@@ -52,42 +52,59 @@ fabric_rdf_translation/
 
 ## Current Status
 
-🟡 **Phase: Requirements Gathering**
+🟡 **Phase: Requirements Gathering** (In Progress)
 
 - [x] Project folder structure created
 - [x] Git repository initialized
 - [x] Documentation templates in place
-- [ ] Requirements documented
+- [x] Business problem documented
+- [x] Decision framework defined (3 categories: A/B/C)
+- [x] Fabric technical requirements researched
+- [ ] Test data (NEN 2660-2) uploaded and analyzed
 - [ ] Architecture finalized
-- [ ] Data sources identified
 - [ ] Fabric workspace linked
+
+---
+
+## Key Decisions Made This Session
+
+### Decision Framework Structure
+Adopted 3-category approach for RDF → LPG translation:
+- **Category A**: Auto-resolvable (7 items) - deterministic transformations
+- **Category B**: Human decision required (12 items) - need guidance UI
+- **Category C**: Not resolvable (8 items) - document limitations
+
+### Fabric Technical Requirements (from docs research)
+- Data must be in **managed Lakehouse tables** (Delta format)
+- Graph model maps tables to nodes/edges via column mappings
+- Column names must avoid special characters
+- Schema evolution NOT supported - requires reingest
+
+### User Interface Approach
+- Decision-making: Fabric App (wizard-style) preferred over Power BI
+- Execution: Spark Notebooks + Pipelines
+- Each B-category decision needs: explanation, examples, preview
 
 ---
 
 ## Next Steps
 
-1. **Document Requirements**
-   - Open `docs/requirements.md`
-   - Fill in business problem, objectives, data sources
-   - Define RDF translation requirements (formats, ontologies, rules)
+1. **Upload NEN 2660-2 Test Data**
+   - Add normative files (SKOS, RDFS, OWL, SHACL)
+   - Add example TTL files (bridge, road network, hospital)
+   - Analyze structure to validate decision framework
 
-2. **Identify Data Sources**
-   - Document source systems in `docs/data-sources.md`
-   - Define RDF mappings and target ontologies
-
-3. **Design Architecture**
+2. **Design Architecture**
    - Update `docs/architecture.md` with specific components
-   - Decide on Fabric workloads needed (Lakehouse, Notebooks, Pipelines, etc.)
+   - Define data flow: RDF files → Lakehouse → Ontology → Graph
+
+3. **Prototype Decision UI**
+   - Evaluate Fabric App capabilities for wizard workflows
+   - Design guidance content for each B-category decision
 
 4. **Link to Fabric Workspace**
-   - Use VS Code Fabric extension to link local folder to remote workspace
-   - Or create new workspace if needed
-
-5. **Push to Remote Repository**
-   ```bash
-   git remote add origin <your-repo-url>
-   git push -u origin main
-   ```
+   - Create or connect to Fabric workspace
+   - Test Ontology/Graph preview features
 
 ---
 
