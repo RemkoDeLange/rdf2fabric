@@ -1,0 +1,64 @@
+# Fabric Project .gitignore
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE / Editor
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.env
+.venv
+venv/
+ENV/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Secrets & credentials (NEVER commit these)
+*.pem
+*.key
+secrets/
+.env.local
+.env.*.local
+appsettings.*.json
+local.settings.json
+
+# Fabric specific
+.fabric/
+*.pbix.tmp
+
+# Data files (typically too large for git)
+*.csv
+*.parquet
+*.json.gz
+data/raw/
+data/temp/
