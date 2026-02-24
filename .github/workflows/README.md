@@ -9,7 +9,7 @@ GitHub Actions is a **CI/CD automation** tool built into GitHub. It automaticall
 
 ## How This Project Uses GitHub Actions
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                        YOUR WORKFLOW                            │
 ├─────────────────────────────────────────────────────────────────┤
@@ -43,6 +43,7 @@ GitHub Actions is a **CI/CD automation** tool built into GitHub. It automaticall
 ## The Workflows in This Project
 
 ### `ci.yml` - Continuous Integration
+
 **Runs when:** PR created or code pushed to `main`/`develop`
 
 | Job | What it checks |
@@ -63,6 +64,7 @@ GitHub Actions is a **CI/CD automation** tool built into GitHub. It automaticall
 ### Skip CI for a Commit
 
 Add `[skip ci]` to your commit message:
+
 ```bash
 git commit -m "Update readme [skip ci]"
 ```
