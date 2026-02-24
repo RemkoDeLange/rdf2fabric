@@ -180,6 +180,15 @@ fabric_rdf_translation/
 - **Full details:** [research-spike-results.md](research-spike-results.md)
 - **Rationale:** Fabric Graph is the target; RDF is the source; translation layer bridges the gap
 
+### 14. GitHub Repository & Fabric Workspace Setup ✅
+- **Decision:** Project infrastructure established
+- **GitHub Repository:** https://github.com/RemkoDeLange/rdf2fabric
+- **Fabric Workspace:** `ws-rdf_translation-dev-01`
+- **Git Integration:** Fabric workspace connected to GitHub, syncing `/fabric` folder
+- **Branch:** `main`
+- **App Name:** RDF2Fabric
+- **Rationale:** Public GitHub enables open-source distribution; Fabric Git integration enables CI/CD for notebooks/pipelines
+
 ---
 
 ## Current Status
@@ -210,7 +219,9 @@ fabric_rdf_translation/
 **Pending (Next Phase):**
 - [x] Reorganize src/ folder structure for new layout
 - [x] **Complete research spike (Fabric Ontology API)** → See [research-spike-results.md](research-spike-results.md)
-- [ ] Create development Fabric workspace (`ws-rdf_translation-dev-01`)
+- [x] Create development Fabric workspace (`ws-rdf_translation-dev-01`)
+- [x] Create GitHub repository (https://github.com/RemkoDeLange/rdf2fabric)
+- [x] Connect Fabric workspace to GitHub (folder: `/fabric`)
 - [ ] Scaffold React app with Electron support
 - [ ] Prototype notebooks (starting with RDF → Delta tables)
 
@@ -218,7 +229,7 @@ fabric_rdf_translation/
 
 ## Key Decisions Summary
 
-See **Decisions Made** section above for numbered canonical decisions (1-12).
+See **Decisions Made** section above for numbered canonical decisions (1-14).
 See **Session Archive** section below for dated session logs.
 
 ---
