@@ -65,19 +65,19 @@
 ```
 lh_nen2660data_dev_01/
 ├── Files/
-│   ├── normative/                          # Schema/model definitions (authoritative)
+│   ├── normative_nen2660/                  # Schema/model definitions (authoritative)
 │   │   ├── nen2660-term.ttl               # Terms vocabulary (SKOS)
 │   │   ├── nen2660-rdfs.ttl               # Classes & Properties (RDFS)
 │   │   ├── nen2660-owl.ttl                # Ontology (OWL)
 │   │   └── nen2660-shacl.ttl              # Validation shapes (SHACL)
 │   │
-│   ├── informative/                        # Same content, alternate formats
+│   ├── informative_nen2660/                # Same content, alternate formats
 │   │   ├── nen2660.trig                   # TriG (Turtle + named graphs)
 │   │   ├── nen2660.jsonld                 # JSON-LD
 │   │   ├── nen2660.ttl                    # Turtle (combined)
 │   │   └── nen2660.rdf                    # RDF/XML
 │   │
-│   └── examples/                           # Instance data (nen2660-term namespace)
+│   └── examples_nen2660/                   # Instance data (nen2660-term namespace)
 │       ├── IJsselbrug.ttl                 # Bridge example (IJssel bridge)
 │       ├── Liggerbrug.ttl                 # Bridge example (beam bridge)
 │       ├── Wegennetwerk.ttl               # Road network example

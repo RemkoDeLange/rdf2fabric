@@ -68,9 +68,9 @@ fabric_rdf_translation/
 - **Source Workspace:** `ws-ont_nen2660-dev-01`
 - **Lakehouse:** `lh_nen2660data_dev_01`
 - **Data Structure:**
-  - `Files/normative/` - Normative NEN 2660 ontology (SKOS, RDFS, OWL, SHACL)
-  - `Files/informative/` - Informative NEN 2660 content (format variants)
-  - `Files/examples/` - Example RDF data (IJsselbrug, Liggerbrug, etc.)
+  - `Files/normative_nen2660/` - Normative NEN 2660 ontology (SKOS, RDFS, OWL, SHACL)
+  - `Files/informative_nen2660/` - Informative NEN 2660 content (format variants)
+  - `Files/examples_nen2660/` - Example RDF data (IJsselbrug, Liggerbrug, etc.)
 
 ### 6. User Interface Architecture ✅
 - **Technology:** Fabric App (React) - full custom UI for decision-making

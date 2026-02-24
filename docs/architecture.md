@@ -147,7 +147,7 @@ This application translates **any** RDF (Semantic Web) data into Microsoft Fabri
 │ ┌─────────────────────────────────────────────────────────────────────────┐ │
 │ │ 🟢 SCHEMA-FIRST MODE                                                    │ │
 │ │ RDFS schema detected • High confidence • 5 decisions auto-resolved     │ │
-│ │ Source: normative_nen2660/nen2660.rdfs                                 │ │
+│ │ Source: normative_nen2660/nen2660-rdfs.ttl                             │ │
 │ └─────────────────────────────────────────────────────────────────────────┘ │
 │ SCHEMA SUMMARY                                                              │
 │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
@@ -411,12 +411,12 @@ LEVEL_AUTO_DECISIONS = {
     "workspace": "ws-ont_nen2660-dev-01",
     "lakehouse": "lh_nen2660data_dev_01",
     "paths": [
-      "Files/examples/IJsselbrug.ttl",
-      "Files/examples/Liggerbrug.ttl"
+      "Files/examples_nen2660/IJsselbrug.ttl",
+      "Files/examples_nen2660/Liggerbrug.ttl"
     ],
     "schemaFiles": [
-      "Files/normative/nen2660-rdfs.ttl",
-      "Files/normative/nen2660-owl.ttl"
+      "Files/normative_nen2660/nen2660-rdfs.ttl",
+      "Files/normative_nen2660/nen2660-owl.ttl"
     ],
     "formats": {
       "detected": ["turtle", "turtle"],
