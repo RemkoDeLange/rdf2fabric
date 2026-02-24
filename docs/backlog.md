@@ -1,0 +1,1617 @@
+# RDF2Fabric - Feature Backlog
+
+> **Purpose:** Comprehensive feature list with acceptance criteria and tests.  
+> **Last Updated:** 2026-02-24  
+> **Version:** v0.1.0 (Documentation Complete)
+
+---
+
+## Overview
+
+This backlog tracks all features needed to build RDF2Fabric. Each feature includes:
+- **Acceptance Criteria** - What "done" looks like
+- **Tests** - How we verify it works
+- **Dependencies** - What must be completed first
+- **Estimate** - Rough effort (S/M/L/XL)
+
+### Priority Legend
+| Priority | Meaning |
+|----------|---------|
+| 🔴 P0 | Critical - Blocks everything |
+| 🟠 P1 | High - Core functionality |
+| 🟡 P2 | Medium - Important but not blocking |
+| 🟢 P3 | Low - Nice to have |
+
+### Status Legend
+| Status | Meaning |
+|--------|---------|
+| ⬜ Not Started | Work not begun |
+| 🔄 In Progress | Currently being worked on |
+| ✅ Complete | Done and tested |
+| 🚫 Blocked | Waiting on dependency |
+
+---
+
+## Epic 1: Infrastructure Setup
+
+### F1.1 - Fabric Workspace Configuration ✅
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** S
+
+**Description:** Set up development Fabric workspace with Git integration.
+
+**Acceptance Criteria:**
+- [x] Workspace `ws-rdf_translation-dev-01` created
+- [x] Git integration connected to `RemkoDeLange/rdf2fabric`
+- [x] Sync folder set to `/fabric`
+
+**Tests:** Manual verification in Fabric portal.
+
+---
+
+### F1.2 - Lakehouse Setup
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** S
+
+**Description:** Create lakehouse for intermediate data storage.
+
+**Acceptance Criteria:**
+- [ ] Lakehouse `lh_rdf_translation_dev_01` created in workspace
+- [ ] Folders created: `/raw`, `/bronze`, `/silver`, `/gold`, `/config`
+- [ ] Shortcut to test data (`ws-ont_nen2660-dev-01/lh_nen2660data_dev_01`)
+
+**Tests:**
+```python
+# test_lakehouse_setup.py
+def test_lakehouse_exists():
+    """Verify lakehouse is accessible."""
+    assert lakehouse_exists("lh_rdf_translation_dev_01")
+
+def test_required_folders_exist():
+    """Verify folder structure."""
+    folders = ["raw", "bronze", "silver", "gold", "config"]
+    for folder in folders:
+        assert folder_exists(f"Files/{folder}")
+
+def test_shortcut_accessible():
+    """Verify shortcut to NEN 2660 test data."""
+    assert file_exists("Files/shortcuts/nen2660/normative_nen2660")
+```
+
+**Dependencies:** F1.1
+
+---
+
+### F1.3 - Test Data Validation
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** S
+
+**Description:** Verify NEN 2660 test data is accessible and correctly structured.
+
+**Acceptance Criteria:**
+- [ ] All normative files accessible (nen2660-term.ttl, nen2660-rdfs.ttl, nen2660-owl.ttl, nen2660-shacl.ttl)
+- [ ] All informative files accessible (nen2660.trig, nen2660.jsonld, nen2660.ttl, nen2660.rdf)
+- [ ] Example files accessible (IJsselbrug.ttl, Liggerbrug.ttl, etc.)
+- [ ] Files are valid RDF (parseable)
+
+**Tests:**
+```python
+# test_test_data.py
+import pytest
+
+NORMATIVE_FILES = [
+    "normative_nen2660/nen2660-term.ttl",
+    "normative_nen2660/nen2660-rdfs.ttl",
+    "normative_nen2660/nen2660-owl.ttl",
+    "normative_nen2660/nen2660-shacl.ttl",
+]
+
+INFORMATIVE_FILES = [
+    "informative_nen2660/nen2660.trig",
+    "informative_nen2660/nen2660.jsonld",
+    "informative_nen2660/nen2660.ttl",
+    "informative_nen2660/nen2660.rdf",
+]
+
+EXAMPLE_FILES = [
+    "examples_nen2660/IJsselbrug.ttl",
+    "examples_nen2660/Liggerbrug.ttl",
+]
+
+@pytest.mark.parametrize("file_path", NORMATIVE_FILES + INFORMATIVE_FILES + EXAMPLE_FILES)
+def test_file_exists(file_path):
+    """Verify test data file exists."""
+    assert file_exists(f"Files/{file_path}")
+
+@pytest.mark.parametrize("file_path", NORMATIVE_FILES + EXAMPLE_FILES)
+def test_file_is_valid_rdf(file_path):
+    """Verify file can be parsed as RDF."""
+    graph = parse_rdf(f"Files/{file_path}")
+    assert len(graph) > 0
+```
+
+**Dependencies:** F1.2
+
+---
+
+## Epic 2: RDF Parsing (Backend - Scala/Python)
+
+### F2.1 - Basic RDF Parser (Turtle)
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Parse Turtle (.ttl) files using Apache Jena in Scala notebook.
+
+**Acceptance Criteria:**
+- [ ] Parse single .ttl file into Spark DataFrame
+- [ ] Extract: subject, predicate, object, datatype, language
+- [ ] Handle IRIs, literals, and blank nodes
+- [ ] Return triple count and parse errors
+
+**Tests:**
+```scala
+// test_turtle_parser.scala
+class TurtleParserTest extends AnyFunSuite {
+  
+  test("parse simple turtle file") {
+    val df = parseTurtle("Files/examples_nen2660/IJsselbrug.ttl")
+    assert(df.count() > 0)
+    assert(df.columns.contains("subject"))
+    assert(df.columns.contains("predicate"))
+    assert(df.columns.contains("object"))
+  }
+  
+  test("handle blank nodes") {
+    val df = parseTurtle("Files/test/blank_nodes.ttl")
+    val blanks = df.filter(col("subject").startsWith("_:"))
+    assert(blanks.count() > 0)
+  }
+  
+  test("extract literal datatypes") {
+    val df = parseTurtle("Files/test/datatypes.ttl")
+    assert(df.filter(col("datatype") === "xsd:integer").count() > 0)
+    assert(df.filter(col("datatype") === "xsd:string").count() > 0)
+  }
+  
+  test("extract language tags") {
+    val df = parseTurtle("Files/test/languages.ttl")
+    assert(df.filter(col("language") === "nl").count() > 0)
+    assert(df.filter(col("language") === "en").count() > 0)
+  }
+}
+```
+
+**Dependencies:** F1.2
+
+---
+
+### F2.2 - Multi-Format RDF Parser
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Extend parser to support all common RDF formats.
+
+**Acceptance Criteria:**
+- [ ] Support Turtle (.ttl)
+- [ ] Support RDF/XML (.rdf, .xml)
+- [ ] Support N-Triples (.nt)
+- [ ] Support N-Quads (.nq)
+- [ ] Support JSON-LD (.jsonld)
+- [ ] Support TriG (.trig) with named graphs
+- [ ] Auto-detect format from file extension or content
+
+**Tests:**
+```scala
+// test_multi_format_parser.scala
+class MultiFormatParserTest extends AnyFunSuite {
+  
+  val formats = Map(
+    "turtle" -> "test.ttl",
+    "rdfxml" -> "test.rdf",
+    "ntriples" -> "test.nt",
+    "jsonld" -> "test.jsonld",
+    "trig" -> "test.trig"
+  )
+  
+  formats.foreach { case (format, file) =>
+    test(s"parse $format format") {
+      val df = parseRdf(s"Files/test/$file")
+      assert(df.count() > 0)
+    }
+  }
+  
+  test("auto-detect format from extension") {
+    val format = detectFormat("example.ttl")
+    assert(format == "turtle")
+  }
+  
+  test("auto-detect format from content") {
+    val content = "@prefix : <http://example.org/> ."
+    val format = detectFormatFromContent(content)
+    assert(format == "turtle")
+  }
+  
+  test("parse trig with named graphs") {
+    val df = parseRdf("Files/informative_nen2660/nen2660.trig")
+    assert(df.columns.contains("graph"))
+    assert(df.filter(col("graph").isNotNull).count() > 0)
+  }
+}
+```
+
+**Dependencies:** F2.1
+
+---
+
+### F2.3 - Large File Streaming Parser
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Handle large RDF files (>1M triples) using streaming.
+
+**Acceptance Criteria:**
+- [ ] Stream parse without loading entire file in memory
+- [ ] Process files up to 10GB
+- [ ] Configurable batch size
+- [ ] Progress reporting (% complete)
+- [ ] Memory usage stays below configured limit
+
+**Tests:**
+```scala
+// test_streaming_parser.scala
+class StreamingParserTest extends AnyFunSuite {
+  
+  test("parse large file with bounded memory") {
+    val memBefore = Runtime.getRuntime.totalMemory()
+    val df = parseRdfStreaming("Files/test/large_10m_triples.ttl", batchSize = 100000)
+    val memAfter = Runtime.getRuntime.totalMemory()
+    
+    assert(df.count() == 10000000)
+    assert(memAfter - memBefore < 2L * 1024 * 1024 * 1024) // < 2GB increase
+  }
+  
+  test("report progress during parsing") {
+    var progressUpdates = List[Int]()
+    parseRdfStreaming("Files/test/large.ttl", onProgress = p => progressUpdates :+= p)
+    
+    assert(progressUpdates.contains(25))
+    assert(progressUpdates.contains(50))
+    assert(progressUpdates.contains(75))
+    assert(progressUpdates.contains(100))
+  }
+}
+```
+
+**Dependencies:** F2.2
+
+---
+
+## Epic 3: Schema Detection
+
+### F3.1 - Schema Richness Detector (5 Levels)
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Detect schema richness level (0-4) from RDF data.
+
+**Schema Levels:**
+| Level | Name | Indicators |
+|-------|------|------------|
+| 0 | No Schema | Only rdf:type, no class/property definitions |
+| 1 | SKOS Terms | skos:Concept, skos:prefLabel, skos:broader |
+| 2 | RDFS Classes | rdfs:Class, rdfs:subClassOf, rdfs:domain, rdfs:range |
+| 3 | OWL Ontology | owl:Class, owl:ObjectProperty, owl:DatatypeProperty |
+| 4 | SHACL Shapes | sh:NodeShape, sh:PropertyShape, sh:path |
+
+**Acceptance Criteria:**
+- [ ] Detect level 0: data-only files
+- [ ] Detect level 1: SKOS vocabularies
+- [ ] Detect level 2: RDFS schemas
+- [ ] Detect level 3: OWL ontologies
+- [ ] Detect level 4: SHACL shapes present
+- [ ] Return confidence score (low/medium/high)
+- [ ] List specific constructs found
+
+**Tests:**
+```python
+# test_schema_detector.py
+import pytest
+
+class TestSchemaDetector:
+    
+    def test_level_0_data_only(self):
+        """File with only instance data, no schema."""
+        result = detect_schema_level("test/level0_data_only.ttl")
+        assert result.level == 0
+        assert result.confidence == "high"
+    
+    def test_level_1_skos(self):
+        """SKOS vocabulary file."""
+        result = detect_schema_level("normative_nen2660/nen2660-term.ttl")
+        assert result.level >= 1
+        assert "skos:Concept" in result.constructs_found
+    
+    def test_level_2_rdfs(self):
+        """RDFS schema file."""
+        result = detect_schema_level("normative_nen2660/nen2660-rdfs.ttl")
+        assert result.level >= 2
+        assert "rdfs:Class" in result.constructs_found
+    
+    def test_level_3_owl(self):
+        """OWL ontology file."""
+        result = detect_schema_level("normative_nen2660/nen2660-owl.ttl")
+        assert result.level >= 3
+        assert "owl:Class" in result.constructs_found
+    
+    def test_level_4_shacl(self):
+        """SHACL shapes file."""
+        result = detect_schema_level("normative_nen2660/nen2660-shacl.ttl")
+        assert result.level == 4
+        assert "sh:NodeShape" in result.constructs_found
+    
+    def test_combined_schema_and_data(self):
+        """File with both schema and instance data."""
+        result = detect_schema_level("informative_nen2660/nen2660.ttl")
+        assert result.level >= 2
+        assert result.has_instance_data == True
+        assert result.has_schema == True
+    
+    def test_multiple_files(self):
+        """Detect combined schema level from multiple files."""
+        files = [
+            "normative_nen2660/nen2660-rdfs.ttl",
+            "normative_nen2660/nen2660-owl.ttl",
+            "examples_nen2660/IJsselbrug.ttl"
+        ]
+        result = detect_schema_level_combined(files)
+        assert result.level == 3  # OWL is highest
+```
+
+**Dependencies:** F2.1
+
+---
+
+### F3.2 - Schema Statistics Extractor
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Extract detailed statistics from schema for UI display.
+
+**Acceptance Criteria:**
+- [ ] Count classes defined
+- [ ] Count properties (datatype + object)
+- [ ] Count instances per class
+- [ ] List class hierarchy (subClassOf)
+- [ ] List property domains and ranges
+- [ ] Count named graphs (if present)
+- [ ] Return in JSON format for UI
+
+**Tests:**
+```python
+# test_schema_statistics.py
+class TestSchemaStatistics:
+    
+    def test_count_classes(self):
+        stats = extract_schema_stats("normative_nen2660/nen2660-rdfs.ttl")
+        assert stats["class_count"] > 0
+        assert "classes" in stats
+    
+    def test_count_properties(self):
+        stats = extract_schema_stats("normative_nen2660/nen2660-owl.ttl")
+        assert stats["datatype_property_count"] > 0
+        assert stats["object_property_count"] > 0
+    
+    def test_count_instances(self):
+        stats = extract_schema_stats("examples_nen2660/IJsselbrug.ttl")
+        assert stats["instance_count"] > 0
+        assert "instances_by_class" in stats
+    
+    def test_class_hierarchy(self):
+        stats = extract_schema_stats("normative_nen2660/nen2660-rdfs.ttl")
+        hierarchy = stats["class_hierarchy"]
+        assert len(hierarchy) > 0
+        # Should have parent-child relationships
+        assert any(c["parent"] is not None for c in hierarchy)
+    
+    def test_output_json_format(self):
+        stats = extract_schema_stats("normative_nen2660/nen2660-owl.ttl")
+        # Should be JSON serializable
+        import json
+        json_str = json.dumps(stats)
+        assert len(json_str) > 0
+```
+
+**Dependencies:** F3.1
+
+---
+
+## Epic 4: RDF → LPG Translation
+
+### F4.1 - Class to Node Type Mapping
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Translate OWL/RDFS classes to Fabric Graph node types.
+
+**Translation Rules:**
+| RDF Construct | LPG Equivalent |
+|---------------|----------------|
+| owl:Class / rdfs:Class | Node Type (label) |
+| rdfs:subClassOf | Node Type hierarchy (labels) |
+| rdf:type | Node label assignment |
+
+**Acceptance Criteria:**
+- [ ] Map each owl:Class to a node type name
+- [ ] Handle class hierarchy (flatten or preserve as multiple labels)
+- [ ] Generate unique, valid node type names (no special chars)
+- [ ] Handle anonymous classes (generate stable ID)
+- [ ] Preserve rdfs:label as display name
+
+**Tests:**
+```python
+# test_class_mapping.py
+class TestClassMapping:
+    
+    def test_map_owl_class(self):
+        mapping = map_classes_to_node_types("normative_nen2660/nen2660-owl.ttl")
+        assert len(mapping) > 0
+        # Check a known class
+        assert "PhysicalObject" in [m["node_type"] for m in mapping]
+    
+    def test_valid_node_type_names(self):
+        mapping = map_classes_to_node_types("normative_nen2660/nen2660-owl.ttl")
+        for m in mapping:
+            name = m["node_type"]
+            # No special characters
+            assert not any(c in name for c in [" ", ",", ";", "{", "}", "(", ")"])
+    
+    def test_preserve_labels(self):
+        mapping = map_classes_to_node_types("normative_nen2660/nen2660-owl.ttl")
+        # Should have display names
+        assert any(m.get("display_name") is not None for m in mapping)
+    
+    def test_handle_class_hierarchy(self):
+        mapping = map_classes_to_node_types("normative_nen2660/nen2660-rdfs.ttl")
+        # Should track parent classes
+        assert any(m.get("parent_types") is not None for m in mapping)
+```
+
+**Dependencies:** F3.1
+
+---
+
+### F4.2 - Property to Node Property / Edge Mapping
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Translate OWL properties to node properties and edge types.
+
+**Translation Rules:**
+| RDF Construct | LPG Equivalent |
+|---------------|----------------|
+| owl:DatatypeProperty | Node property |
+| owl:ObjectProperty | Edge type |
+| rdfs:domain | Source node type for edge |
+| rdfs:range (datatype) | Property data type |
+| rdfs:range (class) | Target node type for edge |
+
+**Acceptance Criteria:**
+- [ ] Map DatatypeProperty → node property with type
+- [ ] Map ObjectProperty → edge type
+- [ ] Use rdfs:domain to assign properties to node types
+- [ ] Use rdfs:range to determine data type or target
+- [ ] Handle properties without domain/range (assign to generic)
+- [ ] Handle multi-domain and multi-range properties
+
+**Tests:**
+```python
+# test_property_mapping.py
+class TestPropertyMapping:
+    
+    def test_map_datatype_property(self):
+        mapping = map_properties("normative_nen2660/nen2660-owl.ttl")
+        datatype_props = [m for m in mapping if m["type"] == "node_property"]
+        assert len(datatype_props) > 0
+    
+    def test_map_object_property(self):
+        mapping = map_properties("normative_nen2660/nen2660-owl.ttl")
+        edges = [m for m in mapping if m["type"] == "edge"]
+        assert len(edges) > 0
+    
+    def test_property_has_domain(self):
+        mapping = map_properties("normative_nen2660/nen2660-owl.ttl")
+        # At least some properties should have domains
+        with_domain = [m for m in mapping if m.get("domain")]
+        assert len(with_domain) > 0
+    
+    def test_datatype_property_has_type(self):
+        mapping = map_properties("normative_nen2660/nen2660-owl.ttl")
+        datatype_props = [m for m in mapping if m["type"] == "node_property"]
+        # Should have data types like string, integer, etc.
+        assert any(m.get("data_type") is not None for m in datatype_props)
+    
+    def test_edge_has_target(self):
+        mapping = map_properties("normative_nen2660/nen2660-owl.ttl")
+        edges = [m for m in mapping if m["type"] == "edge"]
+        # Object properties should have target node types
+        assert any(m.get("target_type") is not None for m in edges)
+```
+
+**Dependencies:** F4.1
+
+---
+
+### F4.3 - Instance Data Translation
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Translate RDF instance data (triples) to node and edge records.
+
+**Acceptance Criteria:**
+- [ ] Create node record for each unique subject with rdf:type
+- [ ] Extract node ID from subject IRI
+- [ ] Assign node labels from rdf:type
+- [ ] Extract node properties from datatype property triples
+- [ ] Create edge records from object property triples
+- [ ] Handle blank nodes (generate stable IDs)
+- [ ] Handle multi-valued properties
+
+**Tests:**
+```python
+# test_instance_translation.py
+class TestInstanceTranslation:
+    
+    def test_create_nodes_from_instances(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        nodes = translate_instances_to_nodes(
+            "examples_nen2660/IJsselbrug.ttl",
+            schema
+        )
+        assert len(nodes) > 0
+    
+    def test_node_has_id(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        nodes = translate_instances_to_nodes("examples_nen2660/IJsselbrug.ttl", schema)
+        for node in nodes:
+            assert "id" in node
+            assert node["id"] is not None
+    
+    def test_node_has_labels(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        nodes = translate_instances_to_nodes("examples_nen2660/IJsselbrug.ttl", schema)
+        for node in nodes:
+            assert "labels" in node
+            assert len(node["labels"]) > 0
+    
+    def test_node_has_properties(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        nodes = translate_instances_to_nodes("examples_nen2660/IJsselbrug.ttl", schema)
+        # At least some nodes should have properties
+        assert any(len(n.get("properties", {})) > 0 for n in nodes)
+    
+    def test_create_edges(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        edges = translate_instances_to_edges("examples_nen2660/IJsselbrug.ttl", schema)
+        assert len(edges) > 0
+    
+    def test_edge_has_source_and_target(self):
+        schema = load_schema("normative_nen2660/nen2660-owl.ttl")
+        edges = translate_instances_to_edges("examples_nen2660/IJsselbrug.ttl", schema)
+        for edge in edges:
+            assert "source_id" in edge
+            assert "target_id" in edge
+            assert "type" in edge
+    
+    def test_handle_blank_nodes(self):
+        nodes = translate_instances_to_nodes("test/with_blank_nodes.ttl", schema)
+        blank_nodes = [n for n in nodes if n["id"].startswith("_:") or n.get("is_blank")]
+        assert len(blank_nodes) > 0
+        # Blank nodes should have stable IDs
+        assert all(n["id"] is not None for n in blank_nodes)
+```
+
+**Dependencies:** F4.1, F4.2, F2.1
+
+---
+
+### F4.4 - Delta Table Writer
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Write translated nodes and edges to Delta Lake tables.
+
+**Table Schema:**
+
+**Nodes Table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| id | STRING | Unique node identifier |
+| labels | ARRAY<STRING> | Node type labels |
+| properties | MAP<STRING, STRING> | Property key-value pairs |
+
+**Edges Table:**
+| Column | Type | Description |
+|--------|------|-------------|
+| source_id | STRING | Source node ID |
+| target_id | STRING | Target node ID |
+| type | STRING | Edge type name |
+| properties | MAP<STRING, STRING> | Edge properties (if any) |
+
+**Acceptance Criteria:**
+- [ ] Write nodes to `Tables/nodes` Delta table
+- [ ] Write edges to `Tables/edges` Delta table
+- [ ] Support incremental append (for large files)
+- [ ] Support overwrite mode (for re-translation)
+- [ ] Partition by label for query performance
+- [ ] Create/update table schema automatically
+
+**Tests:**
+```python
+# test_delta_writer.py
+class TestDeltaWriter:
+    
+    def test_write_nodes_table(self):
+        nodes = [{"id": "n1", "labels": ["Person"], "properties": {"name": "John"}}]
+        write_nodes_to_delta(nodes, "Tables/test_nodes")
+        
+        df = spark.read.format("delta").load("Tables/test_nodes")
+        assert df.count() == 1
+    
+    def test_write_edges_table(self):
+        edges = [{"source_id": "n1", "target_id": "n2", "type": "KNOWS", "properties": {}}]
+        write_edges_to_delta(edges, "Tables/test_edges")
+        
+        df = spark.read.format("delta").load("Tables/test_edges")
+        assert df.count() == 1
+    
+    def test_append_mode(self):
+        nodes1 = [{"id": "n1", "labels": ["A"], "properties": {}}]
+        nodes2 = [{"id": "n2", "labels": ["B"], "properties": {}}]
+        
+        write_nodes_to_delta(nodes1, "Tables/test_append", mode="overwrite")
+        write_nodes_to_delta(nodes2, "Tables/test_append", mode="append")
+        
+        df = spark.read.format("delta").load("Tables/test_append")
+        assert df.count() == 2
+    
+    def test_overwrite_mode(self):
+        nodes1 = [{"id": "n1", "labels": ["A"], "properties": {}}]
+        nodes2 = [{"id": "n2", "labels": ["B"], "properties": {}}]
+        
+        write_nodes_to_delta(nodes1, "Tables/test_overwrite", mode="overwrite")
+        write_nodes_to_delta(nodes2, "Tables/test_overwrite", mode="overwrite")
+        
+        df = spark.read.format("delta").load("Tables/test_overwrite")
+        assert df.count() == 1  # Overwritten
+```
+
+**Dependencies:** F4.3
+
+---
+
+## Epic 5: Fabric Graph Integration
+
+### F5.1 - Graph Model JSON Generator
+**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Generate Fabric Graph Model JSON definition from translated schema.
+
+**Graph Model JSON Structure:**
+```json
+{
+  "name": "MyGraphModel",
+  "version": "1.0",
+  "nodes": [
+    {
+      "name": "Person",
+      "properties": [
+        {"name": "name", "type": "string"},
+        {"name": "age", "type": "int"}
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "name": "KNOWS",
+      "source": "Person",
+      "target": "Person",
+      "properties": []
+    }
+  ]
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Generate valid Graph Model JSON from schema mapping
+- [ ] Include all node types with properties
+- [ ] Include all edge types with source/target constraints
+- [ ] Map RDF datatypes to Fabric Graph types (string, int, double, boolean, datetime)
+- [ ] Validate JSON against Fabric Graph schema requirements
+- [ ] Handle reserved words and naming constraints
+
+**Tests:**
+```python
+# test_graph_model_generator.py
+import json
+
+class TestGraphModelGenerator:
+    
+    def test_generate_valid_json(self):
+        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
+        model_json = generate_graph_model(schema_mapping, name="NEN2660")
+        
+        # Should be valid JSON
+        parsed = json.loads(model_json)
+        assert "name" in parsed
+        assert "nodes" in parsed
+        assert "edges" in parsed
+    
+    def test_nodes_have_properties(self):
+        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
+        model = generate_graph_model(schema_mapping, name="NEN2660")
+        parsed = json.loads(model)
+        
+        # At least some nodes should have properties
+        assert any(len(n.get("properties", [])) > 0 for n in parsed["nodes"])
+    
+    def test_edges_have_source_target(self):
+        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
+        model = generate_graph_model(schema_mapping, name="NEN2660")
+        parsed = json.loads(model)
+        
+        for edge in parsed["edges"]:
+            assert "source" in edge
+            assert "target" in edge
+    
+    def test_datatype_mapping(self):
+        """Verify RDF datatypes map to Fabric types."""
+        type_map = {
+            "xsd:string": "string",
+            "xsd:integer": "int",
+            "xsd:double": "double",
+            "xsd:boolean": "boolean",
+            "xsd:dateTime": "datetime",
+        }
+        for rdf_type, fabric_type in type_map.items():
+            result = map_datatype(rdf_type)
+            assert result == fabric_type
+    
+    def test_valid_names(self):
+        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
+        model = generate_graph_model(schema_mapping, name="NEN2660")
+        parsed = json.loads(model)
+        
+        # Names should not have special characters
+        for node in parsed["nodes"]:
+            assert not any(c in node["name"] for c in [" ", ",", ";"])
+```
+
+**Dependencies:** F4.1, F4.2
+
+---
+
+### F5.2 - Fabric Graph REST API Client
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Client for Fabric Graph REST API operations.
+
+**API Operations:**
+| Operation | Endpoint | Purpose |
+|-----------|----------|---------|
+| Create Graph Model | POST /graphModels | Create new graph schema |
+| Update Graph Model | PUT /graphModels/{id} | Update existing schema |
+| Get Graph Model | GET /graphModels/{id} | Retrieve schema |
+| List Graph Models | GET /graphModels | List all schemas |
+| Bind Data | POST /graphModels/{id}/bindings | Connect Delta tables |
+
+**Acceptance Criteria:**
+- [ ] Authenticate using Entra ID token
+- [ ] Create new Graph Model from JSON
+- [ ] Retrieve existing Graph Model
+- [ ] Update Graph Model (version increment)
+- [ ] Bind Delta tables to Graph Model
+- [ ] Handle API errors gracefully
+- [ ] Retry on transient failures
+
+**Tests:**
+```python
+# test_fabric_graph_client.py (integration tests - require Fabric connection)
+import pytest
+
+@pytest.mark.integration
+class TestFabricGraphClient:
+    
+    def test_create_graph_model(self, fabric_client):
+        model_json = '{"name": "TestModel", "nodes": [], "edges": []}'
+        result = fabric_client.create_graph_model(model_json)
+        assert result["id"] is not None
+    
+    def test_get_graph_model(self, fabric_client, test_model_id):
+        model = fabric_client.get_graph_model(test_model_id)
+        assert model["name"] is not None
+    
+    def test_bind_data(self, fabric_client, test_model_id):
+        binding = {
+            "nodeTable": "Tables/nodes",
+            "edgeTable": "Tables/edges"
+        }
+        result = fabric_client.bind_data(test_model_id, binding)
+        assert result["status"] == "success"
+    
+    def test_handle_auth_error(self, fabric_client):
+        # Invalid token should raise auth error
+        fabric_client.token = "invalid"
+        with pytest.raises(AuthenticationError):
+            fabric_client.get_graph_model("any-id")
+```
+
+**Dependencies:** F5.1
+
+---
+
+### F5.3 - Data Binding Configuration
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Configure data binding between Delta tables and Fabric Graph.
+
+**Acceptance Criteria:**
+- [ ] Generate binding configuration JSON
+- [ ] Map node table columns to Graph Model node types
+- [ ] Map edge table columns to Graph Model edge types
+- [ ] Support computed columns (e.g., ID generation)
+- [ ] Validate binding before applying
+- [ ] Handle binding errors
+
+**Tests:**
+```python
+# test_data_binding.py
+class TestDataBinding:
+    
+    def test_generate_node_binding(self):
+        binding = generate_node_binding(
+            table="Tables/nodes",
+            id_column="id",
+            label_column="labels",
+            properties_map={"name": "name", "age": "age"}
+        )
+        assert binding["table"] == "Tables/nodes"
+        assert binding["idColumn"] == "id"
+    
+    def test_generate_edge_binding(self):
+        binding = generate_edge_binding(
+            table="Tables/edges",
+            source_column="source_id",
+            target_column="target_id",
+            type_column="type"
+        )
+        assert binding["sourceColumn"] == "source_id"
+        assert binding["targetColumn"] == "target_id"
+    
+    def test_validate_binding_valid(self):
+        binding = {
+            "nodes": {"table": "Tables/nodes", "idColumn": "id"},
+            "edges": {"table": "Tables/edges", "sourceColumn": "source_id"}
+        }
+        # Should not raise
+        validate_binding(binding)
+    
+    def test_validate_binding_missing_column(self):
+        binding = {
+            "nodes": {"table": "Tables/nodes"}  # Missing idColumn
+        }
+        with pytest.raises(ValidationError):
+            validate_binding(binding)
+```
+
+**Dependencies:** F4.4, F5.1
+
+---
+
+## Epic 6: SHACL Validation (Pre-Load)
+
+### F6.1 - SHACL Shape Parser
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Parse SHACL shapes to understand validation constraints.
+
+**Acceptance Criteria:**
+- [ ] Parse sh:NodeShape definitions
+- [ ] Parse sh:PropertyShape definitions
+- [ ] Extract sh:path, sh:datatype, sh:minCount, sh:maxCount
+- [ ] Extract sh:class, sh:nodeKind constraints
+- [ ] List all shapes and their targets
+
+**Tests:**
+```python
+# test_shacl_parser.py
+class TestShaclParser:
+    
+    def test_parse_node_shapes(self):
+        shapes = parse_shacl("normative_nen2660/nen2660-shacl.ttl")
+        node_shapes = [s for s in shapes if s["type"] == "NodeShape"]
+        assert len(node_shapes) > 0
+    
+    def test_parse_property_shapes(self):
+        shapes = parse_shacl("normative_nen2660/nen2660-shacl.ttl")
+        prop_shapes = [s for s in shapes if s["type"] == "PropertyShape"]
+        assert len(prop_shapes) > 0
+    
+    def test_extract_constraints(self):
+        shapes = parse_shacl("normative_nen2660/nen2660-shacl.ttl")
+        # Should have various constraint types
+        has_min_count = any(s.get("minCount") is not None for s in shapes)
+        has_datatype = any(s.get("datatype") is not None for s in shapes)
+        assert has_min_count or has_datatype
+```
+
+**Dependencies:** F2.1
+
+---
+
+### F6.2 - SHACL Validator
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Validate RDF data against SHACL shapes before loading.
+
+**Acceptance Criteria:**
+- [ ] Validate data graph against shapes graph
+- [ ] Return conformance result (pass/fail)
+- [ ] Return detailed violation report
+- [ ] Support severity levels (Violation, Warning, Info)
+- [ ] Option to continue on warnings
+
+**Tests:**
+```python
+# test_shacl_validator.py
+class TestShaclValidator:
+    
+    def test_valid_data_conforms(self):
+        result = validate_shacl(
+            data="test/valid_data.ttl",
+            shapes="test/shapes.ttl"
+        )
+        assert result.conforms == True
+    
+    def test_invalid_data_fails(self):
+        result = validate_shacl(
+            data="test/invalid_data.ttl",
+            shapes="test/shapes.ttl"
+        )
+        assert result.conforms == False
+    
+    def test_violation_report(self):
+        result = validate_shacl(
+            data="test/invalid_data.ttl",
+            shapes="test/shapes.ttl"
+        )
+        assert len(result.violations) > 0
+        for v in result.violations:
+            assert "focusNode" in v
+            assert "message" in v
+    
+    def test_severity_filtering(self):
+        result = validate_shacl(
+            data="test/warnings_only.ttl",
+            shapes="test/shapes.ttl",
+            severity_threshold="Violation"  # Ignore warnings
+        )
+        assert result.conforms == True
+```
+
+**Dependencies:** F6.1
+
+---
+
+## Epic 7: Frontend - React Application
+
+### F7.1 - React App Scaffold
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Create React application with Fluent UI and basic structure.
+
+**Acceptance Criteria:**
+- [ ] Vite + React + TypeScript setup
+- [ ] Fluent UI v9 components installed
+- [ ] Basic folder structure (components, hooks, services, pages)
+- [ ] Routing configured (React Router)
+- [ ] Development server runs (`npm run dev`)
+- [ ] Build produces static files (`npm run build`)
+
+**Tests:**
+```typescript
+// test/App.test.tsx (Jest/Vitest)
+import { render, screen } from '@testing-library/react';
+import App from '../src/App';
+
+describe('App', () => {
+  test('renders without crashing', () => {
+    render(<App />);
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+  
+  test('shows navigation', () => {
+    render(<App />);
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+});
+```
+
+**Dependencies:** None
+
+---
+
+### F7.2 - Entra ID Authentication
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Implement Entra ID authentication for web and desktop.
+
+**Acceptance Criteria:**
+- [ ] MSAL.js configured with app registration
+- [ ] Login/logout flow working
+- [ ] Token acquisition for Fabric API
+- [ ] Token refresh handling
+- [ ] User info display (name, email)
+- [ ] Cross-tenant authentication (multi-tenant app)
+- [ ] Device code flow for Electron (desktop)
+
+**Tests:**
+```typescript
+// test/auth.test.ts
+import { AuthService } from '../src/services/auth';
+
+describe('AuthService', () => {
+  test('login initiates redirect', async () => {
+    const auth = new AuthService();
+    await auth.login();
+    // Should redirect to Microsoft login
+  });
+  
+  test('getToken returns valid token', async () => {
+    const auth = new AuthService();
+    auth.setMockUser({ name: 'Test User' });
+    const token = await auth.getToken(['https://analysis.windows.net/powerbi/api/.default']);
+    expect(token).toBeTruthy();
+  });
+  
+  test('logout clears session', async () => {
+    const auth = new AuthService();
+    auth.setMockUser({ name: 'Test User' });
+    await auth.logout();
+    expect(auth.isAuthenticated()).toBe(false);
+  });
+});
+```
+
+**Dependencies:** F7.1
+
+---
+
+### F7.3 - Workspace Configuration Page
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** S
+
+**Description:** First-run setup page for workspace configuration.
+
+**Acceptance Criteria:**
+- [ ] Input for Fabric workspace URL
+- [ ] Workspace validation (check connectivity)
+- [ ] Save workspace config to local storage
+- [ ] Load saved config on app start
+- [ ] Change workspace option in settings
+
+**Tests:**
+```typescript
+// test/WorkspaceConfig.test.tsx
+describe('WorkspaceConfig', () => {
+  test('shows input for workspace URL', () => {
+    render(<WorkspaceConfig />);
+    expect(screen.getByLabelText(/workspace url/i)).toBeInTheDocument();
+  });
+  
+  test('validates workspace URL format', async () => {
+    render(<WorkspaceConfig />);
+    const input = screen.getByLabelText(/workspace url/i);
+    await userEvent.type(input, 'invalid-url');
+    expect(screen.getByText(/invalid url/i)).toBeInTheDocument();
+  });
+  
+  test('saves valid workspace to storage', async () => {
+    render(<WorkspaceConfig />);
+    const input = screen.getByLabelText(/workspace url/i);
+    await userEvent.type(input, 'https://app.fabric.microsoft.com/...');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(localStorage.getItem('workspaceUrl')).toBeTruthy();
+  });
+});
+```
+
+**Dependencies:** F7.1, F7.2
+
+---
+
+### F7.4 - Project Management
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Create, list, load, and save translation projects.
+
+**Project Config Structure:**
+```typescript
+interface Project {
+  id: string;
+  name: string;
+  created: string;
+  updated: string;
+  source: {
+    files: string[];
+    schemaFiles: string[];
+  };
+  schemaLevel: number;
+  decisions: Record<string, DecisionValue>;
+  status: 'draft' | 'configured' | 'translated' | 'loaded';
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Create new project
+- [ ] List existing projects
+- [ ] Load project by ID
+- [ ] Save project changes
+- [ ] Delete project
+- [ ] Store projects in lakehouse (Files/config/)
+
+**Tests:**
+```typescript
+// test/ProjectService.test.ts
+describe('ProjectService', () => {
+  test('create new project', async () => {
+    const project = await projectService.create({ name: 'Test Project' });
+    expect(project.id).toBeTruthy();
+    expect(project.status).toBe('draft');
+  });
+  
+  test('list projects', async () => {
+    await projectService.create({ name: 'Project 1' });
+    await projectService.create({ name: 'Project 2' });
+    const projects = await projectService.list();
+    expect(projects.length).toBeGreaterThanOrEqual(2);
+  });
+  
+  test('load project by id', async () => {
+    const created = await projectService.create({ name: 'Test' });
+    const loaded = await projectService.get(created.id);
+    expect(loaded.name).toBe('Test');
+  });
+  
+  test('save project updates', async () => {
+    const project = await projectService.create({ name: 'Original' });
+    project.name = 'Updated';
+    await projectService.save(project);
+    const loaded = await projectService.get(project.id);
+    expect(loaded.name).toBe('Updated');
+  });
+});
+```
+
+**Dependencies:** F7.3
+
+---
+
+### F7.5 - File Browser & Upload
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Browse lakehouse files and upload new RDF files.
+
+**Acceptance Criteria:**
+- [ ] Browse lakehouse Files folder
+- [ ] Filter by file extension (.ttl, .rdf, etc.)
+- [ ] Multi-select files for project
+- [ ] Upload local RDF files to lakehouse
+- [ ] Show file size and modified date
+- [ ] Preview first few lines of file
+
+**Tests:**
+```typescript
+// test/FileBrowser.test.tsx
+describe('FileBrowser', () => {
+  test('lists files from lakehouse', async () => {
+    render(<FileBrowser path="Files/" />);
+    await waitFor(() => {
+      expect(screen.getByText(/normative_nen2660/)).toBeInTheDocument();
+    });
+  });
+  
+  test('filters by extension', async () => {
+    render(<FileBrowser path="Files/" filter=".ttl" />);
+    await waitFor(() => {
+      const files = screen.getAllByRole('listitem');
+      files.forEach(f => {
+        expect(f.textContent).toMatch(/\.ttl$/);
+      });
+    });
+  });
+  
+  test('allows multi-select', async () => {
+    render(<FileBrowser path="Files/" multiSelect />);
+    await userEvent.click(screen.getByText('file1.ttl'));
+    await userEvent.click(screen.getByText('file2.ttl'));
+    expect(screen.getByText(/2 selected/)).toBeInTheDocument();
+  });
+});
+```
+
+**Dependencies:** F7.3
+
+---
+
+### F7.6 - Decision Dashboard
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Main UI showing all 12 B-category decisions.
+
+**Acceptance Criteria:**
+- [ ] Display all 12 decisions as cards
+- [ ] Show decision status (auto-resolved, pending, completed)
+- [ ] Show recommended next decision
+- [ ] Click to expand decision details
+- [ ] Select option for each decision
+- [ ] Show dependencies between decisions
+- [ ] Grey out irrelevant decisions
+
+**Tests:**
+```typescript
+// test/DecisionDashboard.test.tsx
+describe('DecisionDashboard', () => {
+  test('shows all 12 decisions', () => {
+    render(<DecisionDashboard project={mockProject} />);
+    const cards = screen.getAllByTestId('decision-card');
+    expect(cards.length).toBe(12);
+  });
+  
+  test('highlights recommended decision', () => {
+    render(<DecisionDashboard project={mockProject} />);
+    expect(screen.getByText(/recommended/i)).toBeInTheDocument();
+  });
+  
+  test('shows auto-resolved decisions', () => {
+    const project = { ...mockProject, schemaLevel: 3 };
+    render(<DecisionDashboard project={project} />);
+    expect(screen.getAllByText(/auto-resolved/i).length).toBeGreaterThan(0);
+  });
+  
+  test('expands decision on click', async () => {
+    render(<DecisionDashboard project={mockProject} />);
+    await userEvent.click(screen.getByText('B1: Node Type Mapping'));
+    expect(screen.getByText(/choose how to map/i)).toBeInTheDocument();
+  });
+});
+```
+
+**Dependencies:** F7.4
+
+---
+
+### F7.7 - Graph Preview (React Flow)
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Interactive graph visualization using React Flow.
+
+**Acceptance Criteria:**
+- [ ] Display sample nodes and edges
+- [ ] Color-code by node type
+- [ ] Show node properties on hover
+- [ ] Pan and zoom
+- [ ] Limit preview to N nodes (configurable)
+- [ ] Generate preview from schema mapping
+
+**Tests:**
+```typescript
+// test/GraphPreview.test.tsx
+describe('GraphPreview', () => {
+  test('renders nodes', () => {
+    const data = {
+      nodes: [{ id: 'n1', label: 'Person', properties: { name: 'John' } }],
+      edges: []
+    };
+    render(<GraphPreview data={data} />);
+    expect(screen.getByText('Person')).toBeInTheDocument();
+  });
+  
+  test('renders edges between nodes', () => {
+    const data = {
+      nodes: [
+        { id: 'n1', label: 'Person' },
+        { id: 'n2', label: 'Person' }
+      ],
+      edges: [
+        { id: 'e1', source: 'n1', target: 'n2', label: 'KNOWS' }
+      ]
+    };
+    render(<GraphPreview data={data} />);
+    expect(screen.getByText('KNOWS')).toBeInTheDocument();
+  });
+  
+  test('shows properties on hover', async () => {
+    const data = {
+      nodes: [{ id: 'n1', label: 'Person', properties: { name: 'John' } }],
+      edges: []
+    };
+    render(<GraphPreview data={data} />);
+    await userEvent.hover(screen.getByText('Person'));
+    expect(screen.getByText('name: John')).toBeInTheDocument();
+  });
+});
+```
+
+**Dependencies:** F7.1
+
+---
+
+### F7.8 - Translation Execution UI
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** UI to trigger translation and monitor progress.
+
+**Acceptance Criteria:**
+- [ ] Start translation button
+- [ ] Progress indicator (steps completed)
+- [ ] Real-time log output
+- [ ] Success/failure indication
+- [ ] Link to Fabric Graph after success
+- [ ] Retry on failure
+
+**Tests:**
+```typescript
+// test/TranslationExecution.test.tsx
+describe('TranslationExecution', () => {
+  test('shows start button', () => {
+    render(<TranslationExecution project={mockProject} />);
+    expect(screen.getByRole('button', { name: /start/i })).toBeInTheDocument();
+  });
+  
+  test('shows progress during execution', async () => {
+    render(<TranslationExecution project={mockProject} />);
+    await userEvent.click(screen.getByRole('button', { name: /start/i }));
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+  });
+  
+  test('shows success message', async () => {
+    mockTranslationSuccess();
+    render(<TranslationExecution project={mockProject} />);
+    await userEvent.click(screen.getByRole('button', { name: /start/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/success/i)).toBeInTheDocument();
+    });
+  });
+});
+```
+
+**Dependencies:** F7.6
+
+---
+
+## Epic 8: Electron Desktop App
+
+### F8.1 - Electron Wrapper
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Wrap React app in Electron for desktop distribution.
+
+**Acceptance Criteria:**
+- [ ] Electron main process configured
+- [ ] Load React app in BrowserWindow
+- [ ] Window title and icon
+- [ ] Menu bar (File, Edit, Help)
+- [ ] Device code auth flow
+- [ ] Build for Windows (.exe)
+- [ ] Build for macOS (.dmg)
+- [ ] Build for Linux (.AppImage)
+
+**Tests:**
+```typescript
+// test/electron.test.ts (Playwright/Spectron)
+describe('Electron App', () => {
+  test('opens main window', async () => {
+    const app = await startElectronApp();
+    const window = await app.firstWindow();
+    expect(await window.title()).toBe('RDF2Fabric');
+  });
+  
+  test('shows login on first launch', async () => {
+    const app = await startElectronApp();
+    const window = await app.firstWindow();
+    expect(await window.locator('text=Sign in').isVisible()).toBe(true);
+  });
+});
+```
+
+**Dependencies:** F7.1, F7.2
+
+---
+
+## Epic 9: Pipeline Orchestration
+
+### F9.1 - Translation Pipeline
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Fabric Data Pipeline for end-to-end translation.
+
+**Pipeline Steps:**
+1. Read project config from lakehouse
+2. Run schema detection notebook
+3. Run translation notebook
+4. Run graph loader notebook
+5. Update project status
+
+**Acceptance Criteria:**
+- [ ] Pipeline defined in Fabric
+- [ ] Accepts project ID as parameter
+- [ ] Runs notebooks in sequence
+- [ ] Passes data between steps
+- [ ] Handles errors gracefully
+- [ ] Updates project status on completion
+
+**Tests:**
+```python
+# test_pipeline.py (integration)
+@pytest.mark.integration
+class TestTranslationPipeline:
+    
+    def test_pipeline_runs_successfully(self, fabric_client, test_project):
+        result = fabric_client.run_pipeline(
+            "pl_full_translation",
+            parameters={"projectId": test_project.id}
+        )
+        assert result.status == "Succeeded"
+    
+    def test_pipeline_updates_project_status(self, fabric_client, test_project):
+        fabric_client.run_pipeline(
+            "pl_full_translation",
+            parameters={"projectId": test_project.id}
+        )
+        project = load_project(test_project.id)
+        assert project.status == "loaded"
+```
+
+**Dependencies:** F2.1, F3.1, F4.4, F5.2
+
+---
+
+### F9.2 - Preview Pipeline
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** S
+
+**Description:** Lightweight pipeline for generating preview without full load.
+
+**Pipeline Steps:**
+1. Read project config
+2. Parse sample of RDF data
+3. Generate preview nodes/edges
+4. Write to preview tables
+
+**Acceptance Criteria:**
+- [ ] Limited to first N triples
+- [ ] Fast execution (< 30 sec)
+- [ ] Preview tables don't affect production
+- [ ] Called from app for preview display
+
+**Tests:**
+```python
+# test_preview_pipeline.py
+class TestPreviewPipeline:
+    
+    def test_preview_is_limited(self, fabric_client, test_project):
+        result = fabric_client.run_pipeline(
+            "pl_preview_only",
+            parameters={"projectId": test_project.id, "limit": 100}
+        )
+        preview = spark.read.format("delta").load("Tables/preview_nodes")
+        assert preview.count() <= 100
+    
+    def test_preview_is_fast(self, fabric_client, test_project):
+        import time
+        start = time.time()
+        fabric_client.run_pipeline(
+            "pl_preview_only",
+            parameters={"projectId": test_project.id}
+        )
+        duration = time.time() - start
+        assert duration < 30
+```
+
+**Dependencies:** F9.1
+
+---
+
+## Epic 10: Documentation & Deployment
+
+### F10.1 - User Documentation
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** End-user documentation for installing and using RDF2Fabric.
+
+**Acceptance Criteria:**
+- [ ] Installation guide (Web, Desktop)
+- [ ] Getting started tutorial
+- [ ] Decision reference guide (all 12 decisions explained)
+- [ ] Troubleshooting FAQ
+- [ ] Example walkthroughs
+
+**Tests:** Manual review, spell check.
+
+---
+
+### F10.2 - GitHub Releases
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** S
+
+**Description:** Automated release builds for desktop installers.
+
+**Acceptance Criteria:**
+- [ ] GitHub Action for release builds
+- [ ] Builds Windows .exe installer
+- [ ] Builds macOS .dmg
+- [ ] Builds Linux .AppImage
+- [ ] Attaches artifacts to GitHub Release
+- [ ] Triggered on tag push (v*)
+
+**Tests:** Manual verification of release artifacts.
+
+---
+
+## Implementation Order (Suggested)
+
+### Phase 1: Foundation (Week 1-2)
+1. F1.2 - Lakehouse Setup
+2. F1.3 - Test Data Validation
+3. F2.1 - Basic RDF Parser (Turtle)
+4. F3.1 - Schema Detector
+
+### Phase 2: Core Translation (Week 3-4)
+5. F4.1 - Class to Node Type Mapping
+6. F4.2 - Property Mapping
+7. F4.3 - Instance Translation
+8. F4.4 - Delta Writer
+9. F5.1 - Graph Model Generator
+
+### Phase 3: Frontend (Week 5-6)
+10. F7.1 - React Scaffold
+11. F7.2 - Authentication
+12. F7.3 - Workspace Config
+13. F7.4 - Project Management
+14. F7.5 - File Browser
+
+### Phase 4: Integration (Week 7-8)
+15. F5.2 - Fabric Graph API Client
+16. F5.3 - Data Binding
+17. F7.6 - Decision Dashboard
+18. F7.7 - Graph Preview
+
+### Phase 5: Polish (Week 9-10)
+19. F2.2 - Multi-Format Parser
+20. F6.1 - SHACL Parser
+21. F6.2 - SHACL Validator
+22. F7.8 - Execution UI
+23. F8.1 - Electron Wrapper
+
+### Phase 6: Production (Week 11-12)
+24. F9.1 - Translation Pipeline
+25. F9.2 - Preview Pipeline
+26. F10.1 - User Documentation
+27. F10.2 - GitHub Releases
+
+---
+
+## Test Infrastructure
+
+### Unit Tests
+- **Python:** pytest + pytest-spark
+- **Scala:** ScalaTest
+- **TypeScript:** Vitest + React Testing Library
+
+### Integration Tests
+- Require Fabric connection
+- Mark with `@pytest.mark.integration`
+- Run in CI against dev workspace
+
+### E2E Tests
+- Playwright for web app
+- Spectron/Playwright for Electron
+- Full flow with NEN 2660 test data
+
+### Test Data
+- Located in `ws-ont_nen2660-dev-01/lh_nen2660data_dev_01`
+- Synthetic test files in `tests/fixtures/`
+
+---
+
+## Notes
+
+- Features can be worked on in parallel where dependencies allow
+- Each feature should have a PR with tests passing
+- Tag releases after completing each phase
+- Update this backlog as requirements evolve

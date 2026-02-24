@@ -1,7 +1,7 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-02-23  
+**Date:** 2026-02-24  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
 
@@ -222,8 +222,17 @@ fabric_rdf_translation/
 - [x] Create development Fabric workspace (`ws-rdf_translation-dev-01`)
 - [x] Create GitHub repository (https://github.com/RemkoDeLange/rdf2fabric)
 - [x] Connect Fabric workspace to GitHub (folder: `/fabric`)
-- [ ] Scaffold React app with Electron support
-- [ ] Prototype notebooks (starting with RDF → Delta tables)
+- [x] **Scaffold React app with Electron support** (F7.1)
+- [x] **Create lakehouse with folder structure** (F1.2)
+- [x] **Create shortcuts to NEN 2660 test data** (F1.3)
+
+**In Progress:**
+- [ ] RDF parser notebook with Apache Jena (F2.1) - Environment with JARs created, debugging session issues
+
+**Pending (Next Session):**
+- [ ] Complete RDF parser notebook testing
+- [ ] Prototype remaining notebooks (F2.2-F3.x)
+- [ ] Implement file upload component (F7.2)
 
 ---
 
@@ -235,6 +244,55 @@ See **Session Archive** section below for dated session logs.
 ---
 
 ## Session Archive
+
+### Session: 2026-02-24 (Part 3) - Implementation Start
+**Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
+
+**Completed (F7.1 - React App Scaffold):**
+- Created full React + Electron + Fluent UI v9 application scaffold
+- 20+ files in `src/app/` including:
+  - Vite 5.1 + React 18 + TypeScript configuration
+  - MSAL.js authentication setup
+  - Zustand state management with persistence
+  - Fluent UI v9 theming and layout components
+  - Electron main process with menu bar
+  - Vitest test setup with sample tests
+- Key pages: LoginPage, HomePage (projects), ProjectPage (12 B-decisions), SettingsPage
+
+**Completed (F1.2 - Lakehouse Setup):**
+- Created lakehouse `lh_rdf_translation_dev_01` (manual - MCP API limitation)
+- Created folder structure: `Files/raw/`, `Files/bronze/`, `Files/silver/`, `Files/gold/`, `Files/config/`
+- Workaround: Upload placeholder files to create directories (directory_create API not working)
+
+**Completed (F1.3 - Test Data Shortcuts):**
+- Created shortcuts in Files section (not Tables) to `lh_nen2660data_dev_01`:
+  - `examples_nen2660/` - 4 TTL test files (ijsselbrug, liggerbrug, wegennetwerk, ziekenhuis)
+  - `informative_nen2660/` - Informative ontology TTLs
+  - `normative_nen2660/` - Normative ontology TTLs
+
+**In Progress (F2.1 - RDF Parser Notebook):**
+- Initial Python/rdflib version worked but replaced per design preference for Apache Jena
+- Created Scala notebook `01_rdf_parser_jena.ipynb`
+- **Fabric Environment Setup:**
+  - Created `env_rdf_jena` environment with custom JAR uploads
+  - JARs needed: jena-arq-4.10.0, jena-core-4.10.0, jena-base-4.10.0, jena-iri-4.10.0, caffeine-3.1.8
+  - JARs also stored in `Files/apache_jena_jars/` as backup
+- Discovery: `%%configure` and `sc.addJar()` don't work for driver classpath in Fabric
+- Solution: Custom Environment with direct JAR uploads adds to classpath
+- Issue to debug: Session state sometimes doesn't pick up JARs until restart
+
+**Technical Learnings:**
+- Fabric MCP cannot create Lakehouses programmatically (400 errors)
+- Fabric MCP cannot create directories directly - use file upload workaround
+- Shortcuts must be created at Files level, not Lakehouse level
+- Maven libraries not available in Fabric Environment - must upload JARs directly
+- ABFS paths required for some operations: `abfss://{workspace}@onelake.dfs.fabric.microsoft.com/{lakehouse}.Lakehouse/Files/`
+
+**Outputs:**
+- `src/app/` - Complete React app scaffold (20+ files)
+- `src/notebooks/01_rdf_parser_jena.ipynb` - Scala/Jena RDF parser
+- `src/notebooks/README.md` - Notebook pipeline documentation
+- Fabric Environment `env_rdf_jena` with Jena dependencies
 
 ### Session: 2026-02-24 (continued) - Research Spike Completion
 **Topics:** Fabric Graph and Ontology API research, RDF support investigation
@@ -378,14 +436,16 @@ See **Session Archive** section below for dated session logs.
 
 ## Next Steps
 
+> **Detailed Backlog:** See [backlog.md](backlog.md) for comprehensive feature list with acceptance criteria and tests.
+
 ### Phase 1: Infrastructure Setup
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 1.1 | Create Fabric workspace `ws-rdf_translation-dev-01` | ⬜ | Development environment |
+| 1.1 | Create Fabric workspace `ws-rdf_translation-dev-01` | ✅ | Decision #14 |
 | 1.2 | Create lakehouse `lh_rdf_translation_dev_01` | ⬜ | Intermediate storage |
 | 1.3 | Create shortcut to test data in `ws-ont_nen2660-dev-01` | ⬜ | Access NEN 2660 files |
 | 1.4 | Validate NEN 2660 test files exist and structure | ⬜ | Confirm expected folders |
-| 1.5 | Enable Git integration for workspace | ⬜ | Connect to this repo |
+| 1.5 | Enable Git integration for workspace | ✅ | `/fabric` → `main` branch |
 
 ### Phase 2: Research Spike - Fabric Ontology API ✅ COMPLETED
 
@@ -414,13 +474,16 @@ See **Session Archive** section below for dated session logs.
 **Full details:** See [research-spike-results.md](research-spike-results.md)
 
 ### Phase 3: Implementation
+
+> **Full implementation backlog:** See [backlog.md](backlog.md) for 27 features with detailed acceptance criteria.
+
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| 3.1 | Prototype `nb_schema_detector` notebook | ⬜ | Test 5-level detection logic |
-| 3.2 | Build RDF parser utilities | ⬜ | rdflib wrapper for Spark |
-| 3.3 | Create basic Fabric App shell | ⬜ | React + Fluent UI scaffold |
-| 3.4 | Implement project config storage | ⬜ | JSON in lakehouse |
-| 3.5 | Build first translation pipeline | ⬜ | End-to-end proof of concept |
+| 3.1 | Prototype `nb_schema_detector` notebook | ⬜ | See F3.1 in backlog |
+| 3.2 | Build RDF parser utilities | ⬜ | See F2.1-F2.3 in backlog |
+| 3.3 | Create basic Fabric App shell | ⬜ | See F7.1 in backlog |
+| 3.4 | Implement project config storage | ⬜ | See F7.4 in backlog |
+| 3.5 | Build first translation pipeline | ⬜ | See F9.1 in backlog |
 
 ---
 

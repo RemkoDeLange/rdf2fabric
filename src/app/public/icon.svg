@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" stroke="#0078D4" stroke-width="3" fill="#F3F9FF"/>
+  
+  <!-- Graph nodes -->
+  <circle cx="32" cy="18" r="6" fill="#0078D4"/>
+  <circle cx="18" cy="42" r="6" fill="#00BCF2"/>
+  <circle cx="46" cy="42" r="6" fill="#00BCF2"/>
+  
+  <!-- Graph edges -->
+  <line x1="32" y1="24" x2="18" y2="36" stroke="#0078D4" stroke-width="2"/>
+  <line x1="32" y1="24" x2="46" y2="36" stroke="#0078D4" stroke-width="2"/>
+  <line x1="24" y1="42" x2="40" y2="42" stroke="#00BCF2" stroke-width="2"/>
+  
+  <!-- RDF triple arrow -->
+  <path d="M10 52 L54 52" stroke="#5C2D91" stroke-width="2" stroke-dasharray="4 2"/>
+  <polygon points="54,52 48,48 48,56" fill="#5C2D91"/>
+</svg>
