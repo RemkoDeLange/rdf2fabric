@@ -1,0 +1,163 @@
+# GitHub Actions CI Workflow for Fabric RDF Translation
+# =======================================================
+# This workflow runs automatically when you create a Pull Request (PR)
+# or push code to main/develop branches.
+#
+# What it does:
+# 1. Validates Markdown documentation (catches broken links, formatting)
+# 2. Validates Python code in notebooks (syntax, imports)
+# 3. Runs unit tests (when tests are added)
+#
+# How GitHub Actions works:
+# - Each "job" runs in a fresh virtual machine
+# - Jobs can run in parallel (faster) or sequentially (if dependent)
+# - "Steps" within a job run sequentially
+# - The workflow fails if any step fails (stops the merge)
+
+name: CI
+
+# When to run this workflow
+on:
+  # Run on Pull Requests to these branches
+  pull_request:
+    branches: [main, develop]
+  
+  # Run on direct pushes to these branches
+  push:
+    branches: [main, develop]
+  
+  # Allow running manually from GitHub Actions tab
+  workflow_dispatch:
+
+# Define the jobs to run
+jobs:
+  
+  # Job 1: Validate Documentation
+  # =============================
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Get the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Check Markdown files for issues
+      - name: Lint Markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v15
+        with:
+          globs: '**/*.md'
+          # Configuration: Allow some flexibility for our docs
+          config: |
+            {
+              "MD013": false,
+              "MD033": false,
+              "MD041": false,
+              "MD024": false
+            }
+  
+  # Job 2: Validate Python Code
+  # ============================
+  validate-python:
+    name: Validate Python
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Step 1: Get the code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Step 2: Set up Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest rdflib
+      
+      # Step 4: Check Python syntax and style
+      - name: Lint Python files
+        run: |
+          # Find all Python files and check them
+          # ruff is a fast Python linter
+          ruff check . --ignore E501 || true
+      
+      # Step 5: Run tests (when they exist)
+      - name: Run tests
+        run: |
+          # Run pytest if tests directory exists
+          if [ -d "tests" ]; then
+            pytest tests/ -v
+          else
+            echo "No tests directory found - skipping tests"
+          fi
+
+  # Job 3: Validate Notebook Structure  
+  # ===================================
+  validate-notebooks:
+    name: Validate Notebooks
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install notebook tools
+        run: |
+          pip install nbformat
+      
+      - name: Validate notebook JSON structure
+        run: |
+          # Check that any .ipynb files are valid JSON
+          python -c "
+          import os
+          import json
+          import sys
+          
+          notebooks_found = False
+          for root, dirs, files in os.walk('.'):
+              # Skip .git directory
+              if '.git' in root:
+                  continue
+              for file in files:
+                  if file.endswith('.ipynb'):
+                      notebooks_found = True
+                      path = os.path.join(root, file)
+                      try:
+                          with open(path, 'r') as f:
+                              json.load(f)
+                          print(f'✓ Valid: {path}')
+                      except json.JSONDecodeError as e:
+                          print(f'✗ Invalid JSON in {path}: {e}')
+                          sys.exit(1)
+          
+          if not notebooks_found:
+              print('No notebooks found yet - skipping validation')
+          "
+
+# =======================================================
+# FUTURE ADDITIONS (uncomment when ready):
+# =======================================================
+#
+#   # Job 4: Build and Test Fabric App
+#   build-fabric-app:
+#     name: Build Fabric App
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - uses: actions/setup-node@v4
+#         with:
+#           node-version: '20'
+#       - run: cd src/app && npm ci
+#       - run: cd src/app && npm run build
+#       - run: cd src/app && npm test

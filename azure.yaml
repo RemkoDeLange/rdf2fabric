@@ -1,0 +1,36 @@
+# Azure Developer CLI (azd) configuration
+# Run 'azd up' to deploy the web app to Azure Static Web Apps
+
+name: rdf-translator
+metadata:
+  template: rdf-translator
+
+# Services to deploy
+services:
+  web:
+    project: ./src/app
+    language: js
+    host: staticwebapp
+    dist: dist
+
+# Infrastructure
+infra:
+  provider: bicep
+  path: ./infra
+
+# Hooks (optional)
+hooks:
+  preprovision:
+    shell: sh
+    run: echo "Deploying RDF Translator Web App..."
+  
+  postprovision:
+    shell: sh
+    run: |
+      echo ""
+      echo "Deployment complete!"
+      echo "Web app URL: ${SERVICE_WEB_URI}"
+      echo ""
+      echo "Next steps:"
+      echo "1. Connect your Fabric workspace to GitHub"
+      echo "2. Configure the app with your workspace URL"

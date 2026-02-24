@@ -1,0 +1,52 @@
+{
+  "name": "rdf-translator",
+  "version": "0.1.0",
+  "description": "RDF to Fabric Graph translation tool",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "electron:dev": "concurrently \"npm run dev\" \"electron electron/main.js\"",
+    "electron:build": "npm run build && electron-builder"
+  },
+  "dependencies": {
+    "@fluentui/react-components": "^9.x",
+    "@azure/msal-browser": "^3.x",
+    "@azure/msal-react": "^2.x",
+    "reactflow": "^11.x",
+    "react": "^18.x",
+    "react-dom": "^18.x",
+    "zustand": "^4.x"
+  },
+  "devDependencies": {
+    "@types/react": "^18.x",
+    "@types/react-dom": "^18.x",
+    "@vitejs/plugin-react": "^4.x",
+    "typescript": "^5.x",
+    "vite": "^5.x",
+    "electron": "^28.x",
+    "electron-builder": "^24.x",
+    "concurrently": "^8.x"
+  },
+  "build": {
+    "appId": "com.rdf-translator",
+    "productName": "RDF Translator",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

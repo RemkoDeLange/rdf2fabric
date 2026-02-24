@@ -10,7 +10,9 @@
 
 ## 1. System Overview
 
-This application translates RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph). The core challenge is that this translation requires **human decisions** - there is no 1:1 mapping between RDF and LPG paradigms.
+This application translates **any** RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph). It is a **generic, reusable tool** - not tied to any specific domain or ontology. The core challenge is that this translation requires **human decisions** - there is no 1:1 mapping between RDF and LPG paradigms.
+
+> **Note:** NEN 2660-2 (Dutch built environment standard) is used as **test data** during development. The application works with any RDF dataset: DBpedia, schema.org, FIBO, custom ontologies, etc.
 
 ### 1.1 Key Design Principles
 
@@ -25,17 +27,28 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              USER INTERFACE                                  │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                        FABRIC APP (React)                              │  │
-│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────────┐  │  │
-│  │  │  Projects   │ │   Schema    │ │  Decision   │ │     Preview     │  │  │
-│  │  │    List     │ │  Explorer   │ │  Dashboard  │ │    & Execute    │  │  │
-│  │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
+│                         USER INTERFACE (Shared Codebase)                     │
+│                                                                              │
+│    ┌─────────────────────────────┐    ┌─────────────────────────────────┐   │
+│    │     WEB APP (Option A)      │    │    DESKTOP APP (Option B)       │   │
+│    │  Azure Static Web App       │    │    Electron (Win/Mac/Linux)     │   │
+│    │  Browser-based access       │    │    Download from GitHub         │   │
+│    └─────────────────────────────┘    └─────────────────────────────────┘   │
+│                         \                    /                               │
+│                          \                  /                                │
+│                    ┌──────────────────────────────────────┐                  │
+│                    │        SHARED REACT APP               │                  │
+│                    │  ┌──────────┐ ┌──────────┐ ┌───────┐ │                  │
+│                    │  │ Projects │ │ Decisions│ │Preview│ │                  │
+│                    │  └──────────┘ └──────────┘ └───────┘ │                  │
+│                    │  ┌──────────────────────────────────┐│                  │
+│                    │  │    Graph Visualization           ││                  │
+│                    │  │    (React Flow / Cytoscape)      ││                  │
+│                    │  └──────────────────────────────────┘│                  │
+│                    └──────────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
-                                      │ REST API / Fabric SDK
+                                      │ Fabric REST API (Entra SSO)
                                       ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         PROCESSING LAYER                                     │
@@ -131,10 +144,15 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  RDF Translation: NEN2660-Example                    [Preview] [Execute ▼] │
 ├─────────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ 🟢 SCHEMA-FIRST MODE                                                    │ │
+│ │ RDFS schema detected • High confidence • 5 decisions auto-resolved     │ │
+│ │ Source: normative_nen2660/nen2660.rdfs                                 │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
 │ SCHEMA SUMMARY                                                              │
 │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
 │ │  Classes    │ │ Properties  │ │  Instances  │ │   Graphs    │            │
-│ │     42      │ │     87      │ │   1,234     │ │      3      │            │
+│ │  42 (RDFS)  │ │  87 (RDFS)  │ │   1,234     │ │      3      │            │
 │ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ TRANSLATION DECISIONS                                         [?] Help     │
@@ -143,21 +161,22 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 │ │ Triple mapping • IRI normalization • Datatypes • Blank nodes • ...     │ │
 │ └────────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
-│ ┌─ Category B: Decisions Required (12 items) ────────────────────────────┐ │
+│ ┌─ Category B: Decisions (12 items) ─────────────── 5 auto / 7 manual ───┐ │
 │ │                                                                        │ │
 │ │ ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │ │
 │ │ │ B1: Class Encoding │ │ B2: Collections    │ │ B3: OWL/SHACL      │  │ │
-│ │ │ ✓ Decided          │ │ ○ Not set          │ │ ○ Not set          │  │ │
+│ │ │ 🟢 AUTO-RESOLVED   │ │ ○ Not set          │ │ 🟡 Hints available │  │ │
 │ │ │ → Node labels      │ │                    │ │                    │  │ │
+│ │ │ [Override]         │ │                    │ │                    │  │ │
 │ │ └────────────────────┘ └────────────────────┘ └────────────────────┘  │ │
 │ │ ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │ │
 │ │ │ B4: Named Graphs   │ │ B5: Namespaces     │ │ B6: Inference      │  │ │
-│ │ │ ○ Not set          │ │ ✓ Decided          │ │ ○ Not set          │  │ │
-│ │ │                    │ │ → Prefix convention│ │                    │  │ │
+│ │ │ ○ Not set          │ │ 🟡 Hints available │ │ 🟢 AUTO-RESOLVED   │  │ │
+│ │ │                    │ │ → Prefix convention│ │ → Use subClassOf   │  │ │
 │ │ └────────────────────┘ └────────────────────┘ └────────────────────┘  │ │
 │ │           ... (6 more decision cards) ...                             │ │
 │ │                                                                        │ │
-│ │ Progress: ████████░░░░░░░░░░░░░░░░░░░░  2/12 decisions made           │ │
+│ │ Progress: ████████████████░░░░░░░░░░░░  7/12 resolved (5 auto + 2)    │ │
 │ └────────────────────────────────────────────────────────────────────────┘ │
 │                                                                             │
 │ ┌─ Category C: Limitations (8 items) ─────────────────────────── ⚠ ────┐  │
@@ -166,6 +185,117 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 │ └────────────────────────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Alternative: Instance-Only Mode Dashboard (No RDFS)**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  RDF Translation: Custom Dataset                     [Preview] [Execute ▼] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────────────────┐ │
+│ │ ⚠️ INSTANCE-ONLY MODE                                                   │ │
+│ │ No RDFS schema detected • Schema inferred from data • All decisions    │ │
+│ │ require user input                                                      │ │
+│ │ [Upload RDFS file] to improve translation quality                       │ │
+│ └─────────────────────────────────────────────────────────────────────────┘ │
+│ INFERRED SCHEMA (from rdf:type usage)                                       │
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
+│ │  Classes    │ │ Properties  │ │  Instances  │ │   Graphs    │            │
+│ │ ~23 inferred│ │ ~45 inferred│ │     892     │ │      1      │            │
+│ │  ⚠️ Medium  │ │  ⚠️ Medium  │ │             │ │             │            │
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ TRANSLATION DECISIONS                                         [?] Help     │
+│                                                                             │
+│ ┌─ Category B: All 12 Decisions Required ────────────────────────────────┐ │
+│ │                                                                        │ │
+│ │ ┌────────────────────┐ ┌────────────────────┐ ┌────────────────────┐  │ │
+│ │ │ B1: Class Encoding │ │ B2: Collections    │ │ B3: OWL/SHACL      │  │ │
+│ │ │ ○ DECISION NEEDED  │ │ ○ DECISION NEEDED  │ │ ○ DECISION NEEDED  │  │ │
+│ │ │ No schema guidance │ │                    │ │                    │  │ │
+│ │ └────────────────────┘ └────────────────────┘ └────────────────────┘  │ │
+│ │                                                                        │ │
+│ │ Progress: ░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0/12 decisions made           │ │
+│ └────────────────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.4 Adaptive Guidance Engine
+
+The UI adapts its guidance sequence based on the detected input scenario. This provides a **smart, context-aware experience** while preserving user freedom to navigate non-linearly.
+
+#### Guidance State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    ADAPTIVE GUIDANCE STATE MACHINE                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐                                                           │
+│  │ Files Loaded │                                                           │
+│  └──────┬───────┘                                                           │
+│         │                                                                   │
+│         ▼                                                                   │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                    ANALYZE & CLASSIFY                                 │  │
+│  │  • Detect schema level (0-4)                                         │  │
+│  │  • Check for named graphs → affects B4 relevance                     │  │
+│  │  • Check for SKOS → affects B12 relevance                            │  │
+│  │  • Check for multi-typed resources → affects B3 urgency              │  │
+│  │  • Check for RDF collections → affects B2 relevance                  │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│         │                                                                   │
+│         ▼                                                                   │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                    COMPUTE GUIDANCE CONFIG                            │  │
+│  │                                                                       │  │
+│  │  For each B-decision:                                                 │  │
+│  │  ┌─────────────┬────────────────┬──────────────┬───────────────────┐ │  │
+│  │  │  Status     │  Visibility    │  Priority    │  Recommendation   │ │  │
+│  │  ├─────────────┼────────────────┼──────────────┼───────────────────┤ │  │
+│  │  │ auto        │ read-only      │ n/a          │ show default      │ │  │
+│  │  │ guided      │ highlighted    │ medium       │ suggest option    │ │  │
+│  │  │ manual      │ normal         │ per-decision │ none              │ │  │
+│  │  │ irrelevant  │ greyed/hidden  │ n/a          │ skip              │ │  │
+│  │  └─────────────┴────────────────┴──────────────┴───────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│         │                                                                   │
+│         ▼                                                                   │
+│  ┌──────────────────────────────────────────────────────────────────────┐  │
+│  │                    PRIORITY QUEUE                                     │  │
+│  │                                                                       │  │
+│  │  1. Foundation decisions:  B1 → B6 → B8     (structure)              │  │
+│  │  2. Data-driven decisions: B2, B3, B4       (if input has these)     │  │
+│  │  3. Semantic decisions:    B7, B9, B10, B11 (datatypes, cardinality) │  │
+│  │  4. Presentation:          B5, B12          (namespaces, display)    │  │
+│  │                                                                       │  │
+│  │  ★ "Recommended Next" = first uncompleted in queue                   │  │
+│  └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Scenario-Specific Dashboard Behavior
+
+| Scenario | Dashboard Adaptation |
+|----------|----------------------|
+| **A: Instance-only (L0)** | Warning banner; all 12 decisions prominent; "Recommended: Start with B1" badge; no auto-resolved cards |
+| **B: +SKOS (L1)** | B12 auto-resolved; "SKOS detected" info; hierarchy preview available; 11 decisions remaining |
+| **C: +RDFS (L2)** | 5 auto-resolved shown collapsed; "Schema-First Mode" banner; 7 decisions highlighted; B7 recommended next |
+| **D: +OWL (L3)** | 7 auto-resolved; OWL limitations warning (C3); focused on B2, B4, B5; inverse properties auto-handled |
+| **E: Full (L4)** | 8 auto-resolved; SHACL validation available; "Validate before translate" prompt; minimal decisions |
+| **F: Schema-only** | "Schema Exploration Mode"; ontology tree view prominent; no instance decisions; "Add instance files" CTA |
+
+#### Irrelevance Detection
+
+Certain decisions become **irrelevant** based on input content:
+
+| Decision | Irrelevant When | Dashboard Behavior |
+|----------|-----------------|-------------------|
+| B4: Named Graphs | No named graphs in input | Grey out; show "Not applicable - no named graphs detected" |
+| B12: SKOS Concepts | No SKOS vocabulary in input | Grey out; show "Not applicable - no SKOS detected" |
+| B2: Collections | No `rdf:List`, `rdf:Bag`, `rdf:Seq` found | Grey out or hide completely |
+| B10: Inverse Props | No `owl:inverseOf` in input | Lower priority; note "No explicit inverses found" |
 
 ---
 
@@ -194,10 +324,73 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 
 | Notebook | Purpose | Trigger |
 |----------|---------|---------|
-| `nb_schema_analyzer` | Parse RDF, extract classes/properties/stats | On source selection |
+| `nb_schema_detector` | Detect schema level (0-4) and parse RDF formats | On source selection |
+| `nb_schema_analyzer` | Parse RDF, extract classes/properties/stats | After schema detection |
 | `nb_preview_generator` | Generate sample nodes/edges with current decisions | On preview request |
 | `nb_translator` | Full translation with all decisions applied | Pipeline execution |
 | `nb_graph_loader` | Load Delta tables into Fabric Graph | Pipeline execution |
+
+#### Schema Detection Logic (`nb_schema_detector`)
+
+```python
+# Pseudocode for progressive schema detection
+def detect_schema_level(rdf_files):
+    """
+    Analyze files to determine schema richness level (0-4).
+    Uses progressive detection: SHACL > OWL > RDFS > SKOS > Instance-only
+    
+    Returns schema level with associated metadata.
+    """
+    # Level indicators (checked highest-first)
+    level_checks = [
+        (4, ['sh:NodeShape', 'sh:property', 'sh:path']),           # SHACL
+        (3, ['owl:Class', 'owl:ObjectProperty', 'owl:Restriction']), # OWL
+        (2, ['rdfs:Class', 'rdfs:Property', 'rdfs:domain']),        # RDFS
+        (1, ['skos:ConceptScheme', 'skos:Concept', 'skos:broader']), # SKOS
+    ]
+    
+    # Parse all files with format auto-detection
+    combined_graph = Graph()
+    for file in rdf_files:
+        fmt = detect_format(file)  # From extension or content
+        combined_graph += parse_rdf(file, format=fmt)
+    
+    # Check levels highest-first
+    for level, indicators in level_checks:
+        for indicator in indicators:
+            if combined_graph.contains_predicate(indicator):
+                return build_level_result(level, combined_graph)
+    
+    # Level 0: Instance-only
+    return {
+        'level': 0,
+        'levelName': 'instance-only',
+        'confidence': 'low',
+        'warning': 'No schema detected - all 12 B-decisions require user input',
+        'autoResolvedDecisions': [],
+        'guidedDecisions': [],
+        'manualDecisions': ['B1','B2','B3','B4','B5','B6','B7','B8','B9','B10','B11','B12']
+    }
+
+def detect_format(file_path):
+    """Auto-detect RDF serialization format."""
+    ext_map = {
+        '.ttl': 'turtle', '.trig': 'trig',
+        '.nt': 'nt', '.nq': 'nquads',
+        '.jsonld': 'json-ld', '.json': 'json-ld',
+        '.rdf': 'xml', '.xml': 'xml'
+    }
+    ext = Path(file_path).suffix.lower()
+    return ext_map.get(ext, 'turtle')  # Default to Turtle
+
+LEVEL_AUTO_DECISIONS = {
+    4: ['B1', 'B6', 'B7', 'B8', 'B9', 'B10', 'B11', 'B12'],  # SHACL
+    3: ['B1', 'B6', 'B8', 'B9', 'B10', 'B11', 'B12'],        # OWL
+    2: ['B1', 'B6', 'B8', 'B11', 'B12'],                      # RDFS
+    1: ['B12'],                                               # SKOS
+    0: []                                                     # Instance-only
+}
+```
 
 ### 3.3 Pipelines
 
@@ -217,11 +410,39 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
   "source": {
     "workspace": "ws-ont_nen2660-dev-01",
     "lakehouse": "lh_nen2660data_dev_01",
-    "paths": ["Files/examples_nen2660/bridge_1.ttl"]
+    "paths": [
+      "Files/examples/IJsselbrug.ttl",
+      "Files/examples/Liggerbrug.ttl"
+    ],
+    "schemaFiles": [
+      "Files/normative/nen2660-rdfs.ttl",
+      "Files/normative/nen2660-owl.ttl"
+    ],
+    "formats": {
+      "detected": ["turtle", "turtle"],
+      "autoDetected": true
+    }
+  },
+  "schemaRichness": {
+    "level": 3,
+    "levelName": "OWL Ontology",
+    "confidence": "high",
+    "detectedAt": "2026-02-23T10:02:00Z",
+    "schemaLayers": {
+      "skos": true,
+      "rdfs": true,
+      "owl": true,
+      "shacl": false
+    },
+    "autoResolvedDecisions": ["B1", "B6", "B8", "B9", "B10", "B11", "B12"],
+    "guidedDecisions": ["B3", "B7"],
+    "manualDecisions": ["B2", "B4", "B5"]
   },
   "schemaAnalysis": {
     "classes": 42,
+    "classSource": "owl:Class + rdfs:Class",
     "properties": 87,
+    "propertySource": "rdfs:Property",
     "instances": 1234,
     "namedGraphs": 3,
     "lastAnalyzed": "2026-02-23T10:05:00Z"
@@ -229,19 +450,27 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
   "decisions": {
     "B1_classEncoding": {
       "choice": "nodeLabel",
-      "decidedBy": "user@example.com",
-      "decidedAt": "2026-02-23T11:00:00Z",
-      "notes": "Using labels for query optimization"
+      "autoResolved": true,
+      "reason": "rdfs:Class definitions found",
+      "overridden": false,
+      "decidedAt": "2026-02-23T10:02:00Z"
     },
     "B2_collections": null,
     "B3_owlShacl": null,
     "B4_namedGraphs": null,
     "B5_namespaces": {
       "choice": "prefixConvention",
+      "autoResolved": false,
       "decidedBy": "user@example.com",
       "decidedAt": "2026-02-23T11:15:00Z"
     },
-    "B6_inference": null,
+    "B6_inference": {
+      "choice": "useSubClassOf",
+      "autoResolved": true,
+      "reason": "rdfs:subClassOf hierarchy detected",
+      "overridden": false,
+      "decidedAt": "2026-02-23T10:02:00Z"
+    },
     "B7_naryPatterns": null,
     "B8_ontologyMapping": null,
     "B9_multiValuedProps": null,
@@ -263,7 +492,36 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 
 ## 4. Data Flow
 
-### 4.1 Analysis Flow
+### 4.1 Schema Detection Flow (First Step)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        SCHEMA DETECTION & ANALYSIS                           │
+│                                                                             │
+│  ┌─────────────┐    ┌─────────────────────────────────────────────────────┐ │
+│  │   Source    │    │              Schema Detector                         │ │
+│  │  RDF Files  │───▶│  ┌─────────────────────────────────────────────────┐ │ │
+│  │  (TTL,etc)  │    │  │ Scan for: rdfs:Class, rdfs:Property, owl:Class │ │ │
+│  └─────────────┘    │  │           rdfs:domain, rdfs:range, etc.         │ │ │
+│                     │  └─────────────────────────────────────────────────┘ │ │
+│                     └───────────────────┬─────────────────────────────────┘ │
+│                                         │                                   │
+│                           ┌─────────────┴─────────────┐                     │
+│                           │                           │                     │
+│                           ▼                           ▼                     │
+│                  ┌─────────────────┐        ┌─────────────────┐            │
+│                  │  SCHEMA-FIRST   │        │ INSTANCE-ONLY   │            │
+│                  │                 │        │                 │            │
+│                  │ ✅ RDFS found   │        │ ⚠️ No schema    │            │
+│                  │ • High confidence│       │ • Infer types   │            │
+│                  │ • 5 auto-decisions│      │ • 12 decisions  │            │
+│                  │ • Direct mapping │       │ • Show warning  │            │
+│                  └─────────────────┘        └─────────────────┘            │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Schema Analysis Flow
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -273,7 +531,7 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
-### 4.2 Preview Flow
+### 4.3 Preview Flow
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
@@ -316,16 +574,29 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 
 ## 5. Technology Stack
 
-### 5.1 Frontend (Fabric App)
+### 5.1 Frontend (Shared Codebase)
 
 | Component | Technology | Notes |
 |-----------|------------|-------|
-| Framework | React | Fabric App standard |
-| UI Components | Fluent UI | Microsoft design system |
-| State Management | React Context / Zustand | Project state, decisions |
-| API Client | Fabric SDK / REST | Notebook execution, data read |
+| Framework | React 18+ | Shared between web and desktop |
+| UI Components | Fluent UI v9 | Microsoft design system |
+| Graph Visualization | React Flow | Interactive node/edge preview |
+| State Management | Zustand | Project state, decisions |
+| API Client | Fabric REST API | Notebook execution, data access |
+| Auth | MSAL.js | Entra ID SSO (web) / Device code (desktop) |
 
-### 5.2 Backend (Fabric)
+### 5.2 Deployment Targets
+
+| Target | Technology | Distribution |
+|--------|------------|---------------|
+| Web App | Azure Static Web App | `azd up` or manual deploy |
+| Desktop (Windows) | Electron | `.exe` installer via GitHub Releases |
+| Desktop (macOS) | Electron | `.dmg` via GitHub Releases |
+| Desktop (Linux) | Electron | `.AppImage` via GitHub Releases |
+
+> **Note:** Both deployment targets use the same React codebase. Electron wraps the web app for desktop distribution.
+
+### 5.3 Backend (Fabric)
 
 | Component | Technology | Notes |
 |-----------|------------|-------|
@@ -359,7 +630,8 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 | Notebook | `nb_graph_loader` | Load to Fabric Graph |
 | Pipeline | `pl_full_translation` | End-to-end translation |
 | Pipeline | `pl_preview_only` | Preview generation only |
-| Fabric App | `app_rdf_translator` | User interface |
+
+> **Note:** The user interface (web app / desktop app) runs **outside** Fabric - see Section 5 for deployment.
 
 ### 6.2 Source Workspace: ws-ont_nen2660-dev-01 (existing)
 
@@ -408,10 +680,15 @@ This application translates RDF (Semantic Web) data into Microsoft Fabric Graph 
 
 | # | Decision | Choice | Rationale | Date |
 |---|----------|--------|-----------|------|
-| 1 | UI Technology | Fabric App (React) | Full custom UX for decision-making | 2026-02-23 |
+| 1 | UI Technology | React (external app) | Full custom UX for decision-making | 2026-02-23 |
 | 2 | Decision Flow | Dashboard overview | Users prefer seeing all decisions at once | 2026-02-23 |
 | 3 | Preview | Essential | Must-have to validate before commit | 2026-02-23 |
 | 4 | Project Model | Multi-project | Reuse decisions across similar sources | 2026-02-23 |
 | 5 | Execution | Both app + manual | Flexibility for different workflows | 2026-02-23 |
 | 6 | Target Workspace | ws-rdf_translation-dev-01 | Dedicated workspace for this application | 2026-02-23 |
 | 7 | Source Data | ws-ont_nen2660-dev-01 | NEN 2660 test data already available | 2026-02-23 |
+| 8 | Schema Detection | 5 levels (0-4) | Graduated automation based on richness | 2026-02-24 |
+| 9 | Distribution | GitHub (open source) | External tenants can install in their env | 2026-02-24 |
+| 10 | Deployment | Web + Desktop (same code) | Flexibility: Azure SWA or Electron | 2026-02-24 |
+| 11 | Graph Viz | React Flow | Interactive RDF→LPG preview | 2026-02-24 |
+| 12 | Workspace | Customer chooses | No auto-create, respect governance | 2026-02-24 |

@@ -30,7 +30,7 @@ The challenge is fundamental: RDF (Resource Description Framework) from the Sema
 
 ### 1.2 Business Objectives
 
-- [x] **Generic Tool**: Build a reusable application (not a one-time ETL) that can translate *any* RDF dataset to Fabric Graph
+- [x] **Generic Tool**: Build a reusable application (not a one-time ETL) that can translate *any* RDF dataset to Fabric Graph, regardless of domain or ontology (DBpedia, schema.org, FIBO, custom ontologies, etc.)
 - [ ] **Decision Support**: Guide users through the modeling decisions required for RDF → LPG translation
 - [ ] **Automated Import**: Once decisions are made, automatically transform and load data into Fabric Ontology/Graph
 - [ ] **Documentation**: Capture decisions and known limitations for each translation project
@@ -79,7 +79,91 @@ The application must handle two categories of RDF files:
 | N-Triples | `.nt` | Line-based, simple |
 | N-Quads | `.nq` | N-Triples + named graphs |
 
-### 2.2 Translation Decision Framework
+### 2.2 Schema Richness Levels
+
+**Critical:** The quality and automation of RDF → Fabric translation depends heavily on schema availability. The application detects **five levels** of schema richness, each enabling more auto-resolved decisions.
+
+#### Level Overview
+
+| Level | Available | Detection Criterion | User Decisions |
+|-------|-----------|---------------------|----------------|
+| **0** | Instance data only | No schema predicates found | All 12 B-decisions |
+| **1** | SKOS vocabulary | `skos:ConceptScheme`, `skos:Concept` | 11 B-decisions |
+| **2** | RDFS schema | `rdfs:Class`, `rdfs:Property` | 7 B-decisions |
+| **3** | OWL ontology | `owl:Class`, `owl:ObjectProperty` | 5 B-decisions |
+| **4** | SHACL shapes | `sh:NodeShape`, `sh:property` | 3-4 B-decisions |
+
+> **See:** [data-sources.md](data-sources.md) Section 3 for detailed level definitions and B-decision impact matrix.
+
+#### What Each Level Provides
+
+| Level | Node Types | Edge Types | Datatypes | Validation |
+|-------|------------|------------|-----------|------------|
+| 0 | Inferred from `rdf:type` | Inferred from predicates | From literals | None |
+| 1 | From `skos:Concept` | Inferred | From literals | None |
+| 2 | From `rdfs:Class` | From `rdfs:Property` + range | From `rdfs:range` | None |
+| 3 | From `owl:Class` | From `owl:ObjectProperty` | Full type system | Logical (partial) |
+| 4 | From SHACL shapes | From `sh:path` | From `sh:datatype` | Full SHACL |
+
+#### Level 0 Guidance (Instance-Only Mode)
+
+When schema level is 0, the application MUST:
+1. **Show warning**: "No schema detected - translation based on instance patterns"
+2. **Display confidence scores** for inferred classes/properties
+3. **Allow manual additions**: User can correct/add schema elements
+4. **Recommend schema upload** if available elsewhere
+5. **Use conservative defaults**: Err on explicit modeling
+
+**Instance-Only Limitations:**
+- Classes with no instances are invisible
+- Property domains/ranges are guessed from usage
+- No guarantee of schema completeness
+- All 12 B-category decisions require user input
+- Higher risk of incorrect mappings
+
+#### Progressive Schema Detection Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                     PROGRESSIVE SCHEMA DETECTION                     │
+│                                                                     │
+│  User uploads files                                                  │
+│         │                                                           │
+│         ▼                                                           │
+│  ┌─────────────────┐                                                │
+│  │ Parse all files │                                                │
+│  │ Scan predicates │                                                │
+│  └────────┬────────┘                                                │
+│           │                                                         │
+│           ▼                                                         │
+│  ┌────────────────────────┐    YES    ┌─────────────────┐          │
+│  │ sh:NodeShape found?    │──────────►│   LEVEL 4       │          │
+│  └──────────┬─────────────┘           │ Full SHACL      │          │
+│             │ NO                      └─────────────────┘          │
+│             ▼                                                       │
+│  ┌────────────────────────┐    YES    ┌─────────────────┐          │
+│  │ owl:Class found?       │──────────►│   LEVEL 3       │          │
+│  └──────────┬─────────────┘           │ OWL Ontology    │          │
+│             │ NO                      └─────────────────┘          │
+│             ▼                                                       │
+│  ┌────────────────────────┐    YES    ┌─────────────────┐          │
+│  │ rdfs:Class found?      │──────────►│   LEVEL 2       │          │
+│  └──────────┬─────────────┘           │ RDFS Schema     │          │
+│             │ NO                      └─────────────────┘          │
+│             ▼                                                       │
+│  ┌────────────────────────┐    YES    ┌─────────────────┐          │
+│  │ skos:Concept found?    │──────────►│   LEVEL 1       │          │
+│  └──────────┬─────────────┘           │ SKOS Vocab      │          │
+│             │ NO                      └─────────────────┘          │
+│             ▼                                                       │
+│  ┌─────────────────┐                                                │
+│  │   LEVEL 0       │                                                │
+│  │ Instance-only   │                                                │
+│  └─────────────────┘                                                │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.3 Translation Decision Framework
 
 Translation from RDF → LPG requires handling three categories of differences:
 
@@ -99,28 +183,47 @@ These can be handled automatically by the application without human intervention
 
 #### Category B: Human Decision Required (Ambiguous - Multiple Valid Options)
 
-The application must guide users through these decisions with sufficient context:
+The application must guide users through these decisions with sufficient context.
 
-| ID | Decision | Options | Guidance to Provide |
-|----|----------|---------|---------------------|
-| B1 | **Class Membership Encoding** | • Node label<br>• Property `type`<br>• Type-node + edge | Explain: Labels are query-optimized; properties allow multiple types; type-nodes enable type hierarchies |
-| B2 | **RDF Containers/Collections** | • Array property<br>• Linked list nodes<br>• Indexed edges | Show examples of each; arrays are simpler but lose order semantics |
-| B3 | **OWL/SHACL Constraints** | • Encode as schema<br>• Store as metadata<br>• Ignore at runtime | Fabric Ontology can capture some; full OWL cannot be enforced |
-| B4 | **Named Graphs** | • Separate subgraphs<br>• Tags on edges<br>• Property `graph` | Important for provenance; show data volume implications |
-| B5 | **Namespace Strategy** | • Prefix convention<br>• Full name property<br>• Tagging system | Show examples: `schema:Person` vs `Person` vs tag `schema` |
-| B6 | **Inference Materialization** | • Precompute all<br>• Selected predicates only<br>• None (asserted only)<br>• Store with provenance | Critical: Explain storage cost vs query simplicity trade-off |
-| B7 | **Complex N-ary Patterns** | • Event/measurement node<br>• Edge properties<br>• Intermediate nodes | Show common patterns (observations, qualified relations) |
-| B8 | **Fabric Ontology Mapping** | • Full schema encoding<br>• Core entities only<br>• Metadata documentation | Depends on Fabric Ontology capabilities at time of use |
-| B9 | **Multi-valued Properties** | • Array property<br>• Multiple edges<br>• First value only | RDF naturally supports; LPG arrays may have query limitations |
-| B10 | **Language Tags** | • Separate properties per lang<br>• Nested object<br>• Ignore | Show: `label_en`, `label_nl` vs `label: {en: "...", nl: "..."}` |
-| B11 | **Inverse Properties** | • Keep both directions<br>• One direction + query<br>• Materialize missing | Storage vs query trade-off |
-| B12 | **SKOS Concepts** | • Hierarchical edges<br>• Flattened labels<br>• Tree structure | Common for taxonomies; show visualization implications |
+**Schema Impact Legend:**
+- 🟢 **Auto with RDFS**: Decision can be auto-resolved when schema is available
+- 🟡 **Guided with RDFS**: Schema provides useful hints, but user still decides
+- ⚪ **Schema-independent**: Decision is the same regardless of schema availability
+
+| ID | Decision | Options | Schema Impact | Guidance to Provide |
+|----|----------|---------|---------------|---------------------|
+| B1 | **Class Membership Encoding** | • Node label<br>• Property `type`<br>• Type-node + edge | 🟢 Auto: `rdfs:Class` → labels | Explain: Labels are query-optimized; properties allow multiple types |
+| B2 | **RDF Containers/Collections** | • Array property<br>• Linked list nodes<br>• Indexed edges | ⚪ Independent | Show examples of each; arrays are simpler but lose order semantics |
+| B3 | **OWL/SHACL Constraints** | • Encode as schema<br>• Store as metadata<br>• Ignore at runtime | 🟡 Guided: constraints visible | Fabric Ontology can capture some; full OWL cannot be enforced |
+| B4 | **Named Graphs** | • Separate subgraphs<br>• Tags on edges<br>• Property `graph` | ⚪ Independent | Important for provenance; show data volume implications |
+| B5 | **Namespace Strategy** | • Prefix convention<br>• Full name property<br>• Tagging system | 🟡 Guided: prefixes from schema | Show examples: `schema:Person` vs `Person` vs tag `schema` |
+| B6 | **Inference Materialization** | • Precompute all<br>• Selected predicates only<br>• None (asserted only) | 🟢 Auto: use `rdfs:subClassOf` | Critical: Explain storage cost vs query simplicity trade-off |
+| B7 | **Complex N-ary Patterns** | • Event/measurement node<br>• Edge properties<br>• Intermediate nodes | 🟡 Guided: patterns in schema | Show common patterns (observations, qualified relations) |
+| B8 | **Fabric Ontology Mapping** | • Full schema encoding<br>• Core entities only<br>• Metadata documentation | 🟢 Auto: RDFS → Ontology | Direct mapping from rdfs:Class/Property to Fabric Ontology |
+| B9 | **Multi-valued Properties** | • Array property<br>• Multiple edges<br>• First value only | 🟡 Guided: `rdfs:range` hints | RDF naturally supports; LPG arrays may have query limitations |
+| B10 | **Language Tags** | • Separate properties per lang<br>• Nested object<br>• Ignore | 🟡 Guided: `rdfs:label` patterns | Show: `label_en`, `label_nl` vs `label: {en: "...", nl: "..."}` |
+| B11 | **Inverse Properties** | • Keep both directions<br>• One direction + query<br>• Materialize missing | 🟢 Auto: `owl:inverseOf` | Storage vs query trade-off |
+| B12 | **SKOS Concepts** | • Hierarchical edges<br>• Flattened labels<br>• Tree structure | 🟢 Auto: SKOS structure known | Common for taxonomies; show visualization implications |
+
+**Summary: Schema Level Impact on Decisions**
+
+| Schema Level | Auto-Resolved | Guided/Hints | Manual | Example |
+|--------------|---------------|--------------|--------|---------|
+| **Level 0** (Instance-only) | 0 | 0 | 12 | Ad-hoc data export |
+| **Level 1** (SKOS) | 1 (B12) | 1 (B11) | 10 | Vocabulary/taxonomy |
+| **Level 2** (RDFS) | 5 (B1,B6,B8,B11,B12) | 2 (B7,B9) | 5 | Standard semantic data |
+| **Level 3** (OWL) | 7 (+B9,B10) | 2 (B3,B7) | 3 | Rich ontology |
+| **Level 4** (SHACL) | 8 (+B7) | 1 (B3) | 3 | Complete validation |
+
+> **See:** [data-sources.md](data-sources.md) Section 3.3 for full B-decision impact matrix by level.
 
 **Requirement: For each B-category decision, the application MUST provide:**
 1. Clear explanation of the trade-offs
-2. Visual example of each option
+2. Visual example of each option (from actual source data)
 3. Recommendation based on common use cases
-4. Ability to preview impact before committing
+4. **Schema level indicator** showing if auto-resolved, guided, or manual
+5. Ability to preview impact before committing
+6. Option to override auto-resolved decisions if needed
 
 #### Category C: Not Resolvable (Fundamental Semantic Gaps)
 
@@ -171,18 +274,92 @@ These differences CANNOT be resolved through translation. The application must c
 ## 3. Non-Functional Requirements
 
 ### 3.1 Performance
-- Expected data volume: Variable (test set: 4 TTL example files)
-- Processing time requirements: TBD based on data size
+
+**Data Volume Categories:**
+| Category | Triple Count | Example |
+|----------|--------------|----------|
+| Small | < 10,000 | Test files, single domain |
+| Medium | 10,000 - 1,000,000 | Department-level data |
+| Large | > 1,000,000 | Enterprise-wide data |
+
+**Processing Time Targets:**
+| Operation | Small | Medium | Large |
+|-----------|-------|--------|-------|
+| Schema detection | < 30 sec | < 30 sec | < 60 sec |
+| RDF parsing & analysis | < 2 min | < 15 min | < 60 min |
+| Translation to Delta | < 2 min | < 15 min | < 60 min |
+| Fabric Graph import | Fabric API-dependent | Fabric API-dependent | Fabric API-dependent |
+
+> **Note:** Fabric Graph import timing is outside our control - depends on Microsoft's API performance.
+
 - Query response time: N/A (batch processing)
 
 ### 3.2 Security & Compliance
-- Data classification: Depends on source data
-- Access control requirements: Fabric workspace security
-- Compliance requirements: TBD
+
+**Data Classification:**
+- Source data classification: User responsibility (app doesn't auto-classify PII)
+- Intermediate storage: Inherits Fabric workspace security
+
+**Access Control:**
+- Fabric workspace RBAC (Admin/Member/Contributor/Viewer)
+- No additional role model in application
+
+**Compliance:**
+- Data residency: Inherits from Fabric tenant configuration
+- Audit logging: Fabric Activity Log + notebook run history (built-in)
+- Data retention: Follows Fabric workspace defaults
+- GDPR/privacy: User responsibility to classify and handle PII in source data
 
 ### 3.3 Availability
 - Uptime requirements: N/A (tool, not service)
 - Disaster recovery: Git-based, Fabric workspace backup
+
+### 3.4 Distribution & Deployment
+
+**Target Audience:**
+- External organizations (different Entra tenants)
+- Users install in their own environment
+- No shared infrastructure dependency
+
+**Distribution Method:**
+| Component | Distribution | Location |
+|-----------|--------------|----------|
+| Fabric Backend | GitHub (clone/fork) | Import to user's Fabric via Git integration |
+| Web App | `azd up` template | Deploy to user's Azure subscription |
+| Desktop App | GitHub Releases | Download installer (`.exe` / `.dmg` / `.AppImage`) |
+| Documentation | GitHub | Included in repo |
+
+**Workspace Strategy:**
+> **The app does NOT create workspaces.** Customer chooses where to install.
+
+| Option | Scenario |
+|--------|----------|
+| New dedicated workspace | Clean isolation, recommended for production use |
+| Existing workspace | Add tool to current data engineering workspace |
+
+On first app launch, customer configures their Fabric workspace URL. The app stores this in local settings.
+
+**User Installation Options:**
+
+*Option A: Web App*
+1. Clone/fork GitHub repository
+2. Create or choose a Fabric workspace
+3. Connect workspace to GitHub (Settings → Git integration) → auto-imports notebooks/pipelines
+4. Run `azd up` → deploys web app to their Azure
+5. Open browser, login with Entra SSO
+6. Configure Fabric workspace URL on first run
+
+*Option B: Desktop App (Simpler)*
+1. Create or choose a Fabric workspace
+2. Fork repo and connect workspace to GitHub → auto-imports notebooks/pipelines
+3. Download installer from GitHub Releases
+4. Run app, login with Entra device code flow
+5. Configure Fabric workspace URL on first run
+
+**Cross-Tenant Authentication:**
+- Web App: Entra ID SSO (redirect flow)
+- Desktop App: Entra ID device code flow (works across tenants)
+- Both use delegated permissions to call Fabric REST API
 
 ---
 
@@ -194,9 +371,11 @@ These differences CANNOT be resolved through translation. The application must c
 - [x] Data Pipelines - Orchestrate the translation workflow
 - [ ] Data Warehouse - Not needed
 - [ ] Real-Time Intelligence - Not needed
-- [x] Power BI Reports / Fabric App - Visual interface for decision-making
+- [ ] Power BI Reports - Not needed (UI is external app)
 - [x] Fabric Ontology - Target ontology definition
 - [x] Fabric Graph - Target graph database
+
+> **Note:** The user interface runs **outside** Fabric as either a web app (Azure Static Web App) or desktop app (Electron). See Section 3.4 for distribution details.
 
 ### 4.2 Fabric Graph Data Requirements (from documentation)
 
@@ -277,18 +456,103 @@ These differences CANNOT be resolved through translation. The application must c
 | UX2 | Each decision has explanation panel with trade-offs | Must |
 | UX3 | Each decision shows visual examples from loaded data | Must |
 | UX4 | Preview panel shows sample translated nodes/edges | Must |
-| UX5 | Decisions can be made in any order | Must |
+| UX5 | Decisions can be made in any order (non-linear) | Must |
 | UX6 | Project saves all decisions for re-use | Must |
 | UX7 | A-category auto-decisions shown as read-only info | Should |
 | UX8 | C-category limitations shown as warnings | Should |
 | UX9 | Export decisions as JSON config | Should |
 | UX10 | Import decisions from previous project | Nice |
+| **UX11** | **Adaptive guidance sequence based on input scenario** | **Must** |
+| **UX12** | **Highlight recommended next decision based on context** | **Should** |
+| **UX13** | **Skip/hide irrelevant decisions for current scenario** | **Should** |
 
-### 4.5 Development Environment
-- Fabric Workspace(s): TBD (Dev / Test / Prod)
-- Git Repository: This repo (`fabric_rdf_translation`)
-- CI/CD: TBD
-- Fabric Ontology/Graph: Preview (targeting GA compatibility)
+### 4.6 Adaptive Guidance Sequencing
+
+The application must intelligently adapt its guidance flow based on what files the user provides. This is NOT a fixed wizard - users can still navigate freely - but the app **recommends** an optimal sequence and **highlights** what to focus on.
+
+#### Scenario-Specific Guidance Flows
+
+| Scenario | Input Files | Guidance Behavior |
+|----------|-------------|-------------------|
+| **A** | Instances only (Level 0) | Show all 12 decisions; **recommend** starting with B1 (Class Encoding) → B6 (Inference) → B8 (Ontology); warn about low confidence |
+| **B** | Instances + SKOS (Level 1) | Auto-resolve B12 (SKOS); **recommend** B1 → B6 → B8; show SKOS hierarchy in preview |
+| **C** | Instances + RDFS (Level 2) | Auto-resolve B1, B6, B8, B11, B12; **highlight** remaining 7 decisions; guide B7 (Datatypes) first |
+| **D** | Instances + OWL (Level 3) | Auto-resolve 7 decisions; **focus** on B2, B4, B5; show OWL semantics that won't transfer |
+| **E** | Full dataset (Level 4) | Auto-resolve 8 decisions; minimal guidance; **validate** with SHACL before translation |
+| **F** | Schema only (no instances) | **Schema exploration mode**: Show ontology structure, preview empty Graph skeleton, no instance decisions needed |
+
+#### Adaptive Guidance Logic
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ADAPTIVE GUIDANCE FLOW                                │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. ANALYZE INPUT                                                           │
+│     ├─► Detect schema level (0-4)                                           │
+│     ├─► Identify file types (schema vs instance)                            │
+│     └─► Check for special patterns (named graphs, collections, etc.)        │
+│                                                                             │
+│  2. CATEGORIZE DECISIONS                                                    │
+│     ├─► Auto-resolved: Mark complete, show as read-only (overridable)      │
+│     ├─► Guided: Schema provides hints, recommend specific option            │
+│     ├─► Manual: No hints, require user choice                               │
+│     └─► Irrelevant: Hide or grey out (e.g., B4 if no named graphs)         │
+│                                                                             │
+│  3. DETERMINE PRIORITY ORDER                                                │
+│     ├─► High-impact decisions first (B1, B6, B8 affect everything)          │
+│     ├─► Dependent decisions after prerequisites                             │
+│     └─► Low-impact / cosmetic decisions last (B5, B10)                      │
+│                                                                             │
+│  4. PRESENT DASHBOARD                                                       │
+│     ├─► "Recommended next" badge on priority decision                       │
+│     ├─► Progress bar: "X of Y decisions remaining"                          │
+│     ├─► Completion blockers: "Cannot preview until B1, B6 decided"          │
+│     └─► All decisions still accessible (non-linear navigation)              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Decision Dependencies
+
+Some decisions have logical dependencies:
+
+| Decision | Depends On | Reason |
+|----------|------------|--------|
+| B8 (Ontology Mapping) | B1 (Class Encoding) | Ontology structure follows class strategy |
+| B9 (Multi-valued Props) | B6 (Inference) | Affects whether inferred properties are multi-valued |
+| B7 (Datatype Coercion) | B8 (Ontology Mapping) | Datatypes must align with ontology |
+| B4 (Named Graphs) | - | Independent, but irrelevant if no named graphs in input |
+| B12 (SKOS Concepts) | - | Independent, but irrelevant if no SKOS in input |
+
+### 4.7 Development Environment
+
+**Fabric Workspaces:**
+| Environment | Workspace Name | Purpose |
+|-------------|----------------|----------|
+| Development | `ws-rdf_translation-dev-01` | Active development and testing |
+| Test | `ws-rdf_translation-test-01` | Integration testing before prod |
+| Production | `ws-rdf_translation-prod-01` | End-user facing deployment |
+
+**Git Repository:**
+- Repository: This repo (`fabric_rdf_translation`)
+- Branching Strategy: `main` → `develop` → `feature/*` branches
+- PR workflow: Feature branches merge to `develop`, `develop` merges to `main`
+
+**CI/CD Strategy:**
+| Stage | Tool | Trigger |
+|-------|------|----------|
+| Linting | GitHub Actions | On PR to `develop` |
+| Unit Tests | GitHub Actions (pytest) | On PR to `develop` |
+| Deploy to Dev | Fabric Git integration | On merge to `develop` |
+| Deploy to Test | Fabric Deployment Pipeline | Manual trigger |
+| Deploy to Prod | Fabric Deployment Pipeline | Manual trigger + approval |
+
+> **Note:** See `.github/workflows/` for GitHub Actions configuration.
+
+**Fabric Ontology/Graph:**
+- Status: Preview (targeting GA compatibility)
+- Risk: API/features may change - see Open Questions section
 
 ---
 
