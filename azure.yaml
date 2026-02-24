@@ -22,7 +22,7 @@ infra:
 hooks:
   preprovision:
     shell: sh
-    run: echo "Deploying RDF Translator Web App..."
+    run: echo "Deploying RDF2Fabric Web App..."
   
   postprovision:
     shell: sh

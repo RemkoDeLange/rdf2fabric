@@ -154,6 +154,32 @@ fabric_rdf_translation/
   - Flexible: use dedicated workspace or add to existing
 - **Rationale:** Respect customer's Fabric environment; avoid permission escalation; support various governance models
 
+### 13. RDF to LPG Translation Layer ✅
+- **Decision:** Build translation layer because Fabric Graph does NOT support RDF natively
+- **Finding:** Fabric Graph uses **Labeled Property Graph (LPG)** model, not RDF triples
+- **Translation Mapping:**
+  | RDF/OWL Concept | LPG Equivalent |
+  |-----------------|----------------|
+  | `owl:Class` | Node Type (label) |
+  | `owl:DatatypeProperty` | Node Property |
+  | `owl:ObjectProperty` | Edge Type |
+  | `rdfs:domain` | Edge source node type |
+  | `rdfs:range` | Edge target / property type |
+  | `rdf:type` | Node label assignment |
+- **Workflow:**
+  1. Parse RDF with rdflib (Python)
+  2. Validate with pySHACL (optional)
+  3. Translate to LPG structure
+  4. Write to Lakehouse as Delta tables
+  5. Generate Graph Model JSON definition
+  6. Create/update Fabric Graph via REST API
+- **Implications:**
+  - No native OWL, RDFS, or SHACL support in Fabric
+  - Schema evolution not supported (requires new Graph Model version)
+  - Service principal auth not available (preview limitation)
+- **Full details:** [research-spike-results.md](research-spike-results.md)
+- **Rationale:** Fabric Graph is the target; RDF is the source; translation layer bridges the gap
+
 ---
 
 ## Current Status
@@ -183,10 +209,10 @@ fabric_rdf_translation/
 
 **Pending (Next Phase):**
 - [x] Reorganize src/ folder structure for new layout
+- [x] **Complete research spike (Fabric Ontology API)** → See [research-spike-results.md](research-spike-results.md)
 - [ ] Create development Fabric workspace (`ws-rdf_translation-dev-01`)
-- [ ] Complete research spike (Fabric Ontology API)
 - [ ] Scaffold React app with Electron support
-- [ ] Prototype notebooks
+- [ ] Prototype notebooks (starting with RDF → Delta tables)
 
 ---
 
@@ -198,6 +224,28 @@ See **Session Archive** section below for dated session logs.
 ---
 
 ## Session Archive
+
+### Session: 2026-02-24 (continued) - Research Spike Completion
+**Topics:** Fabric Graph and Ontology API research, RDF support investigation
+**Critical Finding:** Fabric Graph does NOT support RDF natively - uses Labeled Property Graph (LPG)
+
+**Research Results (S1-S6):**
+- S1: Graph Model REST API documented with JSON definition format
+- S2: OWL NOT supported - must translate owl:Class → Node Types, owl:ObjectProperty → Edges
+- S3: SHACL NOT supported - must validate with pySHACL before loading
+- S4: Schema evolution NOT supported - requires new Graph Model version
+- S5: Import timing estimated (tables for performance data)
+- S6: Fabric Graph still in public preview (no GA date announced)
+
+**Architecture Impact:**
+- Must build RDF → LPG translation layer
+- Pipeline: Parse RDF → Translate to LPG → Write Delta tables → Generate Graph Model JSON → Create via REST API
+- No native OWL/RDFS reasoning in Fabric
+
+**Outputs:**
+- Created [research-spike-results.md](research-spike-results.md) with full findings
+- Added Decision #13: RDF to LPG Translation Layer
+- Updated project-context.md with completed research status
 
 ### Session: 2026-02-24 (continued) - Customer Workspace Choice
 **Topics:** Fabric workspace strategy for external users
@@ -328,18 +376,31 @@ See **Session Archive** section below for dated session logs.
 | 1.4 | Validate NEN 2660 test files exist and structure | ⬜ | Confirm expected folders |
 | 1.5 | Enable Git integration for workspace | ⬜ | Connect to this repo |
 
-### Phase 2: Research Spike - Fabric Ontology API
+### Phase 2: Research Spike - Fabric Ontology API ✅ COMPLETED
 
 > **Purpose:** Resolve blocking unknowns about Fabric Ontology and Graph capabilities before implementation.
 
-| # | Task | Goal | Deliverable |
-|---|------|------|-------------|
-| S1 | Explore Fabric Ontology API format | Determine JSON structure for ontology import | Document API schema or sample payload |
-| S2 | Test OWL subset support | Which OWL constructs work? (`owl:Class`, restrictions, unions) | Compatibility matrix |
-| S3 | Test SHACL support | Are `NodeShape`/`PropertyShape` supported? | Yes/No + workarounds |
-| S4 | Schema evolution experiment | What happens when ontology changes? Re-import? Versioning? | Document limitations + strategy |
-| S5 | Fabric Graph import timing | Benchmark import for various ontology sizes | Performance baseline |
-| S6 | Fabric Graph GA timeline check | Review MS docs/roadmap for preview→GA changes | Risk assessment note |
+| # | Task | Goal | Status |
+|---|------|------|--------|
+| S1 | Explore Fabric Ontology API format | Determine JSON structure for ontology import | ✅ Done |
+| S2 | Test OWL subset support | Which OWL constructs work? | ✅ Done - NOT SUPPORTED |
+| S3 | Test SHACL support | Are `NodeShape`/`PropertyShape` supported? | ✅ Done - NOT SUPPORTED |
+| S4 | Schema evolution experiment | What happens when ontology changes? | ✅ Done - NOT SUPPORTED |
+| S5 | Fabric Graph import timing | Benchmark import for various sizes | ✅ Estimated |
+| S6 | Fabric Graph GA timeline check | Review MS docs/roadmap | ✅ Still Preview |
+
+#### Critical Finding (Decision #13)
+
+**Fabric Graph does NOT support RDF directly.** It uses the **Labeled Property Graph (LPG)** model.
+
+**Implications:**
+- We must build an **RDF → LPG translation layer**
+- OWL classes → Node Types (labels)
+- OWL datatype properties → Node properties
+- OWL object properties → Edge types
+- SHACL validation must happen **before** loading into Fabric
+
+**Full details:** See [research-spike-results.md](research-spike-results.md)
 
 ### Phase 3: Implementation
 | # | Task | Status | Notes |

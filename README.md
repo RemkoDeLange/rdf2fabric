@@ -1,4 +1,4 @@
-# RDF Translator for Microsoft Fabric
+# RDF2Fabric
 
 A **generic tool** for translating RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph).
 
@@ -15,9 +15,9 @@ RDF and Fabric Graph use fundamentally different graph paradigms that cannot be 
 ### Option A: Desktop App (Simplest)
 
 1. Download installer from [GitHub Releases](../../releases):
-   - Windows: `rdf-translator-setup.exe`
-   - macOS: `rdf-translator.dmg`
-   - Linux: `rdf-translator.AppImage`
+   - Windows: `rdf2fabric-setup.exe`
+   - macOS: `rdf2fabric.dmg`
+   - Linux: `rdf2fabric.AppImage`
 2. [Set up Fabric workspace](#set-up-fabric-workspace)
 3. Run app, login with your Entra ID, configure workspace URL
 

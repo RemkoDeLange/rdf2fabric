@@ -31,7 +31,7 @@
   },
   "build": {
     "appId": "com.rdf-translator",
-    "productName": "RDF Translator",
+    "productName": "RDF2Fabric",
     "directories": {
       "output": "dist-electron"
     },

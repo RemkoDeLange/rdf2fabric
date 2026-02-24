@@ -1,4 +1,4 @@
-// Azure Static Web App infrastructure for RDF Translator
+// Azure Static Web App infrastructure for RDF2Fabric
 // Deploy with: azd up
 
 targetScope = 'subscription'

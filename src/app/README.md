@@ -1,4 +1,4 @@
-# RDF Translator App
+# RDF2Fabric App
 
 This folder contains the shared React application that can be deployed as:
 - **Web App** → Azure Static Web App (via `azd up`)
