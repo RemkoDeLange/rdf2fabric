@@ -49,9 +49,17 @@ fabric/
 
 ## Dependencies
 
-Notebooks require:
-- `rdflib` - RDF parsing library (install via `%pip install rdflib`)
+Notebooks can use either Scala or Python (or both):
+
+**Scala (preferred for RDF parsing):**
+- Apache Jena libraries (for enterprise-grade RDF parsing)
+- Included in Spark runtime or add via Maven coordinates
+
+**Python (for orchestration):**
+- `rdflib` - RDF parsing (install via `%pip install rdflib`)
 - PySpark runtime (provided by Fabric)
+
+> **Note:** Mix Scala and Python notebooks as needed. Use Scala for heavy RDF parsing with Jena, Python for orchestration and Fabric API integration.
 
 ## API
 

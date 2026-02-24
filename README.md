@@ -63,7 +63,7 @@ fabric_rdf_translation/
 | Component | Technology |
 |-----------|------------|
 | UI | React + Fluent UI + React Flow (graph viz) |
-| Backend | PySpark notebooks + rdflib |
+| Backend | Spark notebooks (Scala + Python), Apache Jena for RDF parsing |
 | Storage | Delta Lake (Lakehouse) |
 | Target | Fabric Ontology + Fabric Graph |
 | Auth | Entra ID (SSO / device code) |

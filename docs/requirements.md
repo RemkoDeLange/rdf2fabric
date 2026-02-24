@@ -407,15 +407,18 @@ On first app launch, customer configures their Fabric workspace URL. The app sto
 
 | Library | Language | Formats Supported | Spark Compatible | Notes |
 |---------|----------|-------------------|------------------|-------|
-| **rdflib** | Python | Turtle, RDF/XML, N-Triples, JSON-LD, TriG | ✅ Yes (driver) | Most common Python library |
-| **Apache Jena** | Java/Scala | All RDF formats | ✅ Yes | Full-featured, enterprise-grade |
+| **Apache Jena** | Java/Scala | All RDF formats (Turtle, RDF/XML, N-Triples, N-Quads, JSON-LD, TriG, TriX, RDF/JSON, etc.) | ✅ Yes (native) | Enterprise-grade, widest format support, SPARQL engine |
+| **rdflib** | Python | Turtle, RDF/XML, N-Triples, JSON-LD, TriG | ✅ Yes (driver) | Python ecosystem, good for prototyping |
 | **Oxigraph** | Rust/Python | Turtle, N-Triples, RDF/XML | ✅ Yes | Fast, modern |
-| **json-ld** | Python | JSON-LD only | ✅ Yes | Specialized for JSON-LD |
 
 **Recommended Approach:**
-1. Use `rdflib` for initial parsing (broad format support)
-2. Convert to Spark DataFrame for transformations
-3. Write to Delta tables for Fabric Graph consumption
+1. Use **Apache Jena** (Scala) for RDF parsing - widest format support, enterprise-grade
+2. Use Python notebooks for orchestration and Fabric API integration
+3. Mix Scala and Python notebooks as needed (Fabric supports both)
+4. Convert to Spark DataFrame for transformations
+5. Write to Delta tables for Fabric Graph consumption
+
+> **Note:** Notebooks can be written in Python, Scala, or a mix - choose the best tool for each task. Apache Jena's native Spark integration is more efficient than Python driver-based parsing for large files.
 
 ### 4.4 User Interface Requirements
 
@@ -569,7 +572,7 @@ Some decisions have logical dependencies:
 
 ### 5.3 Dependencies
 - Microsoft Fabric Ontology & Graph (Preview)
-- RDF parsing library (e.g., rdflib for Python)
+- RDF parsing: Apache Jena (Scala) preferred, rdflib (Python) for orchestration
 
 ---
 

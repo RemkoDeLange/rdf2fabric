@@ -600,10 +600,13 @@ LEVEL_AUTO_DECISIONS = {
 
 | Component | Technology | Notes |
 |-----------|------------|-------|
-| RDF Parsing | rdflib (Python) | Turtle, RDF/XML, JSON-LD, TriG |
-| Data Processing | PySpark | Distributed processing |
+| RDF Parsing | Apache Jena (Scala) preferred, rdflib (Python) | Enterprise-grade, widest format support |
+| SHACL Validation | Apache Jena SHACL / pySHACL | Pre-load validation |
+| Data Processing | Spark (Scala/Python) | Distributed processing |
 | Storage Format | Delta Lake | Fabric-native |
 | Orchestration | Data Pipelines | Sequence notebooks |
+
+> **Note:** Notebooks can mix Scala and Python as needed. Use Scala for heavy RDF parsing, Python for orchestration and Fabric API calls.
 
 ### 5.3 Integration Points
 
