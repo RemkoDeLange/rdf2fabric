@@ -48,14 +48,8 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@v15
         with:
           globs: '**/*.md'
-          # Configuration: Allow some flexibility for our docs
-          config: |
-            {
-              "MD013": false,
-              "MD033": false,
-              "MD041": false,
-              "MD024": false
-            }
+          # Configuration file in repo root
+          config: '.markdownlint.json'
   
   # Job 2: Validate Python Code
   # ============================
