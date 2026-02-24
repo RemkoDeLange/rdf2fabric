@@ -256,7 +256,7 @@ These differences CANNOT be resolved through translation. The application must c
 | **OWL Axioms Not Enforced** | Disjointness, cardinality restrictions, equivalence cannot be enforced | Document as metadata only |
 | **Named Graph Semantics** | Full provenance/versioning semantics cannot be replicated | Partial support via properties |
 | **Blank Node Merging** | Cannot merge data from multiple sources on blank nodes | Generate stable IDs |
-| **SPARQL Incompatibility** | Existing SPARQL queries will not work | Must rewrite as Gremlin/Cypher |
+| **SPARQL Incompatibility** | Existing SPARQL queries will not work | Must rewrite as GQL (Fabric Graph query language) |
 | **Semantic Entailment** | RDFS/OWL entailment rules not automatically applied | Manual or pre-processing |
 
 ### 2.4 Outputs
