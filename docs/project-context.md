@@ -48,11 +48,37 @@ fabric_rdf_translation/
     └── reports/              # Power BI reports
 ```
 
+### 4. Fabric Workspace Strategy ✅
+- **Decision:** Create a new dedicated workspace `ws-rdf_translation-dev-01`
+- **Rationale:** 
+  - Clean separation from existing workspaces
+  - Follows established naming convention
+  - Isolated development environment for RDF translation
+
+### 5. Source Data Location ✅
+- **Source Workspace:** `ws-ont_nen2660-dev-01`
+- **Lakehouse:** `lh_nen2660data_dev_01`
+- **Data Structure:**
+  - `Files/normative_nen2660/` - Normative NEN 2660 ontology
+  - `Files/informative_nen2660/` - Informative NEN 2660 content
+  - `Files/examples_nen2660/` - Example RDF data
+
+### 6. User Interface Architecture ✅
+- **Technology:** Fabric App (React) - full custom UI for decision-making
+- **Navigation:** Dashboard overview - see all 12 B-decisions at once
+- **Preview:** Essential - must see sample nodes/edges before final import
+- **Project Model:** Multi-project - each RDF source = saved project with decisions
+- **Execution:** Both app-triggered and manual pipeline run supported
+
+### 7. Primary Users ✅
+- **Knowledge Graph Specialist** + **Business Analyst** collaborate on decisions
+- **Data Engineer** implements and maintains the solution
+
 ---
 
 ## Current Status
 
-🟡 **Phase: Requirements Gathering** (In Progress)
+🟡 **Phase: Requirements Gathering → Architecture** (In Progress)
 
 - [x] Project folder structure created
 - [x] Git repository initialized
@@ -60,9 +86,12 @@ fabric_rdf_translation/
 - [x] Business problem documented
 - [x] Decision framework defined (3 categories: A/B/C)
 - [x] Fabric technical requirements researched
-- [ ] Test data (NEN 2660-2) uploaded and analyzed
-- [ ] Architecture finalized
-- [ ] Fabric workspace linked
+- [x] Source data identified (NEN 2660-2 in `ws-ont_nen2660-dev-01`)
+- [x] UX requirements defined (Fabric App, dashboard, preview)
+- [x] Architecture document drafted
+- [ ] New Fabric workspace created (`ws-rdf_translation-dev-01`)
+- [ ] Create lakehouse and shortcuts
+- [ ] Review and finalize architecture
 
 ---
 
@@ -80,10 +109,48 @@ Adopted 3-category approach for RDF → LPG translation:
 - Column names must avoid special characters
 - Schema evolution NOT supported - requires reingest
 
-### User Interface Approach
-- Decision-making: Fabric App (wizard-style) preferred over Power BI
-- Execution: Spark Notebooks + Pipelines
+### User Interface Architecture
+- **Technology:** Fabric App (React) for full custom interactive UX
+- **Flow:** Dashboard overview showing all 12 B-category decisions at once
+- **Preview:** Essential - must show sample translated nodes/edges before commit
+- **Projects:** Multi-project model - save and reuse decisions across similar sources
+- **Execution:** Both app-triggered pipeline and manual run supported
 - Each B-category decision needs: explanation, examples, preview
+
+---
+
+## Session Archive
+
+### Session: 2026-02-23 (Part 2) - Architecture & UX
+**Topics:** UX requirements, architecture design
+**Decisions made:**
+- UI Technology: Fabric App (React) - full custom UI for decision-making
+- Decision Flow: Dashboard overview (all 12 decisions visible at once, any order)
+- Preview: Essential - must see sample nodes/edges before final import
+- Project Model: Multi-project - each RDF source = saved project with decisions
+- Execution: Both app-triggered and manual pipeline run supported
+- User Personas confirmed: KG Specialist + Business Analyst collaborate; Data Engineer implements
+
+**Outputs:**
+- Rewrote `architecture.md` with full component design
+- Added UX requirements section to `requirements.md`
+
+### Session: 2026-02-23 (Part 1) - Workspace & Data Source
+**Topics:** Fabric workspace strategy, source data location
+**Decisions made:**
+- New dedicated workspace: `ws-rdf_translation-dev-01`
+- Source data in: `ws-ont_nen2660-dev-01` / `lh_nen2660data_dev_01`
+- Data folders: `normative_nen2660/`, `informative_nen2660/`, `examples_nen2660/`
+
+### Previous Sessions - Decision Framework & Requirements
+**Topics:** Problem definition, translation categories, Fabric requirements
+**Decisions made:**
+- 3-category decision framework (A/B/C)
+- Category A: 7 auto-resolvable items
+- Category B: 12 human decisions required
+- Category C: 8 fundamental limitations
+- Fabric Graph requires managed Delta tables
+- Schema evolution not supported
 
 ---
 

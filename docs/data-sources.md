@@ -14,11 +14,11 @@
 
 | Property | Value |
 |----------|-------|
-| Workspace Name | `ws-rdfapp-dev-01` |
+| Workspace Name | `ws-rdf_translation-dev-01` |
 | Purpose | RDF Translation Application |
 | Environment | Development |
 
-**Lakehouse: `lh_rdfapp_dev_01`** (to be created)
+**Lakehouse: `lh_rdf_translation_dev_01`** (to be created)
 
 | Folder/Table | Purpose |
 |--------------|---------|
@@ -62,19 +62,19 @@
 ```
 lh_nen2660data_dev_01/
 ├── Files/
-│   ├── formative/           # Schema/Model definitions
+│   ├── normative_nen2660/   # Normative schema/model definitions
 │   │   ├── *.skos          # SKOS concept schemes
 │   │   ├── *.rdfs          # RDFS class/property definitions
 │   │   ├── *.owl           # OWL ontology
 │   │   └── *.shacl         # SHACL shapes/constraints
 │   │
-│   ├── informative/         # Additional representations
+│   ├── informative_nen2660/ # Additional representations
 │   │   ├── *.trig          # TriG (Turtle + named graphs)
 │   │   ├── *.jsonld        # JSON-LD
 │   │   ├── *.ttl           # Turtle
 │   │   └── *.rdf           # RDF/XML
 │   │
-│   └── example/             # Instance data
+│   └── examples_nen2660/    # Instance data
 │       ├── bridge_1.ttl    # Bridge example 1
 │       ├── bridge_2.ttl    # Bridge example 2
 │       ├── road_network.ttl # Road network example

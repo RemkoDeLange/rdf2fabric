@@ -238,17 +238,51 @@ These differences CANNOT be resolved through translation. The application must c
 2. Convert to Spark DataFrame for transformations
 3. Write to Delta tables for Fabric Graph consumption
 
-### 4.4 User Interface Approach
+### 4.4 User Interface Requirements
 
-| Phase | Interface | Technology | Rationale |
-|-------|-----------|------------|-----------|
-| **File Upload & Schema Discovery** | Visual | Power BI / Fabric App | See structure before decisions |
-| **Decision-Making** | Interactive wizard | Fabric App (preferred) | Step-by-step guidance needed |
-| **Decision Preview** | Visual diff | Power BI / Fabric App | Show impact of choices |
-| **Execution** | Automated | Spark Notebooks + Pipelines | Performance for large files |
-| **Monitoring** | Dashboard | Power BI | Track progress and errors |
+#### Target Platform: Fabric App (React)
 
-**Note:** Fabric App may provide better UX for wizard-style workflows than Power BI reports.
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Technology** | Fabric App (React) | Full custom UI, interactive decision-making |
+| **Navigation** | Dashboard overview | See all decisions at once, pick any order |
+| **Preview** | Essential | Must see sample nodes/edges before final import |
+| **Project Model** | Multi-project | Each RDF source = saved project with decisions |
+| **Execution** | Both | App-triggered pipeline + manual run option |
+
+#### Primary Users
+
+| Role | Responsibilities in App |
+|------|------------------------|
+| **Knowledge Graph Specialist** | Make B-category decisions, validate translations |
+| **Business Analyst** | Provide domain context, review outputs |
+| **Data Engineer** | Implement/maintain, run pipelines, troubleshoot |
+
+#### User Journey Phases
+
+| Phase | Interface | Key Actions |
+|-------|-----------|-------------|
+| **1. Project Setup** | Project list view | Create project, select RDF source location |
+| **2. Data Discovery** | Schema explorer | View classes, properties, named graphs, statistics |
+| **3. Decision-Making** | Dashboard + detail panels | Review all 12 B-decisions, make choices |
+| **4. Preview** | Graph sample viewer | See sample nodes/edges with current decisions |
+| **5. Execute** | Run panel | Trigger pipeline or export config for manual run |
+| **6. Monitor** | Status dashboard | Track progress, view logs, handle errors |
+
+#### UX Requirements
+
+| ID | Requirement | Priority |
+|----|-------------|----------|
+| UX1 | Dashboard shows all 12 B-category decisions with status | Must |
+| UX2 | Each decision has explanation panel with trade-offs | Must |
+| UX3 | Each decision shows visual examples from loaded data | Must |
+| UX4 | Preview panel shows sample translated nodes/edges | Must |
+| UX5 | Decisions can be made in any order | Must |
+| UX6 | Project saves all decisions for re-use | Must |
+| UX7 | A-category auto-decisions shown as read-only info | Should |
+| UX8 | C-category limitations shown as warnings | Should |
+| UX9 | Export decisions as JSON config | Should |
+| UX10 | Import decisions from previous project | Nice |
 
 ### 4.5 Development Environment
 - Fabric Workspace(s): TBD (Dev / Test / Prod)
