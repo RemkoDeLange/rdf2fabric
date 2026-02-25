@@ -189,6 +189,21 @@ fabric_rdf_translation/
 - **App Name:** RDF2Fabric
 - **Rationale:** Public GitHub enables open-source distribution; Fabric Git integration enables CI/CD for notebooks/pipelines
 
+### 15. Notebook Development Workflow 🟡
+- **Decision:** Use manual notebook import during prototyping phase
+- **Current Approach:**
+  - Develop notebooks locally in VS Code
+  - Manual import to Fabric for testing
+  - Fabric is "source of truth" for working code
+  - Local repo captures design intent
+- **Switch to Git Sync When:**
+  - Notebooks become production artifacts (scheduled pipelines, user-facing)
+  - Second developer joins the project
+  - Separate dev/test/prod workspaces are created
+  - Notebooks need deployment across multiple workspaces
+- **Trigger Flag:** Copilot will flag when these conditions are met
+- **Rationale:** P0 notebooks are proving out the translation flow; may be replaced by GUI app or evolve into reusable pipeline components; premature sync creates maintenance overhead
+
 ---
 
 ## Current Status
