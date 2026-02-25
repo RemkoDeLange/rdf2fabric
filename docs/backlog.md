@@ -553,18 +553,25 @@ class TestPropertyMapping:
 ---
 
 ### F4.3 - Instance Data Translation
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** L
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** L
 
 **Description:** Translate RDF instance data (triples) to node and edge records.
 
 **Acceptance Criteria:**
-- [ ] Create node record for each unique subject with rdf:type
-- [ ] Extract node ID from subject IRI
-- [ ] Assign node labels from rdf:type
-- [ ] Extract node properties from datatype property triples
-- [ ] Create edge records from object property triples
-- [ ] Handle blank nodes (generate stable IDs)
-- [ ] Handle multi-valued properties
+- [x] Create node record for each unique subject with rdf:type
+- [x] Extract node ID from subject IRI
+- [x] Assign node labels from rdf:type
+- [x] Extract node properties from datatype property triples
+- [x] Create edge records from object property triples
+- [x] Handle blank nodes (generate stable IDs)
+- [x] Handle multi-valued properties
+
+**Implementation Notes:**
+- Notebook: `src/notebooks/05_instance_translator.ipynb`
+- Outputs: `silver_nodes` and `silver_edges` Delta tables
+- Filters out schema definitions (owl:Class, owl:ObjectProperty, etc.) to focus on instance data
+- Node ID generation: local name for URIs, hash-based stable IDs for blank nodes
+- Properties pivoted to map column per node
 
 **Tests:**
 ```python

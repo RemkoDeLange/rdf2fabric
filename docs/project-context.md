@@ -442,6 +442,39 @@ Created `src/notebooks/04_property_mapping.ipynb` with pure PySpark:
 
 ---
 
+### Session: 2026-02-25 (Part 5) - F4.3 Instance Translation Complete ✅
+
+**Topics:** Instance data translation, node/edge extraction
+
+**Completed (F4.3 - Instance Data Translation):**
+
+Created `src/notebooks/05_instance_translator.ipynb` with pure PySpark:
+
+- ✅ Create node records from unique subjects with `rdf:type`
+- ✅ Generate stable node IDs (local name for URIs, hash for blank nodes)
+- ✅ Assign labels from `rdf:type` using `silver_node_types` mapping
+- ✅ Extract properties from literal triples (pivoted to property map)
+- ✅ Create edges from URI→URI triples (object properties)
+- ✅ Filter schema definitions to isolate instance data
+- ✅ Handle multi-valued properties (collected to arrays)
+
+**Output Tables:**
+
+| Table | Description |
+|-------|-------------|
+| `silver_nodes` | id, uri, labels[], properties{}, display_name, is_blank_node, source_graph |
+| `silver_edges` | id, source_id, target_id, type, predicate_uri, source_graph |
+
+**Outputs:**
+
+- `src/notebooks/05_instance_translator.ipynb` - Instance translation notebook
+- `silver_nodes` Delta table - Node records with properties
+- `silver_edges` Delta table - Edge records linking nodes
+- Updated `src/notebooks/README.md` - Pipeline overview
+- Updated `docs/backlog.md` - F4.3 marked complete
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 

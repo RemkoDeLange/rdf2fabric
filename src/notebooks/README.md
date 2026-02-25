@@ -20,7 +20,7 @@ XX_name_technology.ipynb
 | 02 | `02_schema_detector` | Bronze → Analysis | Detect schema richness level (0-4) for adaptive guidance |
 | 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) |
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
-| 05 | `05_instance_translator` | Bronze → Silver | Translate instance data to nodes and edges (planned) |
+| 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
 | 06 | `06_graph_builder` | Silver → Gold | Build final graph model (planned) |
 
 ## Prerequisites
@@ -64,8 +64,8 @@ lh_rdf_translation_dev_01/
 │   ├── bronze_schema_analysis # Output of 02_schema_detector
 │   ├── silver_node_types      # Output of 03_class_to_nodetype
 │   ├── silver_properties      # Output of 04_property_mapping
-│   ├── silver_nodes           # Output of 05_instance_translator (planned)
-│   └── silver_edges           # Output of 05_instance_translator (planned)
+│   ├── silver_nodes           # Output of 05_instance_translator
+│   └── silver_edges           # Output of 05_instance_translator
 ├── Files/
 │   ├── raw/                   # User-uploaded RDF files
 │   ├── bronze/                # Intermediate parsed data
