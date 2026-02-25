@@ -711,218 +711,244 @@ class TestDeltaWriter:
 
 ---
 
-## Epic 5: Fabric Graph Integration
+## Epic 5: Fabric Ontology Integration
 
-### F5.1 - Graph Model JSON Generator
-**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** L
+> **Architecture Update (2026-02-25):** Changed from Graph Model JSON approach to Fabric Ontology.
+> Fabric Ontology is a first-class item that provides:
+> - Entity types, properties, and relationships (the schema)
+> - Data binding to Lakehouse/Eventhouse tables
+> - Automatic Graph materialization for querying
+> - Data Agent support for natural language queries (NL2Ontology)
+>
+> The REST API at `/v1/workspaces/{workspaceId}/ontologies` supports programmatic creation and updates.
 
-**Description:** Generate Fabric Graph Model JSON definition from translated schema.
+### F5.1 - Ontology Definition Generator
+**Priority:** 🔴 P0 | **Status:** 🔄 In Progress | **Estimate:** L
 
-**Graph Model JSON Structure:**
+**Description:** Generate Fabric Ontology definition from silver layer schema tables.
+
+**Ontology Definition Structure:** (base64-encoded JSON parts)
+```
+definition.json                                    → Root definition
+EntityTypes/{id}/definition.json                   → Entity type (name, properties, key)  
+EntityTypes/{id}/DataBindings/{bindingId}.json     → Data binding to lakehouse table
+RelationshipTypes/{id}/definition.json             → Relationships between entity types
+.platform                                          → Metadata
+```
+
+**Entity Type Definition Example:**
 ```json
 {
-  "name": "MyGraphModel",
-  "version": "1.0",
-  "nodes": [
-    {
-      "name": "Person",
-      "properties": [
-        {"name": "name", "type": "string"},
-        {"name": "age", "type": "int"}
-      ]
-    }
-  ],
-  "edges": [
-    {
-      "name": "KNOWS",
-      "source": "Person",
-      "target": "Person",
-      "properties": []
-    }
+  "id": "8813598896083",
+  "namespace": "usertypes",
+  "name": "PhysicalObject",
+  "entityIdParts": ["propertyId_for_key"],
+  "displayNamePropertyId": "propertyId_for_display",
+  "properties": [
+    {"id": "prop1", "name": "name", "dataType": "String"},
+    {"id": "prop2", "name": "description", "dataType": "String"}
   ]
 }
 ```
 
 **Acceptance Criteria:**
-- [ ] Generate valid Graph Model JSON from schema mapping
-- [ ] Include all node types with properties
-- [ ] Include all edge types with source/target constraints
-- [ ] Map RDF datatypes to Fabric Graph types (string, int, double, boolean, datetime)
-- [ ] Validate JSON against Fabric Graph schema requirements
-- [ ] Handle reserved words and naming constraints
+- [ ] Generate entity type definitions from `silver_node_types` table
+- [ ] Generate property definitions with correct Fabric data types
+- [ ] Generate relationship type definitions from `silver_properties` (object properties)
+- [ ] Map RDF datatypes to Fabric Ontology types (String, Int32, Double, Boolean, DateTime)
+- [ ] Validate entity/property names (1-26 chars, alphanumeric + hyphens/underscores)
+- [ ] Output base64-encoded definition parts ready for API upload
 
 **Tests:**
 ```python
-# test_graph_model_generator.py
+# test_ontology_generator.py
 import json
+import base64
 
-class TestGraphModelGenerator:
+class TestOntologyDefinitionGenerator:
     
-    def test_generate_valid_json(self):
-        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
-        model_json = generate_graph_model(schema_mapping, name="NEN2660")
-        
-        # Should be valid JSON
-        parsed = json.loads(model_json)
-        assert "name" in parsed
-        assert "nodes" in parsed
-        assert "edges" in parsed
+    def test_generate_entity_types_from_silver(self):
+        """Entity types generated from silver_node_types."""
+        definition = generate_ontology_definition()
+        entity_parts = [p for p in definition["parts"] if "EntityTypes" in p["path"]]
+        assert len(entity_parts) > 0
     
-    def test_nodes_have_properties(self):
-        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
-        model = generate_graph_model(schema_mapping, name="NEN2660")
-        parsed = json.loads(model)
-        
-        # At least some nodes should have properties
-        assert any(len(n.get("properties", [])) > 0 for n in parsed["nodes"])
+    def test_entity_type_has_required_fields(self):
+        """Each entity type has id, name, namespace, properties."""
+        definition = generate_ontology_definition()
+        entity_part = next(p for p in definition["parts"] if "EntityTypes" in p["path"] and "definition.json" in p["path"])
+        payload = json.loads(base64.b64decode(entity_part["payload"]))
+        assert "id" in payload
+        assert "name" in payload
+        assert "namespace" in payload
     
-    def test_edges_have_source_target(self):
-        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
-        model = generate_graph_model(schema_mapping, name="NEN2660")
-        parsed = json.loads(model)
-        
-        for edge in parsed["edges"]:
-            assert "source" in edge
-            assert "target" in edge
-    
-    def test_datatype_mapping(self):
-        """Verify RDF datatypes map to Fabric types."""
+    def test_property_datatype_mapping(self):
+        """RDF datatypes map to Fabric Ontology types."""
         type_map = {
-            "xsd:string": "string",
-            "xsd:integer": "int",
-            "xsd:double": "double",
-            "xsd:boolean": "boolean",
-            "xsd:dateTime": "datetime",
+            "xsd:string": "String",
+            "xsd:integer": "Int32",
+            "xsd:double": "Double",
+            "xsd:boolean": "Boolean",
+            "xsd:dateTime": "DateTime",
         }
         for rdf_type, fabric_type in type_map.items():
-            result = map_datatype(rdf_type)
+            result = map_to_ontology_datatype(rdf_type)
             assert result == fabric_type
     
-    def test_valid_names(self):
-        schema_mapping = load_schema_mapping("normative_nen2660/nen2660-owl.ttl")
-        model = generate_graph_model(schema_mapping, name="NEN2660")
-        parsed = json.loads(model)
-        
-        # Names should not have special characters
-        for node in parsed["nodes"]:
-            assert not any(c in node["name"] for c in [" ", ",", ";"])
+    def test_valid_entity_names(self):
+        """Entity names conform to Fabric naming rules."""
+        definition = generate_ontology_definition()
+        for part in definition["parts"]:
+            if "EntityTypes" in part["path"] and "definition.json" in part["path"]:
+                payload = json.loads(base64.b64decode(part["payload"]))
+                name = payload["name"]
+                assert 1 <= len(name) <= 26
+                assert name[0].isalnum() and name[-1].isalnum()
 ```
 
 **Dependencies:** F4.1, F4.2
 
 ---
 
-### F5.2 - Fabric Graph REST API Client
+### F5.2 - Fabric Ontology REST API Client
 **Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
 
-**Description:** Client for Fabric Graph REST API operations.
+**Description:** Client for Fabric Ontology REST API operations.
 
 **API Operations:**
 | Operation | Endpoint | Purpose |
 |-----------|----------|---------|
-| Create Graph Model | POST /graphModels | Create new graph schema |
-| Update Graph Model | PUT /graphModels/{id} | Update existing schema |
-| Get Graph Model | GET /graphModels/{id} | Retrieve schema |
-| List Graph Models | GET /graphModels | List all schemas |
-| Bind Data | POST /graphModels/{id}/bindings | Connect Delta tables |
+| Create Ontology | POST /v1/workspaces/{id}/ontologies | Create new Ontology item |
+| Get Ontology | GET /v1/workspaces/{id}/ontologies/{ontologyId} | Get Ontology metadata |
+| Get Definition | POST /ontologies/{id}/getDefinition | Retrieve current entity types, properties, relationships |
+| Update Definition | POST /ontologies/{id}/updateDefinition | Push entity types, properties, bindings |
+| List Ontologies | GET /v1/workspaces/{id}/ontologies | List all ontologies in workspace |
+
+**Authentication:** Entra ID with scope `Item.ReadWrite.All`
 
 **Acceptance Criteria:**
-- [ ] Authenticate using Entra ID token
-- [ ] Create new Graph Model from JSON
-- [ ] Retrieve existing Graph Model
-- [ ] Update Graph Model (version increment)
-- [ ] Bind Delta tables to Graph Model
+- [ ] Authenticate using Entra ID token (user or service principal)
+- [ ] Create new Ontology item in workspace
+- [ ] Retrieve existing Ontology definition
+- [ ] Update Ontology definition (entity types, properties, relationships)
+- [ ] Handle long-running operations (LRO) with polling
 - [ ] Handle API errors gracefully
-- [ ] Retry on transient failures
+- [ ] Retry on transient failures (429, 5xx)
 
 **Tests:**
 ```python
-# test_fabric_graph_client.py (integration tests - require Fabric connection)
+# test_fabric_ontology_client.py (integration tests - require Fabric connection)
 import pytest
 
 @pytest.mark.integration
-class TestFabricGraphClient:
+class TestFabricOntologyClient:
     
-    def test_create_graph_model(self, fabric_client):
-        model_json = '{"name": "TestModel", "nodes": [], "edges": []}'
-        result = fabric_client.create_graph_model(model_json)
+    def test_create_ontology(self, fabric_client, workspace_id):
+        result = fabric_client.create_ontology(
+            workspace_id=workspace_id,
+            display_name="TestOntology",
+            description="Test ontology for integration tests"
+        )
         assert result["id"] is not None
+        assert result["type"] == "Ontology"
     
-    def test_get_graph_model(self, fabric_client, test_model_id):
-        model = fabric_client.get_graph_model(test_model_id)
-        assert model["name"] is not None
+    def test_get_ontology_definition(self, fabric_client, ontology_id):
+        definition = fabric_client.get_definition(ontology_id)
+        assert "parts" in definition
     
-    def test_bind_data(self, fabric_client, test_model_id):
-        binding = {
-            "nodeTable": "Tables/nodes",
-            "edgeTable": "Tables/edges"
-        }
-        result = fabric_client.bind_data(test_model_id, binding)
-        assert result["status"] == "success"
+    def test_update_ontology_definition(self, fabric_client, ontology_id, definition_parts):
+        result = fabric_client.update_definition(ontology_id, definition_parts)
+        assert result.status_code in [200, 202]  # May be async
     
     def test_handle_auth_error(self, fabric_client):
-        # Invalid token should raise auth error
         fabric_client.token = "invalid"
         with pytest.raises(AuthenticationError):
-            fabric_client.get_graph_model("any-id")
+            fabric_client.list_ontologies("any-workspace-id")
 ```
 
 **Dependencies:** F5.1
 
 ---
 
-### F5.3 - Data Binding Configuration
+### F5.3 - Lakehouse Data Binding
 **Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
 
-**Description:** Configure data binding between Delta tables and Fabric Graph.
+**Description:** Generate data binding configuration to connect Ontology entity types to Lakehouse Delta tables.
+
+**Binding Types:**
+- **Static binding:** Entity properties bound to Lakehouse table columns (gold_nodes)
+- **Relationship binding:** Relationship types bound to edge table (gold_edges)
+- **Time series binding:** (Future) Real-time data from Eventhouse
+
+**Data Binding JSON Structure:**
+```json
+{
+  "id": "binding-uuid",
+  "dataBindingConfiguration": {
+    "dataBindingType": "NonTimeSeries",
+    "propertyBindings": [
+      {"sourceColumnName": "name", "propertyId": "prop-id-1"},
+      {"sourceColumnName": "description", "propertyId": "prop-id-2"}
+    ],
+    "dataSource": {
+      "workspaceId": "ws-id",
+      "lakehouseId": "lh-id",
+      "tableName": "gold_nodes"
+    }
+  }
+}
+```
 
 **Acceptance Criteria:**
-- [ ] Generate binding configuration JSON
-- [ ] Map node table columns to Graph Model node types
-- [ ] Map edge table columns to Graph Model edge types
-- [ ] Support computed columns (e.g., ID generation)
-- [ ] Validate binding before applying
-- [ ] Handle binding errors
+- [ ] Generate static data binding JSON for entity types
+- [ ] Map gold_nodes columns to entity type properties
+- [ ] Generate relationship binding for gold_edges
+- [ ] Set entity type key (unique identifier column)
+- [ ] Set display name property for entity instances
+- [ ] Validate binding columns exist in source tables
+- [ ] Handle binding errors from API
+
+**Limitations:**
+- Lakehouse tables must be managed (not external)
+- OneLake security must be disabled on lakehouse
+- Column mapping must not be enabled on Delta tables
+- Each entity type supports one static data binding
 
 **Tests:**
 ```python
 # test_data_binding.py
-class TestDataBinding:
+class TestLakehouseDataBinding:
     
-    def test_generate_node_binding(self):
-        binding = generate_node_binding(
-            table="Tables/nodes",
-            id_column="id",
-            label_column="labels",
-            properties_map={"name": "name", "age": "age"}
+    def test_generate_entity_binding(self):
+        binding = generate_entity_binding(
+            entity_type_id="entity-123",
+            lakehouse_id="lh-id",
+            table_name="gold_nodes",
+            property_mappings=[
+                {"column": "name", "property_id": "prop-1"},
+                {"column": "description", "property_id": "prop-2"}
+            ]
         )
-        assert binding["table"] == "Tables/nodes"
-        assert binding["idColumn"] == "id"
+        assert binding["dataBindingConfiguration"]["dataBindingType"] == "NonTimeSeries"
+        assert len(binding["dataBindingConfiguration"]["propertyBindings"]) == 2
     
-    def test_generate_edge_binding(self):
-        binding = generate_edge_binding(
-            table="Tables/edges",
-            source_column="source_id",
-            target_column="target_id",
-            type_column="type"
+    def test_generate_relationship_binding(self):
+        binding = generate_relationship_binding(
+            relationship_type_id="rel-123",
+            source_entity_key_column="source_id",
+            target_entity_key_column="target_id",
+            table_name="gold_edges"
         )
-        assert binding["sourceColumn"] == "source_id"
-        assert binding["targetColumn"] == "target_id"
+        assert "sourceEntityKeyColumn" in binding
+        assert "targetEntityKeyColumn" in binding
     
-    def test_validate_binding_valid(self):
-        binding = {
-            "nodes": {"table": "Tables/nodes", "idColumn": "id"},
-            "edges": {"table": "Tables/edges", "sourceColumn": "source_id"}
-        }
-        # Should not raise
-        validate_binding(binding)
-    
-    def test_validate_binding_missing_column(self):
-        binding = {
-            "nodes": {"table": "Tables/nodes"}  # Missing idColumn
-        }
+    def test_validate_columns_exist(self):
+        # Should raise if column doesn't exist in table
         with pytest.raises(ValidationError):
-            validate_binding(binding)
+            validate_binding_columns(
+                table="gold_nodes",
+                columns=["nonexistent_column"]
+            )
 ```
 
 **Dependencies:** F4.4, F5.1

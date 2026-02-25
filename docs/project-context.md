@@ -204,6 +204,29 @@ fabric_rdf_translation/
 - **Trigger Flag:** Copilot will flag when these conditions are met
 - **Rationale:** P0 notebooks are proving out the translation flow; may be replaced by GUI app or evolve into reusable pipeline components; premature sync creates maintenance overhead
 
+### 16. Fabric Ontology as Target (Not Graph Model) ✅
+- **Decision:** Use Fabric Ontology item as the target, not direct Graph Model JSON
+- **Architecture:**
+  ```
+  silver_node_types  ─┐
+  silver_properties  ─┼──► Ontology Definition ──► REST API ──► Fabric Ontology
+  gold_nodes         ─┤                                              │
+  gold_edges         ─┘                                              ▼
+                                                              Fabric Graph (automatic)
+  ```
+- **Why Ontology over Graph Model:**
+  - Ontology is a first-class Fabric item with dedicated REST API
+  - Automatic Graph materialization when Ontology is bound to data
+  - Data Agent support for natural language queries (NL2Ontology)
+  - Future: Rules and reasoning at the Ontology layer
+  - Better alignment with semantic web concepts (entity types ≈ classes)
+- **REST API:**
+  - `POST /v1/workspaces/{id}/ontologies` - Create Ontology item
+  - `POST /ontologies/{id}/updateDefinition` - Push entity types, properties, relationships
+  - `POST /ontologies/{id}/getDefinition` - Retrieve current definition
+- **Data Binding:** Entity types bind to Lakehouse tables (gold_nodes), relationships bind to edges (gold_edges)
+- **Rationale:** Native integration path, better tooling support, enables Agentic AI scenarios
+
 ---
 
 ## Current Status
