@@ -475,11 +475,43 @@ Created `src/notebooks/05_instance_translator.ipynb` with pure PySpark:
 
 ---
 
+### Session: 2026-02-25 (Part 7) - F5.1 Graph Model Generator Complete ✅
+
+**Topics:** Graph Model JSON generation for Fabric Graph API
+
+**Completed (F5.1 - Graph Model JSON Generator):**
+
+Created `src/notebooks/07_graph_model_generator.ipynb` with pure PySpark:
+
+- ✅ Generate valid Graph Model JSON from silver_node_types and silver_properties
+- ✅ Map RDF datatypes to Fabric Graph types (string, int, double, boolean, datetime)
+- ✅ Sanitize names for Graph API compatibility (reserved words, special chars)
+- ✅ Validate JSON structure before saving
+- ✅ Save timestamped + latest versions to Files/graph_models/
+
+**Output JSON Structure:**
+```json
+{
+  "name": "RdfTranslatedGraph",
+  "version": "1.0",
+  "nodes": [{"name": "NodeType", "properties": [{"name": "uri", "type": "string"}]}],
+  "edges": [{"name": "relationType", "source": "NodeA", "target": "NodeB", "properties": []}]
+}
+```
+
+**Outputs:**
+
+- `src/notebooks/07_graph_model_generator.ipynb` - Graph model JSON generator
+- `Files/graph_models/graph_model_*_latest.json` - Latest graph model
+- Updated `docs/backlog.md` - F5.1 marked complete
+
+---
+
 ### Session: 2026-02-25 (Part 6) - F4.4 Delta Table Writer Complete ✅
 
 **Topics:** Gold layer transformation, final Delta tables
 
-**Completed (F4.4 - Delta Table Writer):**
+**Completed (F4.4 - Delta Table Writer):
 
 Created `src/notebooks/06_delta_writer.ipynb` with pure PySpark:
 

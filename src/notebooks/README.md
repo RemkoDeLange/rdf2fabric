@@ -22,7 +22,7 @@ XX_name_technology.ipynb
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
 | 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
 | 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) |
-| 07 | `07_graph_builder` | Gold → Graph | Generate Graph Model JSON (planned) |
+| 07 | `07_graph_model_generator` | Silver → JSON | Generate Graph Model JSON for Fabric Graph API |
 
 ## Prerequisites
 

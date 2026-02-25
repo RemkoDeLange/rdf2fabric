@@ -714,7 +714,7 @@ class TestDeltaWriter:
 ## Epic 5: Fabric Graph Integration
 
 ### F5.1 - Graph Model JSON Generator
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** L
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** L
 
 **Description:** Generate Fabric Graph Model JSON definition from translated schema.
 
