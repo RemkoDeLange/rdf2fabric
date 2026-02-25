@@ -487,7 +487,7 @@ class TestClassMapping:
 ---
 
 ### F4.2 - Property to Node Property / Edge Mapping
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Translate OWL properties to node properties and edge types.
 
@@ -501,12 +501,18 @@ class TestClassMapping:
 | rdfs:range (class) | Target node type for edge |
 
 **Acceptance Criteria:**
-- [ ] Map DatatypeProperty → node property with type
-- [ ] Map ObjectProperty → edge type
-- [ ] Use rdfs:domain to assign properties to node types
-- [ ] Use rdfs:range to determine data type or target
-- [ ] Handle properties without domain/range (assign to generic)
-- [ ] Handle multi-domain and multi-range properties
+- [x] Map DatatypeProperty → node property with type
+- [x] Map ObjectProperty → edge type
+- [x] Use rdfs:domain to assign properties to node types
+- [x] Use rdfs:range to determine data type or target
+- [x] Handle properties without domain/range (assign to generic)
+- [x] Handle multi-domain and multi-range properties
+
+**Implementation Notes:**
+- Notebook: `src/notebooks/04_property_mapping.ipynb`
+- Output: `silver_properties` Delta table
+- XSD types mapped to Spark types (string, integer, boolean, timestamp, etc.)
+- Supports labels, descriptions, inverse relationships, functional property detection
 
 **Tests:**
 ```python

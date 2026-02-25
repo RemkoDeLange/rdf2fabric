@@ -394,6 +394,54 @@ Created `src/notebooks/03_class_to_nodetype.ipynb` with pure PySpark:
 
 ---
 
+### Session: 2026-02-25 (Part 4) - F4.2 Property Mapping Complete ✅
+
+**Topics:** Property to node property / edge mapping
+
+**Completed (F4.2 - Property Mapping):**
+
+Created `src/notebooks/04_property_mapping.ipynb` with pure PySpark:
+
+- ✅ Map `owl:DatatypeProperty` → node properties with XSD→Spark type mapping
+- ✅ Map `owl:ObjectProperty` → edge types
+- ✅ Extract `rdfs:domain` → source node type(s)
+- ✅ Extract `rdfs:range` → data type (for properties) or target node types (for edges)
+- ✅ Handle multi-domain and multi-range properties (collect as arrays)
+- ✅ Properties without domain/range get null source_types (generic)
+- ✅ Extract labels, descriptions (prefers English), inverse relationships
+- ✅ Detect functional properties
+- ✅ Validation: check for duplicate property names, unknown mapping types
+
+**Translation Rules:**
+
+| RDF Construct | LPG Equivalent |
+|---------------|----------------|
+| owl:DatatypeProperty | Node property |
+| owl:ObjectProperty | Edge type |
+| rdfs:domain | source_types array |
+| rdfs:range (xsd:*) | data_type (string, integer, boolean, etc.) |
+| rdfs:range (class) | target_types array |
+
+**XSD Type Mapping:**
+
+| XSD Type | Spark/LPG Type |
+|----------|----------------|
+| xsd:string | string |
+| xsd:integer, xsd:int, xsd:short | integer |
+| xsd:boolean | boolean |
+| xsd:decimal, xsd:double | double |
+| xsd:dateTime | timestamp |
+| xsd:date | date |
+
+**Outputs:**
+
+- `src/notebooks/04_property_mapping.ipynb` - Property mapping notebook
+- `silver_properties` Delta table - Property definitions with mapping info
+- Updated `src/notebooks/README.md` - Pipeline overview updated
+- Updated `docs/backlog.md` - F4.2 marked complete
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 
