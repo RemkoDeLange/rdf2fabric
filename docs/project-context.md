@@ -322,6 +322,43 @@ cd tools/jena-shaded
 
 ---
 
+### Session: 2026-02-25 (Part 2) - F3.1 Schema Detector Complete ✅
+
+**Topics:** Schema richness detection, owl:imports discovery, recommendations
+
+**Completed (F3.1 - Schema Richness Detector):**
+
+Created `src/notebooks/02_schema_detector.ipynb` with pure PySpark (no Jena JAR required):
+
+- ✅ Detects schema levels 0-4 (Instance Data → SKOS → RDFS → OWL → SHACL)
+- ✅ Returns confidence score (low/medium/high) based on indicator coverage
+- ✅ Classifies each graph as `schema` / `instance` / `mixed`
+- ✅ Detects `owl:imports` references to external ontologies
+- ✅ Generates smart recommendations:
+  - Suggests loading informative/normative schemas when only instance data found
+  - Identifies missing owl:imports that should be loaded
+  - Recommends SHACL shapes for validation when available
+
+**Enhancement:** Added support for users who have informative ontology files - the detector now recognizes when data is instance-only and recommends loading associated schema files.
+
+**Schema Level Detection:**
+
+| Level | Name | Key Indicators |
+|-------|------|----------------|
+| 0 | Instance Data Only | Only rdf:type, no class definitions |
+| 1 | SKOS Vocabulary | skos:Concept, skos:prefLabel, skos:broader |
+| 2 | RDFS Schema | rdfs:Class, rdfs:subClassOf, rdfs:domain |
+| 3 | OWL Ontology | owl:Class, owl:ObjectProperty, owl:DatatypeProperty |
+| 4 | SHACL Shapes | sh:NodeShape, sh:PropertyShape, sh:path |
+
+**Outputs:**
+
+- `src/notebooks/02_schema_detector.ipynb` - Schema richness detection notebook
+- `bronze_schema_analysis` Delta table - Persisted analysis results
+- Updated `docs/backlog.md` - F3.1 marked complete
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 
