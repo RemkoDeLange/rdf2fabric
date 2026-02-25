@@ -475,6 +475,38 @@ Created `src/notebooks/05_instance_translator.ipynb` with pure PySpark:
 
 ---
 
+### Session: 2026-02-25 (Part 6) - F4.4 Delta Table Writer Complete ✅
+
+**Topics:** Gold layer transformation, final Delta tables
+
+**Completed (F4.4 - Delta Table Writer):**
+
+Created `src/notebooks/06_delta_writer.ipynb` with pure PySpark:
+
+- ✅ Transform silver nodes/edges to simplified gold format
+- ✅ Write `gold_nodes` Delta table (id, labels, properties)
+- ✅ Write `gold_edges` Delta table (source_id, target_id, type, properties)
+- ✅ Support overwrite and append modes (configurable)
+- ✅ Optional partitioning by primary label
+- ✅ Validation checks for edge references and null IDs
+
+**Gold Table Schemas:**
+
+| Table | Columns |
+|-------|--------|
+| `gold_nodes` | id, labels[], properties{} |
+| `gold_edges` | source_id, target_id, type, properties{} |
+
+**Outputs:**
+
+- `src/notebooks/06_delta_writer.ipynb` - Delta table writer notebook
+- `gold_nodes` Delta table - Final nodes for graph import
+- `gold_edges` Delta table - Final edges for graph import
+- Updated `src/notebooks/README.md` - Pipeline overview
+- Updated `docs/backlog.md` - F4.4 marked complete
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 

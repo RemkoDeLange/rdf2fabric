@@ -21,7 +21,8 @@ XX_name_technology.ipynb
 | 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) |
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
 | 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
-| 06 | `06_graph_builder` | Silver → Gold | Build final graph model (planned) |
+| 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) |
+| 07 | `07_graph_builder` | Gold → Graph | Generate Graph Model JSON (planned) |
 
 ## Prerequisites
 
@@ -65,7 +66,9 @@ lh_rdf_translation_dev_01/
 │   ├── silver_node_types      # Output of 03_class_to_nodetype
 │   ├── silver_properties      # Output of 04_property_mapping
 │   ├── silver_nodes           # Output of 05_instance_translator
-│   └── silver_edges           # Output of 05_instance_translator
+│   ├── silver_edges           # Output of 05_instance_translator
+│   ├── gold_nodes             # Output of 06_delta_writer
+│   └── gold_edges             # Output of 06_delta_writer
 ├── Files/
 │   ├── raw/                   # User-uploaded RDF files
 │   ├── bronze/                # Intermediate parsed data

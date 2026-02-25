@@ -632,7 +632,7 @@ class TestInstanceTranslation:
 ---
 
 ### F4.4 - Delta Table Writer
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Write translated nodes and edges to Delta Lake tables.
 
@@ -654,12 +654,18 @@ class TestInstanceTranslation:
 | properties | MAP<STRING, STRING> | Edge properties (if any) |
 
 **Acceptance Criteria:**
-- [ ] Write nodes to `Tables/nodes` Delta table
-- [ ] Write edges to `Tables/edges` Delta table
-- [ ] Support incremental append (for large files)
-- [ ] Support overwrite mode (for re-translation)
-- [ ] Partition by label for query performance
-- [ ] Create/update table schema automatically
+- [x] Write nodes to `Tables/gold_nodes` Delta table
+- [x] Write edges to `Tables/gold_edges` Delta table
+- [x] Support incremental append (for large files)
+- [x] Support overwrite mode (for re-translation)
+- [x] Partition by label for query performance (optional)
+- [x] Create/update table schema automatically
+
+**Implementation Notes:**
+- Notebook: `src/notebooks/06_delta_writer.ipynb`
+- Outputs: `gold_nodes` and `gold_edges` Delta tables
+- Configurable write mode (overwrite/append)
+- Validation checks for edge references and null IDs
 
 **Tests:**
 ```python
