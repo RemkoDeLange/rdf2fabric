@@ -1,0 +1,5 @@
+# Maven build output
+target/
+
+# Maven wrapper downloaded files
+.mvn/wrapper/maven-wrapper.jar

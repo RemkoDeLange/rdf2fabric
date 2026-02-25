@@ -245,6 +245,83 @@ See **Session Archive** section below for dated session logs.
 
 ## Session Archive
 
+### Session: 2026-02-25 - F2.1 RDF Parser Complete ✅
+
+**Topics:** Apache Jena JAR conflicts, shaded uber JAR solution, successful RDF parsing
+
+**Problem: JAR Conflicts in Fabric Spark**
+
+Multiple approaches tried to load Apache Jena dependencies:
+
+| Approach | Result |
+|----------|--------|
+| Separate JARs (jena-arq, jena-core, etc.) without caffeine | Imports work, runtime `NoClassDefFoundError: caffeine` |
+| Add caffeine-3.1.8.jar | Cell 2 imports fail with classloader conflict |
+| Maven packages via `%%configure` | Not supported in Fabric |
+| `sc.addJar()` with ABFS paths | Loads for executors but not driver classpath |
+
+**Root Cause:** Fabric Spark includes Jackson 2.15.2 and other libraries that conflict with Jena's bundled versions.
+
+**Solution: Shaded Uber JAR**
+
+Created `tools/jena-shaded/` Maven project that:
+
+1. Bundles all Jena dependencies into single JAR (~18 MB)
+2. **Relocates** caffeine to `shaded.caffeine` (avoids conflict)
+3. **Relocates** Google libs to `shaded.google`
+4. **Excludes** Jackson (uses Fabric's version)
+
+Build command:
+
+```bash
+cd tools/jena-shaded
+./mvnw.cmd package -DskipTests
+```
+
+**Completed (F2.1 - RDF Parser Notebook):**
+
+- ✅ Notebook `01_rdf_parser_jena.ipynb` runs fully
+- ✅ Parses 4 TTL files from `examples_nen2660`
+- ✅ Creates `bronze_triples` Delta table with 1,237 triples
+- ✅ Schema: subject, predicate, object, object_type, datatype, lang, graph
+
+**Test Results:**
+
+```
++------------+------------+---------------+-----------------+
+|       graph|triple_count|unique_subjects|unique_predicates|
++------------+------------+---------------+-----------------+
+|  liggerbrug|         511|            126|               18|
+|  ziekenhuis|         321|             99|               24|
+|wegennetwerk|         252|             89|               19|
+|  ijsselbrug|         153|             75|               18|
++------------+------------+---------------+-----------------+
+```
+
+**Environment Setup:**
+
+1. Create Fabric Environment: `env_rdf_jena`
+2. Upload: `tools/jena-shaded/target/jena-shaded-4.10.0.jar`
+3. Publish environment
+4. Attach to notebook, restart session
+
+**Technical Learnings:**
+
+- JDK 11 required (matches Fabric Spark runtime)
+- Maven shade plugin relocates conflicting packages
+- Must exclude Jackson from shaded JAR - Spark provides it
+- Session restart required after environment changes
+- Attach `lh_rdf_translation_dev_01` as default lakehouse (not the source lakehouse)
+
+**Outputs:**
+
+- `tools/jena-shaded/pom.xml` - Maven project for shaded JAR
+- `tools/jena-shaded/README.md` - Build instructions and troubleshooting
+- Updated `src/notebooks/01_rdf_parser_jena.ipynb` - All cells Scala, working
+- Updated `src/notebooks/README.md` - Environment setup documentation
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 

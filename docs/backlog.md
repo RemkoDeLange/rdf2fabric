@@ -49,14 +49,19 @@ This backlog tracks all features needed to build RDF2Fabric. Each feature includ
 ---
 
 ### F1.2 - Lakehouse Setup
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** S
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** S
 
 **Description:** Create lakehouse for intermediate data storage.
 
+**Implementation Notes:**
+- Lakehouse: `lh_rdf_translation_dev_01` in `ws-rdf_translation-dev-01`
+- Created manually (MCP API limitation)
+- Folders created via placeholder file upload workaround
+
 **Acceptance Criteria:**
-- [ ] Lakehouse `lh_rdf_translation_dev_01` created in workspace
-- [ ] Folders created: `/raw`, `/bronze`, `/silver`, `/gold`, `/config`
-- [ ] Shortcut to test data (`ws-ont_nen2660-dev-01/lh_nen2660data_dev_01`)
+- [x] Lakehouse `lh_rdf_translation_dev_01` created in workspace
+- [x] Folders created: `/raw`, `/bronze`, `/silver`, `/gold`, `/config`
+- [x] Shortcut to test data (`ws-ont_nen2660-dev-01/lh_nen2660data_dev_01`)
 
 **Tests:**
 ```python
@@ -81,15 +86,19 @@ def test_shortcut_accessible():
 ---
 
 ### F1.3 - Test Data Validation
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** S
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** S
 
 **Description:** Verify NEN 2660 test data is accessible and correctly structured.
 
+**Implementation Notes:**
+- Shortcuts created at Files level (not Tables)
+- 4 example TTL files successfully parsed (1,237 triples)
+
 **Acceptance Criteria:**
-- [ ] All normative files accessible (nen2660-term.ttl, nen2660-rdfs.ttl, nen2660-owl.ttl, nen2660-shacl.ttl)
-- [ ] All informative files accessible (nen2660.trig, nen2660.jsonld, nen2660.ttl, nen2660.rdf)
-- [ ] Example files accessible (IJsselbrug.ttl, Liggerbrug.ttl, etc.)
-- [ ] Files are valid RDF (parseable)
+- [x] All normative files accessible (nen2660-term.ttl, nen2660-rdfs.ttl, nen2660-owl.ttl, nen2660-shacl.ttl)
+- [x] All informative files accessible (nen2660.trig, nen2660.jsonld, nen2660.ttl, nen2660.rdf)
+- [x] Example files accessible (IJsselbrug.ttl, Liggerbrug.ttl, etc.)
+- [x] Files are valid RDF (parseable)
 
 **Tests:**
 ```python
@@ -134,15 +143,21 @@ def test_file_is_valid_rdf(file_path):
 ## Epic 2: RDF Parsing (Backend - Scala/Python)
 
 ### F2.1 - Basic RDF Parser (Turtle)
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Parse Turtle (.ttl) files using Apache Jena in Scala notebook.
 
+**Implementation Notes:**
+- Notebook: `src/notebooks/01_rdf_parser_jena.ipynb`
+- Requires shaded JAR: `tools/jena-shaded/target/jena-shaded-4.10.0.jar`
+- Environment: `env_rdf_jena` with custom JAR upload
+- Output: `bronze_triples` Delta table (1,237 triples from test data)
+
 **Acceptance Criteria:**
-- [ ] Parse single .ttl file into Spark DataFrame
-- [ ] Extract: subject, predicate, object, datatype, language
-- [ ] Handle IRIs, literals, and blank nodes
-- [ ] Return triple count and parse errors
+- [x] Parse single .ttl file into Spark DataFrame
+- [x] Extract: subject, predicate, object, datatype, language
+- [x] Handle IRIs, literals, and blank nodes
+- [x] Return triple count and parse errors
 
 **Tests:**
 ```scala
@@ -993,17 +1008,22 @@ class TestShaclValidator:
 ## Epic 7: Frontend - React Application
 
 ### F7.1 - React App Scaffold
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Create React application with Fluent UI and basic structure.
 
+**Implementation Notes:**
+- Location: `src/app/`
+- Stack: Vite 5.1 + React 18 + TypeScript + Fluent UI v9 + Electron
+- 20+ files including pages, components, state management, auth setup
+
 **Acceptance Criteria:**
-- [ ] Vite + React + TypeScript setup
-- [ ] Fluent UI v9 components installed
-- [ ] Basic folder structure (components, hooks, services, pages)
-- [ ] Routing configured (React Router)
-- [ ] Development server runs (`npm run dev`)
-- [ ] Build produces static files (`npm run build`)
+- [x] Vite + React + TypeScript setup
+- [x] Fluent UI v9 components installed
+- [x] Basic folder structure (components, hooks, services, pages)
+- [x] Routing configured (React Router)
+- [x] Development server runs (`npm run dev`)
+- [x] Build produces static files (`npm run build`)
 
 **Tests:**
 ```typescript
@@ -1546,9 +1566,9 @@ class TestPreviewPipeline:
 ## Implementation Order (Suggested)
 
 ### Phase 1: Foundation (Week 1-2)
-1. F1.2 - Lakehouse Setup
-2. F1.3 - Test Data Validation
-3. F2.1 - Basic RDF Parser (Turtle)
+1. ✅ F1.2 - Lakehouse Setup
+2. ✅ F1.3 - Test Data Validation
+3. ✅ F2.1 - Basic RDF Parser (Turtle)
 4. F3.1 - Schema Detector
 
 ### Phase 2: Core Translation (Week 3-4)
@@ -1559,7 +1579,7 @@ class TestPreviewPipeline:
 9. F5.1 - Graph Model Generator
 
 ### Phase 3: Frontend (Week 5-6)
-10. F7.1 - React Scaffold
+10. ✅ F7.1 - React Scaffold
 11. F7.2 - Authentication
 12. F7.3 - Workspace Config
 13. F7.4 - Project Management

@@ -26,29 +26,33 @@ XX_name_technology.ipynb
 
 ### Fabric Environment: `env_rdf_jena`
 
-Notebooks using Apache Jena require a custom Fabric Environment with JAR uploads.
+Notebooks using Apache Jena require a custom Fabric Environment with a shaded JAR.
+
+**Build the Shaded JAR:**
+
+```bash
+cd tools/jena-shaded
+./mvnw.cmd package -DskipTests   # Windows
+./mvnw package -DskipTests       # Linux/Mac
+```
+
+This creates `target/jena-shaded-4.10.0.jar` (~20MB) with all Jena dependencies and relocated packages to avoid Spark classloader conflicts.
 
 **Setup Steps:**
+
 1. In Fabric workspace → New → **Environment** → name: `env_rdf_jena`
 2. Go to **Custom libraries** section
-3. Upload these JARs (download from Maven Central):
-   - [jena-arq-4.10.0.jar](https://repo1.maven.org/maven2/org/apache/jena/jena-arq/4.10.0/jena-arq-4.10.0.jar)
-   - [jena-core-4.10.0.jar](https://repo1.maven.org/maven2/org/apache/jena/jena-core/4.10.0/jena-core-4.10.0.jar)
-   - [jena-base-4.10.0.jar](https://repo1.maven.org/maven2/org/apache/jena/jena-base/4.10.0/jena-base-4.10.0.jar)
-   - [jena-iri-4.10.0.jar](https://repo1.maven.org/maven2/org/apache/jena/jena-iri/4.10.0/jena-iri-4.10.0.jar)
-   - [caffeine-3.1.8.jar](https://repo1.maven.org/maven2/com/github/benmanes/caffeine/caffeine/3.1.8/caffeine-3.1.8.jar)
+3. Upload: `tools/jena-shaded/target/jena-shaded-4.10.0.jar`
 4. **Publish** the environment
 5. Attach environment to notebook in notebook settings
-
-> **Note:** JARs are also stored in `Files/apache_jena_jars/` in the lakehouse as backup.
+6. **Stop and restart session** after attaching environment
 
 ## Usage
 
 1. Import notebooks into Fabric workspace
 2. Attach lakehouse `lh_rdf_translation_dev_01`
 3. Attach environment `env_rdf_jena` (for Jena notebooks)
-4. **Stop and restart session** after attaching environment
-5. Run notebooks in sequence (01 → 02 → ...)
+4. Run notebooks in sequence (01 → 02 → ...)
 
 ## Lakehouse Structure
 
