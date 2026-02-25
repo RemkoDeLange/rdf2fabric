@@ -328,7 +328,7 @@ Certain decisions become **irrelevant** based on input content:
 | `nb_schema_analyzer` | Parse RDF, extract classes/properties/stats | After schema detection |
 | `nb_preview_generator` | Generate sample nodes/edges with current decisions | On preview request |
 | `nb_translator` | Full translation with all decisions applied | Pipeline execution |
-| `nb_graph_loader` | Load Delta tables into Fabric Graph | Pipeline execution |
+| `nb_ontology_loader` | Create/update Fabric Ontology and bind data | Pipeline execution |
 
 #### Schema Detection Logic (`nb_schema_detector`)
 
@@ -616,7 +616,8 @@ LEVEL_AUTO_DECISIONS = {
 | App → Notebooks | Fabric REST API | Trigger notebook runs |
 | App → Pipelines | Fabric REST API | Trigger pipeline runs |
 | Notebooks → Lakehouse | Spark Delta | Read/write data |
-| Lakehouse → Graph | Fabric Graph binding | Import node/edge tables |
+| Lakehouse → Ontology | Ontology REST API | Create entity types, bind tables |
+| Ontology → Graph | Automatic | Graph materializes from Ontology + bindings |
 
 ---
 
@@ -630,7 +631,8 @@ LEVEL_AUTO_DECISIONS = {
 | Notebook | `nb_schema_analyzer` | Analyze RDF source structure |
 | Notebook | `nb_preview_generator` | Generate preview samples |
 | Notebook | `nb_translator` | Full translation engine |
-| Notebook | `nb_graph_loader` | Load to Fabric Graph |
+| Notebook | `nb_ontology_loader` | Create/update Fabric Ontology |
+| Ontology | `ont_{project_name}` | Entity types, relationships, data bindings |
 | Pipeline | `pl_full_translation` | End-to-end translation |
 | Pipeline | `pl_preview_only` | Preview generation only |
 
