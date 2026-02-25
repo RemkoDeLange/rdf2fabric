@@ -435,7 +435,7 @@ class TestSchemaStatistics:
 ## Epic 4: RDF → LPG Translation
 
 ### F4.1 - Class to Node Type Mapping
-**Priority:** 🔴 P0 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Translate OWL/RDFS classes to Fabric Graph node types.
 

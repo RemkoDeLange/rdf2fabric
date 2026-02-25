@@ -18,9 +18,9 @@ XX_name_technology.ipynb
 |---|----------|-------|-------------|
 | 01 | `01_rdf_parser_jena` | Raw → Bronze | Parse TTL files to `bronze_triples` using Apache Jena |
 | 02 | `02_schema_detector` | Bronze → Analysis | Detect schema richness level (0-4) for adaptive guidance |
-| 03 | `03_prefix_resolver` | Bronze | Expand prefixed URIs to full URIs (planned) |
-| 04 | `04_node_extractor` | Bronze → Silver | Extract distinct nodes with types to `silver_nodes` (planned) |
-| 05 | `05_edge_extractor` | Bronze → Silver | Extract relationships to `silver_edges` (planned) |
+| 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) |
+| 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties and edge types (planned) |
+| 05 | `05_instance_translator` | Bronze → Silver | Translate instance data to nodes and edges (planned) |
 | 06 | `06_graph_builder` | Silver → Gold | Build final graph model (planned) |
 
 ## Prerequisites
@@ -62,8 +62,10 @@ lh_rdf_translation_dev_01/
 ├── Tables/
 │   ├── bronze_triples         # Output of 01_rdf_parser_jena
 │   ├── bronze_schema_analysis # Output of 02_schema_detector
-│   ├── silver_nodes           # Output of 04_node_extractor (planned)
-│   └── silver_edges           # Output of 05_edge_extractor (planned)
+│   ├── silver_node_types      # Output of 03_class_to_nodetype
+│   ├── silver_properties      # Output of 04_property_mapping (planned)
+│   ├── silver_nodes           # Output of 05_instance_translator (planned)
+│   └── silver_edges           # Output of 05_instance_translator (planned)
 ├── Files/
 │   ├── raw/                   # User-uploaded RDF files
 │   ├── bronze/                # Intermediate parsed data

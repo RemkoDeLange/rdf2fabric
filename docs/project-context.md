@@ -359,6 +359,41 @@ Created `src/notebooks/02_schema_detector.ipynb` with pure PySpark (no Jena JAR 
 
 ---
 
+### Session: 2026-02-25 (Part 3) - F4.1 Class to Node Type Mapping Complete ✅
+
+**Topics:** RDF → LPG translation, class mapping, node type generation
+
+**Completed (F4.1 - Class to Node Type Mapping):**
+
+Created `src/notebooks/03_class_to_nodetype.ipynb` with pure PySpark:
+
+- ✅ Finds all `owl:Class` and `rdfs:Class` types from `bronze_triples`
+- ✅ Extracts `rdfs:subClassOf` hierarchy (parent types)
+- ✅ Gets `rdfs:label` / `skos:prefLabel` as display names (prefers English)
+- ✅ Gets `rdfs:comment` / `skos:definition` for descriptions
+- ✅ Generates valid node type names (PascalCase, no special chars)
+- ✅ Handles blank nodes with stable IDs
+- ✅ Validates for duplicate names
+- ✅ Outputs to `silver_node_types` Delta table
+
+**Translation Rules:**
+
+| RDF Construct | LPG Equivalent |
+|---------------|----------------|
+| owl:Class / rdfs:Class | Node Type (label) |
+| rdfs:subClassOf | Parent types array |
+| rdfs:label | Display name |
+| rdfs:comment | Description |
+
+**Outputs:**
+
+- `src/notebooks/03_class_to_nodetype.ipynb` - Class to node type mapping notebook
+- `silver_node_types` Delta table - Node type definitions
+- Updated `src/notebooks/README.md` - Pipeline overview
+- Updated `docs/backlog.md` - F4.1 marked complete
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 
