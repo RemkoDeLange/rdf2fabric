@@ -7,6 +7,34 @@
 
 ---
 
+## RDF Implementation Decisions Log
+
+Tracking specific RDF-related implementation decisions encountered during development. These are more granular than the 12 B-decisions and inform future UI/configuration options.
+
+| ID | Decision | Options | Current Choice | Rationale | B-Decision | Status |
+|----|----------|---------|----------------|-----------|------------|--------|
+| R1 | **Language preference** | Any ISO 639-1 code | `en` (English) | Fabric Ontology accepts single value per entity; RDF supports multi-language | B10 | ✅ Configurable |
+| R2 | **External ontology dereferencing** | Dereference URIs / Use local only | Local only | External URIs may be slow/unavailable; can cache later | - | ⬜ Phase 2 (F2.4) |
+| R3 | **Class discovery sources** | Explicit only / Include property ranges | Include ranges + domains | Many classes only appear as property ranges, not explicit declarations | B1 | ✅ Implemented |
+| R4 | **Duplicate triple handling** | Keep all / Deduplicate | Keep all (track provenance) | `graph` column tracks source; user can deduplicate downstream | - | ✅ Implemented |
+| R5 | **OWL property type URIs** | Short form / Full URI | Full URI in bronze | `http://www.w3.org/2002/07/owl#ObjectProperty` preserved; normalized in silver | B8 | ✅ Implemented |
+| R6 | **Case sensitivity for lookups** | Case-sensitive / Insensitive | Case-insensitive | Different layers may use different casing (e.g., `Bridge` vs `bridge`) | - | ✅ Implemented |
+| R7 | **Blank node handling** | Filter out / Include with stable ID | Include with `_:label` | Blank nodes represent valid data; stable ID enables joins | B1 | ✅ Implemented |
+| R8 | **SHACL constraint storage** | Discard / Store as metadata | Store in silver_constraints | Capture now for future enforcement via Fabric Rules API | B3 | ⬜ Phase 2 (F6.3) |
+| R9 | **Multi-valued properties** | First value / Array / Separate rows | TBD | Fabric Ontology may have limitations; needs investigation | B9 | ⬜ Not started |
+| R10 | **Inverse properties** | Materialize both / Store one direction | TBD | `owl:inverseOf` - should we create bidirectional edges? | B11 | ⬜ Not started |
+| R11 | **Named graph handling** | Flatten / Preserve as property | TBD | Named graphs lost in LPG; could preserve as edge/node property | B4 | ⬜ Not started |
+| R12 | **rdf:type materialization** | Node label / Property / Both | Node label | `rdf:type ex:Bridge` → node labeled `Bridge`; no separate `type` property | B1 | ✅ Implemented |
+
+### Adding New Decisions
+When you encounter a new RDF-specific implementation choice:
+1. Add a row with `⬜` status
+2. Document options considered
+3. Note which B-decision it relates to (if any)
+4. Update status when implemented or deferred
+
+---
+
 ## Project Background
 
 This project is being developed to build a **generic RDF translation application** for Microsoft Fabric. The application will translate **any** RDF (Semantic Web) data to Fabric Graph, regardless of domain or ontology. NEN 2660-2 is used as test data during development, but the tool is designed to work with DBpedia, schema.org, FIBO, or any custom ontology.
