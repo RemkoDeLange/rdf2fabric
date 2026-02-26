@@ -295,6 +295,75 @@ class StreamingParserTest extends AnyFunSuite {
 
 ---
 
+### F2.4 - External Ontology Dereferencing
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M | **Phase:** 2
+
+**Description:** Automatically fetch referenced ontologies from external URIs found in RDF data.
+
+When RDF instance data references external classes/properties (e.g., `rdf:type <https://w3id.org/nen2660/def#PhysicalObject>`), the application should offer to dereference those URIs to retrieve schema definitions. This follows the Linked Data "follow your nose" principle.
+
+**User Flow:**
+1. Parse input RDF files
+2. Detect external namespace URIs (not in provided files)
+3. Display list to user: "Found references to external ontologies"
+4. User selects which to fetch (or skip for manual upload)
+5. Fetch via HTTP with content negotiation (Accept: text/turtle, application/rdf+xml)
+6. Merge fetched schema into bronze layer
+7. Re-run schema detection (may upgrade level 0 → level 2+)
+
+**Acceptance Criteria:**
+- [ ] Extract unique namespace prefixes from parsed triples
+- [ ] Identify namespaces not present in provided files
+- [ ] HTTP fetch with proper content negotiation headers
+- [ ] Handle common responses: Turtle, RDF/XML, JSON-LD
+- [ ] Cache fetched ontologies locally (avoid re-fetching)
+- [ ] Graceful handling of: timeouts, 404s, non-RDF responses
+- [ ] User can skip/defer external fetching
+- [ ] Display consequences: "Without this ontology, you'll have X more decisions"
+
+**Tests:**
+```python
+# test_external_dereferencing.py
+class ExternalDereferencingTest:
+    
+    def test_detect_external_namespaces(self):
+        df_triples = parse_rdf("local_instances.ttl")
+        external_ns = detect_external_namespaces(df_triples)
+        
+        assert "https://w3id.org/nen2660/def#" in external_ns
+        assert "http://www.w3.org/2000/01/rdf-schema#" not in external_ns  # well-known, skip
+    
+    def test_fetch_with_content_negotiation(self):
+        result = fetch_ontology("https://w3id.org/nen2660/def")
+        
+        assert result.format in ["turtle", "rdf/xml", "json-ld"]
+        assert len(result.triples) > 0
+    
+    def test_handles_timeout_gracefully(self):
+        result = fetch_ontology("https://unreachable.example.org/ont", timeout=5)
+        
+        assert result.success == False
+        assert "timeout" in result.error.lower()
+    
+    def test_user_can_skip_external(self):
+        # User chooses not to fetch - should continue with lower schema level
+        external_ns = ["https://example.org/ont#"]
+        user_skip = ["https://example.org/ont#"]
+        
+        result = process_with_user_decisions(external_ns, skip=user_skip)
+        assert result.schema_level == 0  # No auto-upgrade
+```
+
+**Technical Notes:**
+- Use requests library with proper headers
+- Respect robots.txt and rate limiting
+- Cache in Lakehouse Files/cache/external_ontologies/
+- Well-known prefixes (rdf, rdfs, owl, xsd, skos) should be built-in, not fetched
+
+**Dependencies:** F2.1, F3.1
+
+---
+
 ## Epic 3: Schema Detection
 
 ### F3.1 - Schema Richness Detector (5 Levels)
