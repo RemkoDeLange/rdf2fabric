@@ -22,7 +22,7 @@ XX_name_technology.ipynb
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
 | 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
 | 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) |
-| 07 | `07_graph_model_generator` | Silver → JSON | Generate Graph Model JSON for Fabric Graph API |
+| 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition for REST API upload |
 
 ## Prerequisites
 
@@ -75,6 +75,7 @@ lh_rdf_translation_dev_01/
 │   ├── silver/                # Translated nodes/edges
 │   ├── gold/                  # Final graph model
 │   ├── config/                # Project configuration JSON
+│   ├── ontology_definitions/  # Generated Ontology definitions (output of 08)
 │   ├── apache_jena_jars/      # Backup of Jena JARs
 │   ├── examples_nen2660/      # Shortcut to test data
 │   ├── informative_nen2660/   # Shortcut to informative ontology

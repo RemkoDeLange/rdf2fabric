@@ -577,6 +577,52 @@ Created `src/notebooks/06_delta_writer.ipynb` with pure PySpark:
 
 ---
 
+### Session: 2026-02-26 - F5.1 Ontology Definition Generator Complete ✅
+
+**Topics:** Fabric Ontology definition generation, base64 encoding, entity/relationship types
+
+**Completed (F5.1 - Ontology Definition Generator):**
+
+Created `src/notebooks/07_ontology_definition_generator.ipynb` with pure PySpark:
+
+- ✅ Generate entity type definitions from `silver_node_types` table
+- ✅ Generate property definitions with Fabric Ontology types (String, Int32, Int64, Double, Boolean, DateTime)
+- ✅ Generate relationship type definitions from `silver_properties` (object properties)
+- ✅ Map RDF/XSD datatypes to Fabric Ontology types
+- ✅ Validate entity/property names (1-26 chars, alphanumeric + hyphens/underscores)
+- ✅ Output base64-encoded definition parts ready for API upload
+- ✅ Generate unique deterministic IDs from URIs using MD5 hashing
+- ✅ Save human-readable summaries for debugging
+
+**Definition Structure:**
+
+```
+.platform                                  → Metadata (type, displayName)
+definition.json                            → Root definition (namespace, entityTypeIds, relationshipTypeIds)
+EntityTypes/{id}/definition.json           → Entity type (name, properties, entityIdParts)
+RelationshipTypes/{id}/definition.json     → Relationship type (name, fromEntityTypeIds, toEntityTypeIds)
+```
+
+**Key Design Decisions:**
+
+- Use `uri` property as entity key (`entityIdParts`) for all entity types
+- Generate deterministic IDs from URIs for reproducibility
+- Namespace: `rdftranslation` for all generated types
+- Datatype properties become entity properties
+- Object properties become relationship types
+
+**Outputs:**
+
+- `src/notebooks/07_ontology_definition_generator.ipynb` - Ontology definition generator
+- `Files/ontology_definitions/ontology_definition_{timestamp}.json` - API-ready definition
+- `Files/ontology_definitions/entity_types_{timestamp}.json` - Human-readable entity summary
+- `Files/ontology_definitions/relationship_types_{timestamp}.json` - Human-readable relationship summary
+- Updated `docs/backlog.md` - F5.1 marked complete
+
+**Next P0 Task:** None - all P0 items complete! Ready for P1 work (F5.2 REST API Client, F5.3 Data Binding).
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 

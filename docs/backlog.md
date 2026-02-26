@@ -723,7 +723,7 @@ class TestDeltaWriter:
 > The REST API at `/v1/workspaces/{workspaceId}/ontologies` supports programmatic creation and updates.
 
 ### F5.1 - Ontology Definition Generator
-**Priority:** 🔴 P0 | **Status:** 🔄 In Progress | **Estimate:** L
+**Priority:** 🔴 P0 | **Status:** ✅ Complete | **Estimate:** L
 
 **Description:** Generate Fabric Ontology definition from silver layer schema tables.
 
