@@ -25,6 +25,9 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R10 | **Inverse properties** | Materialize both / Store one direction | TBD | `owl:inverseOf` - should we create bidirectional edges? | B11 | ⬜ Not started |
 | R11 | **Named graph handling** | Flatten / Preserve as property | TBD | Named graphs lost in LPG; could preserve as edge/node property | B4 | ⬜ Not started |
 | R12 | **rdf:type materialization** | Node label / Property / Both | Node label | `rdf:type ex:Bridge` → node labeled `Bridge`; no separate `type` property | B1 | ✅ Implemented |
+| R13 | **Blank nodes as entity types** | Include / Filter out | Filter out | Blank nodes (`_:`) are structural (restrictions, lists, reification), not domain concepts; unstable IDs; can't be externally referenced | B1 | ✅ Implemented |
+| R14 | **Label language fallback** | Preferred only / Fallback to any / Show original | Fallback with warning | When preferred language label missing, use any available; notebook logs warnings for visibility | B10 | ✅ Implemented |
+| R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` allow any source/target; inference from instance data deferred to Phase 2 | B2 | ✅ Implemented |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:

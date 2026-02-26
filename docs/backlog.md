@@ -1649,6 +1649,49 @@ describe('TranslationExecution', () => {
 
 ---
 
+### F7.9 - Label Override & Language Management UI
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** UI to review and override display names when preferred language labels are missing. Related to R14 (Label Language Fallback).
+
+**Context:** When RDF sources lack labels in the preferred language (e.g., English), the system falls back to available labels (e.g., Dutch). This UI allows users to:
+1. See which entities/properties are using fallback labels
+2. Provide manual translations/overrides
+3. Export/import label override mappings
+
+**Acceptance Criteria:**
+- [ ] List entities/properties with non-preferred language labels
+- [ ] Show original label, language tag, and source URI
+- [ ] Inline edit to provide preferred language override
+- [ ] Save overrides to project configuration
+- [ ] Apply overrides during next translation run
+- [ ] Export label overrides as JSON/CSV
+- [ ] Import label overrides from file
+
+**Tests:**
+```typescript
+// test/LabelOverride.test.tsx
+describe('LabelOverrideManager', () => {
+  test('shows entities with fallback labels', () => {
+    render(<LabelOverrideManager project={mockProjectWithFallbacks} />);
+    expect(screen.getByText('hechtingskracht')).toBeInTheDocument();
+    expect(screen.getByText('nl')).toBeInTheDocument(); // language tag
+  });
+  
+  test('allows inline edit of display name', async () => {
+    render(<LabelOverrideManager project={mockProjectWithFallbacks} />);
+    await userEvent.click(screen.getByRole('button', { name: /edit/i }));
+    await userEvent.type(screen.getByRole('textbox'), 'adhesion strength');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(mockSaveOverride).toHaveBeenCalledWith('hechtingskracht', 'adhesion strength');
+  });
+});
+```
+
+**Dependencies:** F7.4
+
+---
+
 ## Epic 8: Electron Desktop App
 
 ### F8.1 - Electron Wrapper
