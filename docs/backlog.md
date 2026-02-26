@@ -811,7 +811,7 @@ class TestOntologyDefinitionGenerator:
 ---
 
 ### F5.2 - Fabric Ontology REST API Client
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Client for Fabric Ontology REST API operations.
 
@@ -871,7 +871,7 @@ class TestFabricOntologyClient:
 ---
 
 ### F5.3 - Lakehouse Data Binding
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Generate data binding configuration to connect Ontology entity types to Lakehouse Delta tables.
 

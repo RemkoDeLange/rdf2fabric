@@ -623,6 +623,52 @@ RelationshipTypes/{id}/definition.json     → Relationship type (name, fromEnti
 
 ---
 
+### Session: 2026-02-26 (Part 2) - F5.2 & F5.3 Complete ✅
+
+**Topics:** Fabric Ontology REST API client, Lakehouse data binding
+
+**Completed (F5.2 - Fabric Ontology REST API Client):**
+
+Created `src/notebooks/08_ontology_api_client.ipynb`:
+
+- ✅ Authenticate using Entra ID token via `mssparkutils.credentials.getToken()`
+- ✅ Create new Ontology item in workspace
+- ✅ List existing ontologies
+- ✅ Get Ontology definition
+- ✅ Update Ontology definition (upload entity types, properties, relationships)
+- ✅ Handle long-running operations (LRO) with polling
+- ✅ Retry logic for transient failures (429, 5xx)
+- ✅ Save ontology config for downstream notebooks
+
+**Completed (F5.3 - Lakehouse Data Binding):**
+
+Created `src/notebooks/09_data_binding.ipynb`:
+
+- ✅ Generate static data binding JSON for entity types
+- ✅ Map gold_nodes columns to entity type properties
+- ✅ Generate relationship binding for gold_edges
+- ✅ Set entity type key (uri column as unique identifier)
+- ✅ Upload bindings via `POST /ontologies/{id}/updateDefinition`
+- ✅ Save binding configuration for reference
+
+**Key Design Decisions:**
+
+- Entity key property: `uri` column from gold_nodes
+- Data binding type: NonTimeSeries (static Lakehouse binding)
+- Relationship binding: source_id/target_id columns from gold_edges
+- Entity filter: `array_contains(labels, '{entity_type_name}')`
+
+**Outputs:**
+
+- `src/notebooks/08_ontology_api_client.ipynb` - REST API client
+- `src/notebooks/09_data_binding.ipynb` - Data binding generator
+- Updated `docs/backlog.md` - F5.2, F5.3 marked complete
+- Updated `src/notebooks/README.md` - Added notebooks 08 and 09
+
+**Next P1 Task:** F6.1 SHACL Shape Parser (validation before data load)
+
+---
+
 ### Session: 2026-02-24 (Part 3) - Implementation Start
 **Topics:** React app scaffold, Lakehouse setup, RDF parser notebook
 

@@ -22,7 +22,9 @@ XX_name_technology.ipynb
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
 | 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
 | 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) |
-| 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition for REST API upload |
+| 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition from silver tables |
+| 08 | `08_ontology_api_client` | Ontology → Fabric | Upload Ontology definition via REST API |
+| 09 | `09_data_binding` | Ontology → Graph | Bind Lakehouse tables to Ontology for Graph materialization |
 
 ## Prerequisites
 
