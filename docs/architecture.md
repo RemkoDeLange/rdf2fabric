@@ -474,7 +474,14 @@ LEVEL_AUTO_DECISIONS = {
     "B7_naryPatterns": null,
     "B8_ontologyMapping": null,
     "B9_multiValuedProps": null,
-    "B10_languageTags": null,
+    "B10_languageTags": {
+      "choice": "selectLanguage",
+      "preferredLanguage": "en",
+      "fallbackOrder": ["en", null, "nl"],
+      "autoResolved": false,
+      "decidedBy": "user@example.com",
+      "note": "RDF supports multiple language tags; Fabric Ontology accepts only one value per entity"
+    },
     "B11_inverseProps": null,
     "B12_skosConcepts": null
   },
