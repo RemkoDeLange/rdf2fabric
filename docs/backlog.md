@@ -1119,6 +1119,145 @@ class TestShaclValidator:
 
 ---
 
+### F6.3 - Constraint Extraction & Storage
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Extract and store constraints from SHACL/OWL for future enforcement via Fabric Ontology Rules, Fabric Activator, or Fabric Operational Agent.
+
+> **Rationale:** RDF standards (SHACL, OWL) express rich constraints. Fabric Ontology doesn't support SHACL natively yet, but we should capture constraints as metadata now for future implementation when Fabric Ontology Rules becomes GA.
+
+**Constraint Types to Extract:**
+
+| Source | Constraint Type | Example | Future Enforcement |
+|--------|----------------|---------|-------------------|
+| SHACL | Cardinality | `sh:minCount 1` | Ontology Rules (when GA) |
+| SHACL | Data type | `sh:datatype xsd:decimal` | Ontology Rules |
+| SHACL | Pattern | `sh:pattern "^[A-Z]{3}$"` | Activator / Pipeline |
+| SHACL | Value range | `sh:minInclusive 0` | Activator / Agent |
+| OWL | Functional property | `owl:FunctionalProperty` | Ontology Rules |
+| OWL | Symmetric/Inverse | `owl:inverseOf` | Ontology Rules |
+| OWL | Disjoint classes | `owl:disjointWith` | Agent (validation) |
+| RDFS | Domain/Range | `rdfs:domain`, `rdfs:range` | Already mapped |
+
+**Output:** `silver_constraints` Delta table
+
+| Column | Type | Description |
+|--------|------|-------------|
+| constraint_id | String | Unique identifier |
+| source_uri | String | SHACL shape or OWL axiom URI |
+| constraint_type | String | cardinality, datatype, pattern, etc. |
+| target_entity | String | Node type or property affected |
+| specification | JSON | Full constraint details |
+| enforcement_target | String | ontology_rules, activator, agent, none |
+| source_file | String | Origin file (e.g., nen2660-shacl.ttl) |
+
+**Acceptance Criteria:**
+- [ ] Parse SHACL shapes into silver_constraints
+- [ ] Parse OWL axioms (functional, inverse, disjoint) into silver_constraints
+- [ ] Classify each constraint by enforcement_target
+- [ ] Generate summary report of constraints found
+- [ ] Expose constraints in ontology definition JSON as metadata (not enforced)
+
+**Tests:**
+```python
+# test_constraint_extraction.py
+class TestConstraintExtraction:
+    
+    def test_extract_shacl_cardinality(self):
+        constraints = extract_constraints("nen2660-shacl.ttl")
+        cardinality = [c for c in constraints if c["constraint_type"] == "cardinality"]
+        assert len(cardinality) > 0
+        assert all("minCount" in c["specification"] or "maxCount" in c["specification"] 
+                   for c in cardinality)
+    
+    def test_extract_owl_functional(self):
+        constraints = extract_constraints("nen2660-owl.ttl")
+        functional = [c for c in constraints if c["constraint_type"] == "functional"]
+        # All functional properties should be captured
+        assert len(functional) >= 0  # May be 0 in test data
+    
+    def test_enforcement_target_classification(self):
+        constraints = extract_constraints("nen2660-shacl.ttl")
+        # Each constraint should have valid enforcement target
+        valid_targets = {"ontology_rules", "activator", "agent", "none"}
+        assert all(c["enforcement_target"] in valid_targets for c in constraints)
+```
+
+**Dependencies:** F6.1
+
+---
+
+## Epic 12: Fabric Rules Integration (Phase 2)
+> **Phase:** 2 (Post-MVP) | **Depends on:** Fabric Ontology Rules GA
+
+### F12.1 - Ontology Rules Generator
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Generate Fabric Ontology Rules from extracted constraints when the API becomes GA.
+
+> **Note:** Fabric Ontology Rules is currently in private preview. This feature should wait until the API stabilizes.
+
+**Mapping Strategy:**
+
+| SHACL/OWL Constraint | Fabric Ontology Rule |
+|---------------------|---------------------|
+| `sh:minCount 1` | Required property |
+| `sh:maxCount 1` | Single-valued property |
+| `sh:datatype xsd:integer` | Property value type |
+| `sh:class :SomeClass` | Relationship target type |
+| `owl:FunctionalProperty` | Single-valued property |
+| `owl:inverseOf` | Inverse relationship (if supported) |
+
+**Acceptance Criteria:**
+- [ ] Generate Ontology Rules JSON from silver_constraints
+- [ ] Upload rules via Fabric Rules API (when available)
+- [ ] Report unsupported constraints to user
+- [ ] Validate rules before upload
+
+**Dependencies:** F6.3, Fabric Ontology Rules GA
+
+---
+
+### F12.2 - Activator Policy Generator
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Generate Fabric Activator policies for runtime constraint enforcement.
+
+**Use Cases:**
+- Data validation on ingestion
+- Pattern matching alerts
+- Value range monitoring
+- Periodic compliance checks
+
+**Acceptance Criteria:**
+- [ ] Generate Activator trigger definitions from constraints
+- [ ] Support event-driven validation patterns
+- [ ] Create alerting rules for constraint violations
+
+**Dependencies:** F6.3
+
+---
+
+### F12.3 - Operational Agent Rules
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Generate Fabric Operational Agent rules for complex/cross-domain constraints.
+
+**Use Cases:**
+- Multi-entity validation rules
+- Process/workflow constraints
+- Time-based rules
+- Cross-reference validations
+
+**Acceptance Criteria:**
+- [ ] Define agent action patterns from complex constraints
+- [ ] Support remediation workflows
+- [ ] Generate human-readable constraint descriptions for agent context
+
+**Dependencies:** F6.3
+
+---
+
 ## Epic 7: Frontend - React Application
 
 ### F7.1 - React App Scaffold
