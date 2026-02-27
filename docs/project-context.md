@@ -27,7 +27,7 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R12 | **rdf:type materialization** | Node label / Property / Both | Node label | `rdf:type ex:Bridge` → node labeled `Bridge`; no separate `type` property | B1 | ✅ Implemented |
 | R13 | **Blank nodes as entity types** | Include / Filter out | Filter out | Blank nodes (`_:`) are structural (restrictions, lists, reification), not domain concepts; unstable IDs; can't be externally referenced | B1 | ✅ Implemented |
 | R14 | **Label language fallback** | Preferred only / Fallback to any / Show original | Fallback with warning | When preferred language label missing, use any available; notebook logs warnings for visibility | B10 | ✅ Implemented |
-| R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` allow any source/target; inference from instance data deferred to Phase 2 | B2 | ✅ Implemented |
+| R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` are skipped in edge creation (cannot determine source node type). **Known limitation:** Properties like `designLifespan`, `length`, `width` may be defined in ontology but have no declared domain - these become orphaned. Future: F7.10 UI to assign domains manually, or Phase 2 instance-based inference. | B2 | ✅ Implemented |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:
@@ -296,12 +296,12 @@ fabric_rdf_translation/
 - [x] **Create shortcuts to NEN 2660 test data** (F1.3)
 
 **In Progress:**
-- [ ] RDF parser notebook with Apache Jena (F2.1) - Environment with JARs created, debugging session issues
+- [ ] F5.3 Data Binding - fetching entity types from Fabric API
 
 **Pending (Next Session):**
-- [ ] Complete RDF parser notebook testing
-- [ ] Prototype remaining notebooks (F2.2-F3.x)
-- [ ] Implement file upload component (F7.2)
+- [ ] Complete data binding upload (notebook 09)
+- [ ] Verify entity instances appear in Fabric Graph
+- [ ] F6.1 SHACL Shape Parser
 
 ---
 
@@ -313,6 +313,46 @@ See **Session Archive** section below for dated session logs.
 ---
 
 ## Session Archive
+
+### Session: 2026-02-27 - F5.3 Data Binding Debugging 🔄
+
+**Topics:** Fabric Ontology data binding, API structure issues, ID mismatches
+
+**Issues Investigated:**
+
+1. **Int32/Int64 valueType errors** → Fixed: Fabric only supports `BigInt` (not Int32/Int64/Integer/Long)
+2. **RelationshipType structure errors** → Fixed: Must use `source: {entityTypeId}` not arrays
+3. **Empty ontology in UI** → Fixed: Root `definition.json` must be empty `{}`, EntityType needs `namespaceType`, `visibility`, `timeseriesProperties`
+4. **Entity type ID mismatch** → Fixed: Local summary files had different IDs than uploaded ontology
+5. **API LRO response structure** → In progress: LRO completion returns status only, not definition
+
+**Key Fixes to Notebook 09:**
+
+- Changed from loading local `entity_types_*.json` files to fetching from Fabric API
+- Added `get_ontology_definition_from_api()` function to retrieve uploaded definition
+- After LRO completes, re-calls `getDefinition` endpoint to get actual parts
+- Converts all IDs to strings for consistent lookup
+- Parses `source.entityTypeId` and `target.entityTypeId` for relationships
+
+**Fabric Ontology API Learnings:**
+
+| Aspect | Correct Format |
+|--------|----------------|
+| valueType enum | `String`, `BigInt`, `Double`, `Boolean`, `DateTime`, `Object` |
+| EntityType required | `namespaceType: "Custom"`, `visibility: "Visible"`, `timeseriesProperties: []` |
+| RelationshipType | `source: {entityTypeId: "..."}`, `target: {entityTypeId: "..."}` |
+| DataBinding | `sourceTableProperties.itemId` = Lakehouse ID, `targetPropertyId` in bindings |
+| LRO pattern | Poll status URL, then re-call original endpoint for result |
+
+**Status:** Notebook 09 updated, ready to test fetching definition from API after LRO
+
+**Next Steps:**
+1. Run notebook 09 from "Load Configuration" cell
+2. Verify entity types load from API (not local files)
+3. Complete data binding upload
+4. Verify data appears in Fabric Graph
+
+---
 
 ### Session: 2026-02-25 - F2.1 RDF Parser Complete ✅
 
@@ -617,7 +657,7 @@ Created `src/notebooks/06_delta_writer.ipynb` with pure PySpark:
 Created `src/notebooks/07_ontology_definition_generator.ipynb` with pure PySpark:
 
 - ✅ Generate entity type definitions from `silver_node_types` table
-- ✅ Generate property definitions with Fabric Ontology types (String, Int32, Int64, Double, Boolean, DateTime)
+- ✅ Generate property definitions with Fabric Ontology types (String, BigInt, Double, Boolean, DateTime)
 - ✅ Generate relationship type definitions from `silver_properties` (object properties)
 - ✅ Map RDF/XSD datatypes to Fabric Ontology types
 - ✅ Validate entity/property names (1-26 chars, alphanumeric + hyphens/underscores)
@@ -631,7 +671,7 @@ Created `src/notebooks/07_ontology_definition_generator.ipynb` with pure PySpark
 .platform                                  → Metadata (type, displayName)
 definition.json                            → Root definition (namespace, entityTypeIds, relationshipTypeIds)
 EntityTypes/{id}/definition.json           → Entity type (name, properties, entityIdParts)
-RelationshipTypes/{id}/definition.json     → Relationship type (name, fromEntityTypeIds, toEntityTypeIds)
+RelationshipTypes/{id}/definition.json     → Relationship type (name, source, target)
 ```
 
 **Key Design Decisions:**

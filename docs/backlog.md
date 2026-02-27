@@ -824,7 +824,7 @@ RelationshipTypes/{id}/definition.json             → Relationships between ent
 - [ ] Generate entity type definitions from `silver_node_types` table
 - [ ] Generate property definitions with correct Fabric data types
 - [ ] Generate relationship type definitions from `silver_properties` (object properties)
-- [ ] Map RDF datatypes to Fabric Ontology types (String, Int32, Double, Boolean, DateTime)
+- [ ] Map RDF datatypes to Fabric Ontology types (String, BigInt, Double, Boolean, DateTime)
 - [ ] Validate entity/property names (1-26 chars, alphanumeric + hyphens/underscores)
 - [ ] Output base64-encoded definition parts ready for API upload
 
@@ -855,7 +855,9 @@ class TestOntologyDefinitionGenerator:
         """RDF datatypes map to Fabric Ontology types."""
         type_map = {
             "xsd:string": "String",
-            "xsd:integer": "Int32",
+            "xsd:integer": "BigInt",
+            "xsd:int": "BigInt",
+            "xsd:long": "BigInt",
             "xsd:double": "Double",
             "xsd:boolean": "Boolean",
             "xsd:dateTime": "DateTime",
@@ -1653,6 +1655,49 @@ describe('TranslationExecution', () => {
 **Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
 
 **Description:** UI to review and override display names when preferred language labels are missing. Related to R14 (Label Language Fallback).
+
+---
+
+### F7.10 - Property Domain Override UI
+**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** UI to assign or override rdfs:domain for properties that lack domain declarations in the source ontology. Related to R15 (Missing domain/range).
+
+**Context:** Many ontologies define properties without `rdfs:domain` declarations (e.g., `designLifespan`, `length`, `width`). These properties are skipped during edge creation because we cannot determine which node type(s) they belong to. This UI allows users to:
+1. See which properties were skipped due to missing domain
+2. Assign domain(s) to orphaned properties
+3. Export/import domain override mappings
+
+**Acceptance Criteria:**
+- [ ] List properties without rdfs:domain declarations
+- [ ] Show property URI, label, and target type (if any)
+- [ ] Allow assigning one or more source node types
+- [ ] Save overrides to project configuration
+- [ ] Apply overrides during next translation run
+- [ ] Export domain overrides as JSON/CSV
+- [ ] Import domain overrides from file
+
+**Tests:**
+```typescript
+// test/PropertyDomainOverride.test.tsx
+describe('PropertyDomainOverrideManager', () => {
+  test('shows properties without domain', () => {
+    render(<PropertyDomainOverrideManager project={mockProjectWithOrphanedProps} />);
+    expect(screen.getByText('designLifespan')).toBeInTheDocument();
+    expect(screen.getByText('No source type')).toBeInTheDocument();
+  });
+  
+  test('allows assigning domain to property', async () => {
+    render(<PropertyDomainOverrideManager project={mockProjectWithOrphanedProps} />);
+    await userEvent.click(screen.getByRole('button', { name: /assign domain/i }));
+    await userEvent.click(screen.getByText('PhysicalObject'));
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(mockSaveDomainOverride).toHaveBeenCalledWith('designLifespan', ['PhysicalObject']);
+  });
+});
+```
+
+**Dependencies:** F7.4
 
 **Context:** When RDF sources lack labels in the preferred language (e.g., English), the system falls back to available labels (e.g., Dutch). This UI allows users to:
 1. See which entities/properties are using fallback labels
