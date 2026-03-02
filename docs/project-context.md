@@ -299,9 +299,70 @@ fabric_rdf_translation/
 - [ ] F5.3 Data Binding - fetching entity types from Fabric API
 
 **Pending (Next Session):**
+- [ ] Debug ALMOperationImportFailed error on ontology upload
 - [ ] Complete data binding upload (notebook 09)
 - [ ] Verify entity instances appear in Fabric Graph
 - [ ] F6.1 SHACL Shape Parser
+
+---
+
+## Session: 2026-03-02 - F5.2/F5.3 Ontology Upload Debugging 🔄
+
+**Topics:** Fabric Ontology API errors, ID format issues, reserved words
+
+**Problem:** Ontology definition upload fails with `ALMOperationImportFailed` error.
+
+**Investigation Path:**
+
+| Issue | Resolution |
+|-------|------------|
+| UUID IDs rejected | Changed to 64-bit integers |
+| String IDs rejected | Changed `generate_id()` to return `int` |
+| "Must be 64 bit identifier" error | Confirmed by Fabric UI |
+| ID not found during data binding | IDs must be actual JSON integers, not quoted strings |
+| "Class" entity type | Added "class" to RESERVED_WORDS (renames to "ClassType") |
+
+**Key Code Changes:**
+
+1. **Notebook 07 - `generate_id()` function:**
+   - Now returns `int` (not `str`)
+   - Uses SHA-256 hash truncated to 63-bit positive integer
+   - Deterministic: same seed always produces same ID
+
+2. **Notebook 07 - RESERVED_WORDS:**
+   - Added: `class`, `object`, `namespace`, `definition`
+   - Reserved words get suffixed with "Type" (e.g., "Class" → "ClassType")
+
+**Current Blocker:**
+
+After fixing all ID issues and reserved words, upload still fails with:
+```
+ALMOperationImportFailed: Import of the {0} artifact '{1}' threw an exception with this message: {2}
+```
+
+The error message has unfilled placeholders `{0}`, `{1}`, `{2}` which suggests a Fabric API bug (error formatting issue) that doesn't reveal the actual problem.
+
+**Validated so far:**
+- ✅ All entity type IDs are integers
+- ✅ All property IDs are integers  
+- ✅ All relationship type IDs are integers
+- ✅ All source/target entityTypeId references are integers
+- ✅ All referenced entity type IDs exist
+- ✅ No missing source/target references in relationships
+
+**Files Changed:**
+- `src/notebooks/07_ontology_definition_generator.ipynb` - ID generation, reserved words
+- `src/notebooks/08_ontology_api_client.ipynb` - Debug logging for LRO
+- `src/notebooks/09_data_binding.ipynb` - Local file loading, ID diagnostics
+
+**Next Steps:**
+1. Try uploading a minimal ontology (1-2 entity types) to isolate the issue
+2. Compare with Fabric UI manual entity type creation  
+3. Check Fabric documentation for any undocumented constraints
+4. Consider opening support ticket if issue persists
+
+**Commits:**
+- `5ac22bd` - "Add 'class' to RESERVED_WORDS + fix ID types"
 
 ---
 
