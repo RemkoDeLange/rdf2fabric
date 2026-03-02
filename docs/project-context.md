@@ -306,63 +306,64 @@ fabric_rdf_translation/
 
 ---
 
-## Session: 2026-03-02 - F5.2/F5.3 Ontology Upload Debugging 🔄
+## Session: 2026-03-02 - F5.2/F5.3 Ontology Upload Debugging ✅ RESOLVED
 
 **Topics:** Fabric Ontology API errors, ID format issues, reserved words
 
 **Problem:** Ontology definition upload fails with `ALMOperationImportFailed` error.
 
+**RESOLUTION FOUND:** IDs must be **STRINGS** in the JSON payload, not integers!
+
 **Investigation Path:**
 
 | Issue | Resolution |
 |-------|------------|
-| UUID IDs rejected | Changed to 64-bit integers |
-| String IDs rejected | Changed `generate_id()` to return `int` |
-| "Must be 64 bit identifier" error | Confirmed by Fabric UI |
-| ID not found during data binding | IDs must be actual JSON integers, not quoted strings |
-| "Class" entity type | Added "class" to RESERVED_WORDS (renames to "ClassType") |
+| UUID IDs rejected | Changed to numeric IDs |
+| String IDs rejected | **WRONG** - IDs MUST be strings! |
+| "Must be 64 bit identifier" error | Misleading - the error is about format, not value |
+| ID not found during data binding | IDs should be quoted strings like `"id": "8813598896083"` |
+| ALMOperationImportFailed | **ROOT CAUSE:** Was sending unquoted integers, needed quoted strings |
 
-**Key Code Changes:**
+**Solution (2026-03-02):**
 
-1. **Notebook 07 - `generate_id()` function:**
-   - Now returns `int` (not `str`)
-   - Uses SHA-256 hash truncated to 63-bit positive integer
-   - Deterministic: same seed always produces same ID
+From Microsoft documentation sample at [REST API - Update Ontology Definition](https://learn.microsoft.com/en-us/rest/api/fabric/ontology/items/update-ontology-definition):
 
-2. **Notebook 07 - RESERVED_WORDS:**
-   - Added: `class`, `object`, `namespace`, `definition`
-   - Reserved words get suffixed with "Type" (e.g., "Class" → "ClassType")
-
-**Current Blocker:**
-
-After fixing all ID issues and reserved words, upload still fails with:
-```
-ALMOperationImportFailed: Import of the {0} artifact '{1}' threw an exception with this message: {2}
+```json
+{
+  "id": "8813598896083",  // STRING, not integer!
+  "namespace": "usertypes",
+  "entityIdParts": ["3117068036374594013"],  // STRING array!
+  ...
+}
 ```
 
-The error message has unfilled placeholders `{0}`, `{1}`, `{2}` which suggests a Fabric API bug (error formatting issue) that doesn't reveal the actual problem.
+**Key Code Change:**
 
-**Validated so far:**
-- ✅ All entity type IDs are integers
-- ✅ All property IDs are integers  
-- ✅ All relationship type IDs are integers
-- ✅ All source/target entityTypeId references are integers
-- ✅ All referenced entity type IDs exist
-- ✅ No missing source/target references in relationships
+`generate_id()` function updated to return `str`:
+```python
+def generate_id(seed: str) -> str:
+    """Returns numeric string ID like "8813598896083" """
+    hash_bytes = hashlib.sha256(seed.encode('utf-8')).digest()
+    raw_int = int.from_bytes(hash_bytes[:8], byteorder='big', signed=False)
+    int_13digit = raw_int % 10000000000000  # 13-digit number
+    return str(int_13digit)  # Return as STRING!
+```
 
-**Files Changed:**
-- `src/notebooks/07_ontology_definition_generator.ipynb` - ID generation, reserved words
-- `src/notebooks/08_ontology_api_client.ipynb` - Debug logging for LRO
-- `src/notebooks/09_data_binding.ipynb` - Local file loading, ID diagnostics
+**Validation:**
 
-**Next Steps:**
-1. Try uploading a minimal ontology (1-2 entity types) to isolate the issue
-2. Compare with Fabric UI manual entity type creation  
-3. Check Fabric documentation for any undocumented constraints
-4. Consider opening support ticket if issue persists
+Research script `research/fabric_ontology_api_research.py` confirmed:
+- ✅ String IDs: `{"id": "8888888888888"}` → **SUCCESS**
+- ❌ Integer IDs: `{"id": 8888888888888}` → **FAIL**
 
 **Commits:**
 - `5ac22bd` - "Add 'class' to RESERVED_WORDS + fix ID types"
+- `67c36b4` - "Fix: Generate string IDs instead of integers for Fabric Ontology API"
+
+**Next Steps:**
+1. Sync notebooks from GitHub to Fabric workspace
+2. Re-run notebook 07 to regenerate entity types with string IDs
+3. Re-run notebook 08 to upload ontology
+4. Complete F5.3 data binding
 
 ---
 
