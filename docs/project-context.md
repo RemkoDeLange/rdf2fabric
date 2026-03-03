@@ -306,6 +306,86 @@ fabric_rdf_translation/
 
 ---
 
+## Session: 2026-03-03 - F5.3 Data Binding Still Failing 🔄
+
+**Topics:** Data binding upload fails even after entity types work
+
+**Progress:**
+- ✅ **Entity types now upload successfully** (string ID fix from 2026-03-02 worked!)
+- ✅ Entity types visible in Fabric Ontology UI
+- ❌ **Data binding upload still fails** with same `ALMOperationImportFailed` error
+
+**Error:**
+```
+ALMOperationImportFailed: Import of the {0} artifact '{1}' threw an exception with this message: {2}
+```
+
+**Known Data Binding Requirements (from Fabric docs):**
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| OneLake security disabled | ⬜ Unknown | Check lakehouse settings |
+| Managed Delta tables | ⬜ Unknown | Not external tables |
+| Column mapping disabled | ⬜ Unknown | Check table properties |
+| String IDs in binding JSON | ✅ Applied | Same as entity types |
+| `targetPropertyId` as string | ⬜ To verify | Must match entity property IDs |
+
+**Likely Causes to Investigate:**
+
+1. **Lakehouse Configuration:**
+   - OneLake security must be disabled on source lakehouse
+   - Tables must be managed Delta tables (not external)
+   - Column mapping must be disabled
+
+2. **ID Reference Mismatches:**
+   - `targetPropertyId` in bindings must exactly match property IDs in uploaded entity types
+   - May need to fetch entity type definitions from API first to get correct IDs
+
+3. **Data Binding JSON Structure:**
+   - Need to verify exact structure matches Microsoft documentation
+   - May have nested object issues similar to entity types
+
+**Data Binding JSON Structure (from MS docs):**
+```json
+{
+  "id": "66253a71-c26f-4c9d-877f-3af5632a4be2",  // UUID for binding
+  "dataBindingConfiguration": {
+    "dataBindingType": "NonTimeSeries",
+    "propertyBindings": [
+      {
+        "sourceColumnName": "DisplayName",
+        "targetPropertyId": "3117068036374594013"  // STRING!
+      }
+    ],
+    "sourceTableProperties": {
+      "sourceType": "LakehouseTable",
+      "workspaceId": "580f410e-733d-43bd-8a87-be12b536f7ff",
+      "itemId": "d0d863bc-48e1-45b2-8f4b-54795c97ba71",  // Lakehouse ID
+      "sourceTableName": "equipment1nontimeseries",
+      "sourceSchema": "dbo"
+    }
+  }
+}
+```
+
+**Files Involved:**
+- `src/notebooks/09_data_binding.ipynb` - Data binding generation and upload
+- `src/lakehouses/lh_rdf_translation_dev_01/` - Source lakehouse with gold tables
+
+**Next Investigation Steps:**
+1. Check lakehouse settings (OneLake security, table types)
+2. Verify `targetPropertyId` values match uploaded entity type property IDs
+3. Try uploading a minimal binding (1 entity type, 1 property) to isolate issue
+4. Compare binding JSON structure with Microsoft sample exactly
+5. Check if binding ID format (UUID vs numeric string) matters
+
+**To Resume:**
+1. Open Fabric workspace `ws-rdf_translation-dev-01`
+2. Check lakehouse `lh_rdf_translation_dev_01` settings
+3. Run notebook 09 with debug logging to see exact binding payload
+4. Compare with Microsoft REST API documentation sample
+
+---
+
 ## Session: 2026-03-02 - F5.2/F5.3 Ontology Upload Debugging ✅ RESOLVED
 
 **Topics:** Fabric Ontology API errors, ID format issues, reserved words
