@@ -1066,7 +1066,7 @@ class TestLakehouseDataBinding:
 
 **Description:** Build and upload the GraphModel definition to populate the auto-created (but empty) GraphModel, then trigger RefreshGraph to materialize data into the Fabric Graph.
 
-**Problem (Product Gap):** Fabric auto-creates a `GraphModel` item when an Ontology is created, but does NOT populate it from Ontology entity types or data bindings. The GraphModel only contains `.platform` metadata — no `dataSources`, `graphType`, or `graphDefinition`. RefreshGraph on the empty GraphModel immediately returns `Cancelled`.
+**Observation:** Fabric auto-creates a `GraphModel` item when an Ontology is created, but the GraphModel definition needs to be built and uploaded separately. The auto-created GraphModel only contains `.platform` metadata — no `dataSources`, `graphType`, or `graphDefinition`. RefreshGraph on this empty GraphModel immediately returns `Cancelled`.
 
 **Solution:** Build the GraphModel definition ourselves from:
 - Entity types + gold tables → nodeTypes + nodeTables + dataSources

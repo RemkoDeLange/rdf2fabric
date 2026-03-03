@@ -1,14 +1,15 @@
 # RDF2Fabric
 
-A **generic tool** for translating RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph).
+A **proof of concept** exploring what it takes to import RDF (Semantic Web) data into Microsoft Fabric Real-Time Intelligence — specifically Fabric Ontology and Fabric Graph.
 
-## What it does
+## What this PoC explores
 
-RDF and Fabric Graph use fundamentally different graph paradigms that cannot be mapped 1:1. This tool guides users through the **12 modeling decisions** required to translate any RDF dataset into Fabric's property graph format.
+RDF and Fabric Graph use fundamentally different graph paradigms that cannot be mapped 1:1. This PoC investigates the **translation challenges**, the **12 modeling decisions** involved, and the current capabilities and limitations of Fabric's Ontology and Graph APIs.
 
-- **Works with any RDF data**: DBpedia, schema.org, FIBO, custom ontologies
-- **Interactive decision UI**: Graph visualization to preview RDF → LPG mapping
-- **Automated processing**: Once decisions are made, translation runs automatically
+- **RDF → LPG translation**: Parsing RDF, discovering schema, mapping classes to entity types, properties to attributes, and object properties to relationships
+- **Fabric Ontology API integration**: Creating ontology definitions, uploading data bindings, handling LRO patterns
+- **Fabric Graph materialization**: Building GraphModel definitions, triggering RefreshGraph, understanding the end-to-end pipeline
+- **NEN 2660-2 as test data**: Dutch built environment standard used to exercise the full translation pipeline
 
 ## Installation Options
 
@@ -76,4 +77,4 @@ fabric_rdf_translation/
 
 ## Status
 
-🟢 **Requirements Complete** - Ready for implementation
+� **Proof of Concept** — Actively exploring RDF import into Fabric IQ

@@ -10,9 +10,9 @@
 
 ## 1. System Overview
 
-This application translates **any** RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph). It is a **generic, reusable tool** - not tied to any specific domain or ontology. The core challenge is that this translation requires **human decisions** - there is no 1:1 mapping between RDF and LPG paradigms.
+This proof of concept explores the translation of RDF (Semantic Web) data into Microsoft Fabric Graph (Labeled Property Graph) via the Fabric Ontology API. The core challenge is that this translation requires **human decisions** — there is no 1:1 mapping between RDF and LPG paradigms.
 
-> **Note:** NEN 2660-2 (Dutch built environment standard) is used as **test data** during development. The application works with any RDF dataset: DBpedia, schema.org, FIBO, custom ontologies, etc.
+> **Note:** NEN 2660-2 (Dutch built environment standard) is used as **test data** during development.
 
 ### 1.1 Key Design Principles
 

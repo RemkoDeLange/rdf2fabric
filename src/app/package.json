@@ -1,7 +1,7 @@
 {
   "name": "rdf2fabric",
   "version": "0.1.0",
-  "description": "Translate RDF data to Microsoft Fabric Graph",
+  "description": "PoC: Exploring RDF import into Microsoft Fabric Real-Time Intelligence",
   "productName": "RDF2Fabric",
   "author": "Remko de Lange",
   "license": "MIT",

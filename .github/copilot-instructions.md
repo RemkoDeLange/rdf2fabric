@@ -1,4 +1,4 @@
-You are helping build a Microsoft Fabric application for RDF translation.
+You are helping with a proof of concept exploring RDF import into Microsoft Fabric Real-Time Intelligence.
 
 ## Project Context
 
@@ -6,23 +6,24 @@ Before answering questions, read the project context file at `docs/project-conte
 
 - Decisions already made
 - Current project status
-- Next steps in the requirements phase
+- Findings and limitations discovered
 
 ## Key Files
 
-- `docs/requirements.md` - Business & technical requirements (in progress)
+- `docs/requirements.md` - Business & technical requirements
 - `docs/architecture.md` - System design
-- `docs/data-sources.md` - Source systems and RDF mappings
+- `docs/data-sources.md` - Test data (NEN 2660-2)
 - `docs/project-context.md` - Session history and decisions
 
 ## Project Focus
 
-This is a **Fabric RDF Translation** project that will:
+This is a **proof of concept** that explores:
 
-- Ingest data from various sources into a Lakehouse
-- Transform and translate data to RDF format
-- Use Fabric workloads (Lakehouse, Notebooks, Pipelines)
+- Translating RDF data to Fabric Ontology and Graph
+- The modeling decisions required for RDF → LPG translation
+- Fabric Ontology/Graph API capabilities and limitations
+- Using Fabric workloads (Lakehouse, Notebooks, Pipelines)
 
 ## Current Phase
 
-🟡 Requirements Gathering - Help the user document requirements, identify data sources, and define RDF translation rules.
+🟡 Proof of Concept — Actively exploring RDF import into Fabric IQ.

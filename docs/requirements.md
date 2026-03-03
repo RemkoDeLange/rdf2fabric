@@ -30,7 +30,7 @@ The challenge is fundamental: RDF (Resource Description Framework) from the Sema
 
 ### 1.2 Business Objectives
 
-- [x] **Generic Tool**: Build a reusable application (not a one-time ETL) that can translate *any* RDF dataset to Fabric Graph, regardless of domain or ontology (DBpedia, schema.org, FIBO, custom ontologies, etc.)
+- [x] **PoC**: Explore what it involves to import RDF data into Fabric Real-Time Intelligence (Ontology + Graph), identifying translation challenges, required modeling decisions, and API capabilities/limitations
 - [ ] **Decision Support**: Guide users through the modeling decisions required for RDF → LPG translation
 - [ ] **Automated Import**: Once decisions are made, automatically transform and load data into Fabric Ontology/Graph
 - [ ] **Documentation**: Capture decisions and known limitations for each translation project
@@ -51,7 +51,7 @@ The challenge is fundamental: RDF (Resource Description Framework) from the Sema
 |------|------------------|
 | Knowledge Graph Specialist | Make translation/modeling decisions |
 | Business Analyst | Support decisions with domain context |
-| Data Engineer | Implement and maintain pipelines |
+| Data Engineer | Implement pipelines, run translations |
 
 ---
 
@@ -438,7 +438,7 @@ On first app launch, customer configures their Fabric workspace URL. The app sto
 |------|------------------------|
 | **Knowledge Graph Specialist** | Make B-category decisions, validate translations |
 | **Business Analyst** | Provide domain context, review outputs |
-| **Data Engineer** | Implement/maintain, run pipelines, troubleshoot |
+| **Data Engineer** | Implement pipelines, run translations, troubleshoot |
 
 #### User Journey Phases
 

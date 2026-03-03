@@ -40,7 +40,7 @@ When you encounter a new RDF-specific implementation choice:
 
 ## Project Background
 
-This project is being developed to build a **generic RDF translation application** for Microsoft Fabric. The application will translate **any** RDF (Semantic Web) data to Fabric Graph, regardless of domain or ontology. NEN 2660-2 is used as test data during development, but the tool is designed to work with DBpedia, schema.org, FIBO, or any custom ontology.
+This project is a **proof of concept** exploring what it takes to import RDF (Semantic Web) data into Microsoft Fabric Real-Time Intelligence (Ontology + Graph). It investigates the translation challenges between RDF and Labeled Property Graphs, the modeling decisions required, and the current capabilities and limitations of Fabric's Ontology and Graph APIs. NEN 2660-2 (Dutch built environment standard) is used as test data to exercise the full pipeline.
 
 ---
 
@@ -324,7 +324,7 @@ Research script `research/graph_refresh_research.py` discovered:
 | RefreshGraph on Ontology | `400 InvalidJobType` — not supported |
 | RefreshGraph on GraphModel | `202` → immediately `Cancelled` (empty definition) |
 
-**Root cause:** Fabric auto-creates a GraphModel shell when an Ontology is created, but does NOT populate its definition from Ontology entity types or data bindings. This is a product gap — filed with the Ontology product team.
+**Root cause:** Fabric auto-creates a GraphModel shell when an Ontology is created, but does NOT populate its definition from Ontology entity types or data bindings. The GraphModel definition needs to be built and uploaded separately.
 
 ### Solution: Build GraphModel Definition Ourselves
 
