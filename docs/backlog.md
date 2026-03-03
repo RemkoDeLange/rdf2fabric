@@ -1061,6 +1061,47 @@ class TestLakehouseDataBinding:
 
 ---
 
+### F5.4 - GraphModel Definition & Graph Materialization
+**Priority:** 🟠 P1 | **Status:** 🔄 In Progress | **Estimate:** S
+
+**Description:** Build and upload the GraphModel definition to populate the auto-created (but empty) GraphModel, then trigger RefreshGraph to materialize data into the Fabric Graph.
+
+**Problem (Product Gap):** Fabric auto-creates a `GraphModel` item when an Ontology is created, but does NOT populate it from Ontology entity types or data bindings. The GraphModel only contains `.platform` metadata — no `dataSources`, `graphType`, or `graphDefinition`. RefreshGraph on the empty GraphModel immediately returns `Cancelled`.
+
+**Solution:** Build the GraphModel definition ourselves from:
+- Entity types + gold tables → nodeTypes + nodeTables + dataSources
+- Relationship types + gold_edges → edgeTypes + edgeTables (with filter by `type` column)
+
+**GraphModel Definition Parts:**
+
+| Part | Content |
+|------|---------|
+| `dataSources.json` | DeltaTable references with OneLake paths |
+| `graphType.json` | nodeTypes (labels, STRING properties, primaryKey=id) + edgeTypes |
+| `graphDefinition.json` | nodeTables (column→property) + edgeTables (with type filter) |
+| `.platform` | Preserved from existing GraphModel |
+
+**API Calls:**
+1. `GET /v1/workspaces/{wsId}/items` → Discover GraphModel by name pattern
+2. `POST /v1/workspaces/{wsId}/GraphModels/{id}/updateDefinition` → Upload definition
+3. `POST /v1/workspaces/{wsId}/items/{id}/jobs/instances?jobType=RefreshGraph` → Trigger refresh
+4. `GET /v1/workspaces/{wsId}/items/{id}/jobs/instances/{jobId}` → Poll job status
+
+**Acceptance Criteria:**
+- [x] Discover auto-created GraphModel for the Ontology
+- [x] Build dataSources from per-entity gold tables + gold_edges
+- [x] Build graphType with nodeTypes and edgeTypes from ontology definition
+- [x] Build graphDefinition with nodeTables and edgeTables (filtered by type)
+- [x] Upload definition via updateDefinition API
+- [x] Trigger RefreshGraph and poll for completion
+- [ ] Verify Graph shows nodes and edges in Fabric portal
+
+**Implementation:** Added to NB09 (`09_data_binding.ipynb`) as Steps 1-4 after binding upload.
+
+**Dependencies:** F5.2, F5.3
+
+---
+
 ## Epic 6: SHACL Validation (Pre-Load)
 
 ### F6.1 - SHACL Shape Parser

@@ -296,13 +296,60 @@ fabric_rdf_translation/
 - [x] **Create shortcuts to NEN 2660 test data** (F1.3)
 
 **In Progress:**
-- [ ] F5.3 Data Binding - fetching entity types from Fabric API
+- [ ] F5.4 Graph Materialization - verify RefreshGraph populates Graph
 
 **Pending (Next Session):**
-- [ ] Debug ALMOperationImportFailed error on ontology upload
-- [ ] Complete data binding upload (notebook 09)
-- [ ] Verify entity instances appear in Fabric Graph
+- [ ] Run NB09 end-to-end in Fabric to verify Graph is populated
+- [ ] Verify Graph nodes/edges visible in Fabric portal
 - [ ] F6.1 SHACL Shape Parser
+
+---
+
+## Session: 2026-03-04 - GraphModel Definition & Graph Materialization
+
+**Topics:** Empty Graph root cause, GraphModel definition gap, build graph definition ourselves
+
+### Problem: Graph is Empty Despite Working Bindings
+
+After NB07→NB08→NB09 all succeeded and 75 data bindings were visible in Fabric UI, the connected Graph remained empty.
+
+### Root Cause
+
+Research script `research/graph_refresh_research.py` discovered:
+
+| Finding | Detail |
+|---------|--------|
+| GraphModel exists | `cadff1f3-20f6-4795-ade3-1cf42f4e87ab` (auto-created by Fabric) |
+| GraphModel definition | **EMPTY** — only `.platform` metadata, no dataSources/graphType/graphDefinition |
+| RefreshGraph on Ontology | `400 InvalidJobType` — not supported |
+| RefreshGraph on GraphModel | `202` → immediately `Cancelled` (empty definition) |
+
+**Root cause:** Fabric auto-creates a GraphModel shell when an Ontology is created, but does NOT populate its definition from Ontology entity types or data bindings. This is a product gap — filed with the Ontology product team.
+
+### Solution: Build GraphModel Definition Ourselves
+
+Added 4 new cells to NB09 (after binding upload, before save config):
+
+| Step | Cell | Description |
+|------|------|-------------|
+| 1 | `#VSC-82eaf7ba` | Discover auto-created GraphModel by name pattern |
+| 2 | `#VSC-05b916a2` | Build dataSources, graphType, graphDefinition from entity types + gold tables |
+| 3 | `#VSC-b16cbe29` | Assemble definition parts (base64) + upload via `updateDefinition` on GraphModel |
+| 4 | `#VSC-c8e73e6e` | Trigger `RefreshGraph` + poll job until Succeeded/Failed |
+
+**GraphModel Definition Structure:**
+- `dataSources.json`: One DeltaTable per entity gold table + one for `gold_edges`
+- `graphType.json`: nodeTypes (alias, labels, primaryKey=`["id"]`, all STRING properties) + edgeTypes (source/destination node type aliases)
+- `graphDefinition.json`: nodeTables (1:1 column→property mappings) + edgeTables (filter `gold_edges` by `type` column per relationship)
+
+### Files Changed
+- `src/notebooks/09_data_binding.ipynb` — 4 new cells for GraphModel definition + updated summary
+- `research/graph_refresh_research.py` — Research script (committed earlier)
+
+### Next Steps
+- [ ] Run NB09 in Fabric to test full pipeline including graph materialization
+- [ ] Verify Graph shows nodes and edges in Fabric portal
+- [ ] If RefreshGraph fails, debug definition format issues
 
 ---
 
