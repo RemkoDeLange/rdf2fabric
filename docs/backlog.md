@@ -897,14 +897,22 @@ class TestOntologyDefinitionGenerator:
 
 **Authentication:** Entra ID with scope `Item.ReadWrite.All`
 
+**Critical LRO Pattern for getDefinition** (discovered 2026-03-03):
+```
+POST getDefinition → 202 + Location header
+Poll LRO URL until status=Succeeded
+GET {operationUrl}/result → actual definition with parts
+```
+The definition is at `{operationUrl}/result`, NOT from re-calling getDefinition.
+
 **Acceptance Criteria:**
-- [ ] Authenticate using Entra ID token (user or service principal)
-- [ ] Create new Ontology item in workspace
-- [ ] Retrieve existing Ontology definition
-- [ ] Update Ontology definition (entity types, properties, relationships)
-- [ ] Handle long-running operations (LRO) with polling
-- [ ] Handle API errors gracefully
-- [ ] Retry on transient failures (429, 5xx)
+- [x] Authenticate using Entra ID token (user or service principal)
+- [x] Create new Ontology item in workspace
+- [x] Retrieve existing Ontology definition (using LRO `/result` pattern)
+- [x] Update Ontology definition (entity types, properties, relationships)
+- [x] Handle long-running operations (LRO) with polling
+- [x] Handle API errors gracefully
+- [x] Retry on transient failures (429, 5xx)
 
 **Tests:**
 ```python
@@ -951,39 +959,66 @@ class TestFabricOntologyClient:
 - **Relationship binding:** Relationship types bound to edge table (gold_edges)
 - **Time series binding:** (Future) Real-time data from Eventhouse
 
-**Data Binding JSON Structure:**
+**Data Binding JSON Structure** (verified 2026-03-03):
+
+Entity binding (`EntityTypes/{id}/DataBindings/{uuid}.json`):
 ```json
 {
-  "id": "binding-uuid",
+  "id": "dd95e300-25d4-4049-90a0-37ed3c63d5ed",
   "dataBindingConfiguration": {
     "dataBindingType": "NonTimeSeries",
     "propertyBindings": [
-      {"sourceColumnName": "name", "propertyId": "prop-id-1"},
-      {"sourceColumnName": "description", "propertyId": "prop-id-2"}
+      {"sourceColumnName": "id", "targetPropertyId": "3001001001001"}
     ],
-    "dataSource": {
+    "sourceTableProperties": {
+      "sourceType": "LakehouseTable",
       "workspaceId": "ws-id",
-      "lakehouseId": "lh-id",
-      "tableName": "gold_nodes"
+      "itemId": "lakehouse-id",
+      "sourceTableName": "gold_nodes",
+      "sourceSchema": "dbo"
     }
   }
 }
 ```
 
+Relationship contextualization (`RelationshipTypes/{id}/Contextualizations/{uuid}.json`):
+```json
+{
+  "id": "3a5f2567-...",
+  "dataBindingTable": {
+    "sourceType": "LakehouseTable",
+    "workspaceId": "ws-id",
+    "itemId": "lakehouse-id",
+    "sourceTableName": "gold_edges",
+    "sourceSchema": "dbo"
+  },
+  "sourceKeyRefBindings": [{"sourceColumnName": "source_id", "targetPropertyId": "..."}],
+  "targetKeyRefBindings": [{"sourceColumnName": "target_id", "targetPropertyId": "..."}]
+}
+```
+
+**Key Requirements** (discovered via research):
+- All IDs must be **strings** (not integers)
+- `targetPropertyId` (not `propertyId`) for property bindings
+- `sourceTableProperties` with `sourceType`, `itemId`, `sourceSchema: "dbo"`
+- Must include ALL existing definition parts alongside bindings in `updateDefinition`
+- Schemas: `dataBinding/1.0.0/schema.json` and `contextualization/1.0.0/schema.json`
+
 **Acceptance Criteria:**
-- [ ] Generate static data binding JSON for entity types
-- [ ] Map gold_nodes columns to entity type properties
-- [ ] Generate relationship binding for gold_edges
-- [ ] Set entity type key (unique identifier column)
-- [ ] Set display name property for entity instances
+- [x] Generate static data binding JSON for entity types
+- [x] Map gold_nodes columns to entity type properties
+- [x] Generate relationship contextualization for gold_edges
+- [x] Include all existing definition parts when uploading bindings
+- [x] Keep all IDs as strings throughout
 - [ ] Validate binding columns exist in source tables
-- [ ] Handle binding errors from API
+- [x] Handle binding errors from API
 
 **Limitations:**
 - Lakehouse tables must be managed (not external)
 - OneLake security must be disabled on lakehouse
 - Column mapping must not be enabled on Delta tables
 - Each entity type supports one static data binding
+- Fabric IQ is in preview — graph refreshes are costly in CU
 
 **Tests:**
 ```python

@@ -298,6 +298,52 @@ Based on these findings, our translation pipeline must be:
 
 ---
 
+## S7: Fabric Ontology Data Binding API (added 2026-03-03)
+
+### Key Discoveries
+
+Research spike conducted via `research/data_binding_research.py` — tested the Fabric Ontology REST API for data binding operations.
+
+**Full details:** See `research/data_binding_findings.md`
+
+#### 1. getDefinition LRO Pattern
+- `POST getDefinition` **always** returns 202 (Long-Running Operation)
+- After LRO succeeds, definition is at `{operationUrl}/result` (GET)
+- Previous code was re-calling getDefinition after LRO, which returned another 202
+
+#### 2. Data Binding Schemas
+| Type | Schema | Path |
+|------|--------|------|
+| Entity binding | `dataBinding/1.0.0/schema.json` | `EntityTypes/{id}/DataBindings/{uuid}.json` |
+| Relationship | `contextualization/1.0.0/schema.json` | `RelationshipTypes/{id}/Contextualizations/{uuid}.json` |
+
+#### 3. All IDs Must Be Strings
+Entity IDs, property IDs, relationship IDs, and `entityTypeId` references must all be strings (e.g., `"1001001001001"`), not integers.
+
+#### 4. updateDefinition Is a Full Replace
+Must include ALL existing definition parts (entity types, relationships, .platform, definition.json) alongside new binding parts. Omitting existing parts wipes them out.
+
+#### 5. Source Table Properties
+```json
+{
+  "sourceType": "LakehouseTable",
+  "workspaceId": "...",
+  "itemId": "...",
+  "sourceTableName": "gold_nodes",
+  "sourceSchema": "dbo"
+}
+```
+- `itemId` = Lakehouse ID (not Ontology ID)
+- `sourceSchema` is always `"dbo"` for Fabric Lakehouse
+
+#### 6. Performance (Fabric IQ Preview)
+- Graph refreshes are costly in CU (Capacity Units)
+- Any ontology or data binding change triggers a graph refresh
+- Recommend: batch all changes into single `updateDefinition` call
+- Preview limitations: slow materialization, no SLA
+
+---
+
 ## Next Steps
 
 1. ✅ Research complete - findings documented
