@@ -178,7 +178,7 @@ These can be handled automatically by the application without human intervention
 | A3 | **Literal Datatypes** | `"42"^^xsd:int` | Native int/string/bool | Type conversion rules |
 | A4 | **Blank Nodes** | `_:b0` | Generated UUIDs | Deterministic ID generation |
 | A5 | **Simple Reification** | Single statement about statement | Edge with properties | Standard pattern |
-| A6 | **RDFS Hierarchy** | `rdfs:subClassOf` | Label inheritance/tags | Automatic flattening |
+| A6 | **RDFS Hierarchy** | `rdfs:subClassOf` | Label inheritance/tags + **property inheritance** (child classes inherit parent datatype properties) | Automatic: transitive ancestor walk via `parent_types`; materialised at ontology generation time |
 | A7 | **Multi-edges** | Duplicate triples | Multiple edges allowed | LPG multigraph support |
 
 #### Category B: Human Decision Required (Ambiguous - Multiple Valid Options)
