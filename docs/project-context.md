@@ -337,8 +337,10 @@ int_64 = raw_int & 0x7FFFFFFFFFFFFFFF  # Max: 9,223,372,036,854,775,807
 - `src/notebooks/09_data_binding.ipynb` — API ID override cell, diagnostic cleanup
 
 ### Next Steps
-- [ ] Delete existing ontology in Fabric (old 13-digit IDs)
+- [ ] Delete existing ontology + GraphModel in Fabric (old 13-digit IDs)
 - [ ] Re-run NB07→NB08→NB09 with new ID generation
+- [ ] **Test theory:** Before running GraphModel build cells, check if Fabric auto-populated the GraphModel definition. If yes, the manual GraphModel definition build (session 2026-03-04) was a workaround for a problem we caused with truncated IDs, not a product behavior.
+- [ ] If GraphModel is auto-populated → remove manual build cells from NB09
 - [ ] Verify Graph nodes/edges visible in Fabric portal
 
 ---
@@ -363,6 +365,8 @@ Research script `research/graph_refresh_research.py` discovered:
 | RefreshGraph on GraphModel | `202` → immediately `Cancelled` (empty definition) |
 
 **Root cause:** Fabric auto-creates a GraphModel shell when an Ontology is created, but does NOT populate its definition from Ontology entity types or data bindings. The GraphModel definition needs to be built and uploaded separately.
+
+> **⚠️ Revision (2026-03-04b):** This may NOT be a product behavior. The empty GraphModel may have been caused by the **entity type ID mismatch** discovered later — `generate_id()` produced 13-digit IDs, but Fabric assigned 19-digit IDs, so data bindings were attached to non-existent entity type IDs. If correct IDs produce a populated GraphModel, the manual build below is unnecessary. See session 2026-03-04b for test plan.
 
 ### Solution: Build GraphModel Definition Ourselves
 
