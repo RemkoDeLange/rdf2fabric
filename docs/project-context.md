@@ -296,11 +296,274 @@ fabric_rdf_translation/
 - [x] **Create shortcuts to NEN 2660 test data** (F1.3)
 
 **In Progress:**
-- [ ] F5.4 Graph Materialization - verify RefreshGraph populates Graph
+- [ ] F5.4 Graph Materialization - RefreshGraph instantly cancels (service-side issue)
 
 **Pending (Next Session):**
-- [ ] Re-run NB07→NB08→NB09 in Fabric with fixed ID generation
-- [ ] Verify Graph nodes/edges visible in Fabric portal
+- [ ] File Microsoft support ticket with rootActivityId for RefreshGraph cancellation
+- [ ] Try RefreshGraph from Fabric Portal UI (may bypass API-only limitations)
+- [ ] Fix upstream RDF property extraction (gold tables have empty properties MAP)
+
+---
+
+## Session: 2026-03-04e - RefreshGraph Cancelled Investigation 🔴 BLOCKED
+
+**Topics:** RefreshGraph job cancels instantly without error — appears to be service-side limitation
+
+### Summary
+
+GraphModel `updateDefinition` (Step 3) now succeeds consistently, storing all 5 required parts. However, `RefreshGraph` (Step 4) immediately cancels (<1 second) with no `failureReason` provided.
+
+### Investigation Steps
+
+| Test | Result |
+|------|--------|
+| Fetch GraphModel definition | ✅ All 5 parts present (graphType, dataSources, graphDefinition, stylingConfiguration, .platform) |
+| Verify data lakehouse ID | ✅ Correct: `32e17923-0b8b-4106-953a-6d63081fa361` |
+| Verify OneLake path format | ✅ `abfss://52fc996f-...@onelake.dfs.fabric.microsoft.com/32e17923-.../Tables/dbo/gold_container` |
+| Check gold_container table | ⚠️ Only `id` column populated, `properties` MAP empty for all rows |
+| Test minimal id-only GraphModel | ❌ RefreshGraph cancelled |
+| Test with entityTypeId reference | ❌ RefreshGraph cancelled |
+| Path without `dbo/` prefix | ❌ Validation error (dbo/ required) |
+
+### RefreshGraph LRO Response
+
+```json
+{
+  "status": "Cancelled",
+  "createdTimeUtc": "2026-03-04T16:45:23.123Z",
+  "lastUpdatedTimeUtc": "2026-03-04T16:45:23.456Z",
+  "failureReason": null
+}
+```
+
+**Key observation:** `startTime` ≈ `endTime` (same second) — job terminates instantly without attempting any work.
+
+### Minimal Test Definition
+
+Even this minimal definition fails:
+```json
+// graphDefinition.json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/graphDefinition/1.0.0/schema.json",
+  "nodeTables": [{
+    "name": "Container_nodeTable",
+    "nodeType": "Container_nodeType",
+    "dataSource": "gold_container",
+    "nodeIdColumn": "id",
+    "nodeIdColumnType": "String",
+    "columnMappings": [{
+      "columnDataType": "String",
+      "columnName": "id",
+      "property": "uri"
+    }]
+  }],
+  "edgeTables": []
+}
+```
+
+### Root Cause Analysis
+
+| Possible Cause | Verdict |
+|----------------|---------|
+| Bad GraphModel definition | ❌ Ruled out — updateDefinition succeeds, 5 parts stored |
+| Wrong lakehouse ID | ❌ Ruled out — verified matches data lakehouse |
+| OneLake path format | ❌ Ruled out — validated format, dbo/ required |
+| Missing properties in table | ⚠️ Possible but id-only mapping also fails |
+| Service-side preview limitation | **Likely** — no error details, instant cancel |
+| Capacity/region restriction | **Possible** — Graph may not be GA in all regions |
+
+### Data Quality Issue (Separate from RefreshGraph)
+
+The `gold_container` table has empty `properties` MAP:
+```
+id                                              | properties
+nen2660:Container                               | {}
+urn:nen2660:concept:Container:containedElement  | {}
+... (6 rows, all empty)
+```
+
+This is an upstream issue from notebooks 01-05 — property extraction from RDF was not implemented. However, even minimal id-only GraphModel definitions fail RefreshGraph.
+
+### Recommendations
+
+1. **File support ticket** with `rootActivityId` from RefreshGraph response
+2. **Try Fabric Portal UI** — Graph may only refresh through UI, not API
+3. **Check capacity settings** — verify Graph is enabled in workspace capacity
+4. **Test in different region** — this may be a preview region limitation
+
+### Files Changed
+
+None — investigation only, no code fixes possible for service-side issue.
+
+### Next Steps
+
+- [ ] File Microsoft support ticket with rootActivityId
+- [ ] Try RefreshGraph from Fabric Portal UI (not API)
+- [ ] Check if Graph workload is enabled in capacity admin settings
+- [ ] Investigate upstream property extraction (notebooks 01-05)
+
+---
+
+## Session: 2026-03-04d - GraphModel API Root Cause Found ✅ RESOLVED
+
+**Topics:** ModelValidationError on GraphModel updateDefinition — systematic API testing revealed root causes
+
+### Problem
+
+NB09 Step 3 (GraphModel updateDefinition) consistently failed with:
+```
+errorCode: ModelValidationError
+message: Invalid input. Please check the provided data and try again.
+```
+
+Even the "empty definition" test that previously worked started failing.
+
+### Investigation
+
+Created `research/graphmodel_api_test.py` to systematically test API variations:
+1. Empty definition (baseline) — **initially passed, then failed**
+2. 1 dataSource only — **failed**
+3. Full definition with nodeType/nodeTable — **failed**
+
+### Root Causes Found (via direct API testing)
+
+| Issue | Fix |
+|-------|-----|
+| **Missing `$schema` in all JSON files** | Every JSON part must include `$schema` URL |
+| **dataSources.json structure** | Must be `{"$schema": "...", "dataSources": [...]}` — NOT just the array `[...]` |
+| **positions/styles must be objects** | Use `{}` not `[]` in stylingConfiguration |
+| **visualFormat required** | Include `"visualFormat": null` in stylingConfiguration |
+| **Table paths are CASE SENSITIVE** | `gold_container` not `gold_Container` — Spark/Delta lowercases table names |
+
+### Correct JSON Schema URLs
+
+```
+dataSources.json:           https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/dataSources/1.0.0/schema.json
+graphType.json:             https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/graphType/1.0.0/schema.json
+graphDefinition.json:       https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/graphDefinition/1.0.0/schema.json
+stylingConfiguration.json:  https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/stylingConfiguration/1.0.0/schema.json
+.platform:                  https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json
+```
+
+### Correct dataSources.json Format
+
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/dataSources/1.0.0/schema.json",
+  "dataSources": [
+    {
+      "name": "gold_container",
+      "type": "DeltaTable",
+      "properties": {
+        "path": "abfss://...@onelake.dfs.fabric.microsoft.com/.../Tables/dbo/gold_container"
+      }
+    }
+  ]
+}
+```
+
+### Correct stylingConfiguration.json Format
+
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/graphInstance/definition/stylingConfiguration/1.0.0/schema.json",
+  "modelLayout": {
+    "positions": {},
+    "styles": {},
+    "pan": {"x": 0.0, "y": 0.0},
+    "zoomLevel": 1.0
+  },
+  "visualFormat": null
+}
+```
+
+### Test Results After Fixes
+
+| Test | Result |
+|------|--------|
+| Empty definition with correct format | ✅ SUCCESS |
+| 1 dataSource (lowercase path) | ✅ SUCCESS |
+| Full definition (1 nodeType + nodeTable) | ✅ SUCCESS |
+
+### Files Changed
+
+- `src/notebooks/09_data_binding.ipynb` — Step 3 cell completely rewritten:
+  - Added all required `$schema` URLs
+  - Added `fix_datasource_path()` to lowercase table names
+  - Fixed stylingConfiguration to use objects and include `visualFormat: null`
+- `research/graphmodel_api_test.py` — New test script for API validation
+
+### Key Learning
+
+The Fabric GraphModel API validates:
+1. JSON schema compliance (all files need `$schema`)
+2. OneLake path existence and case-sensitivity
+3. Object vs array types in specific fields
+
+The error message "Invalid input" is generic — systematic testing with minimal payloads was needed to isolate each issue.
+
+### Next Steps
+
+- [ ] Replace NB09 in Fabric with updated version
+- [ ] Re-run full pipeline (Steps 1-4)
+- [ ] Verify Graph shows nodes and edges in Fabric portal
+
+---
+
+## Session: 2026-03-04c - GraphItemDefinitionIncomplete Fix
+
+**Topics:** Missing `stylingConfiguration.json` in GraphModel definition upload
+
+### Problem
+
+NB09 Step 3 failed with error:
+```
+errorCode: GraphItemDefinitionIncomplete
+message: An error occurred while processing the operation
+```
+
+The `updateDefinition` API returned 202 (accepted), then the LRO completed with status `Failed`.
+
+### Root Cause
+
+[Microsoft documentation](https://learn.microsoft.com/en-us/rest/api/fabric/articles/item-management/definitions/graph-model-definition) lists **4 required parts** for a GraphModel definition:
+
+| Part | Required |
+|------|----------|
+| `dataSources.json` | **true** |
+| `graphDefinition.json` | **true** |
+| `graphType.json` | **true** |
+| `stylingConfiguration.json` | **true** |
+
+Our code was only sending 3 parts + `.platform` — missing `stylingConfiguration.json`.
+
+### Fix
+
+Added `stylingConfiguration.json` generation to NB09 Step 3:
+- Positions: nodes arranged in a 6-column grid layout (200px spacing)
+- Styles: all node and edge types get `{"size": 30}` (default)
+- Layout: `pan: {0, 0}`, `zoomLevel: 1`
+- Schema: includes `"schemaVersion": "1.0.0"`
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "modelLayout": {
+    "positions": {"Bridge_nodeType": {"x": 0, "y": 0}, ...},
+    "styles": {"Bridge_nodeType": {"size": 30}, ...},
+    "pan": {"x": 0, "y": 0},
+    "zoomLevel": 1
+  }
+}
+```
+
+### Files Changed
+- `src/notebooks/09_data_binding.ipynb` — Added `stylingConfiguration.json` generation in Step 3, updated markdown docs and comments
+
+### Next Steps
+- [ ] Re-run NB09 in Fabric — Step 3 should now succeed
+- [ ] Verify Step 4 RefreshGraph succeeds
+- [ ] Verify Graph shows nodes and edges in Fabric portal
 
 ---
 
@@ -382,6 +645,7 @@ Added 4 new cells to NB09 (after binding upload, before save config):
 - `dataSources.json`: One DeltaTable per entity gold table + one for `gold_edges`
 - `graphType.json`: nodeTypes (alias, labels, primaryKey=`["id"]`, all STRING properties) + edgeTypes (source/destination node type aliases)
 - `graphDefinition.json`: nodeTables (1:1 column→property mappings) + edgeTables (filter `gold_edges` by `type` column per relationship)
+- `stylingConfiguration.json`: UI layout positions and visual styles for all node/edge types (required by API)
 
 ### Files Changed
 - `src/notebooks/09_data_binding.ipynb` — 4 new cells for GraphModel definition + updated summary
