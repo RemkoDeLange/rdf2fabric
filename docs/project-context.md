@@ -337,11 +337,10 @@ int_64 = raw_int & 0x7FFFFFFFFFFFFFFF  # Max: 9,223,372,036,854,775,807
 - `src/notebooks/09_data_binding.ipynb` — API ID override cell, diagnostic cleanup
 
 ### Next Steps
-- [ ] Delete existing ontology + GraphModel in Fabric (old 13-digit IDs)
-- [ ] Re-run NB07→NB08→NB09 with new ID generation
-- [ ] **Test theory:** Before running GraphModel build cells, check if Fabric auto-populated the GraphModel definition. If yes, the manual GraphModel definition build (session 2026-03-04) was a workaround for a problem we caused with truncated IDs, not a product behavior.
-- [ ] If GraphModel is auto-populated → remove manual build cells from NB09
-- [ ] Verify Graph nodes/edges visible in Fabric portal
+- [x] Delete existing ontology + GraphModel in Fabric (old 13-digit IDs)
+- [x] Re-run NB07→NB08→NB09 with new ID generation
+- [x] **Test theory:** Before running GraphModel build cells, check if Fabric auto-populated the GraphModel definition. **Result: GraphModel still empty** — confirmed this is product behavior, not caused by our ID mismatch. The manual GraphModel build cells ARE needed.
+- [ ] Verify Graph nodes/edges visible in Fabric portal after running GraphModel build + RefreshGraph
 
 ---
 
@@ -366,7 +365,7 @@ Research script `research/graph_refresh_research.py` discovered:
 
 **Root cause:** Fabric auto-creates a GraphModel shell when an Ontology is created, but does NOT populate its definition from Ontology entity types or data bindings. The GraphModel definition needs to be built and uploaded separately.
 
-> **⚠️ Revision (2026-03-04b):** This may NOT be a product behavior. The empty GraphModel may have been caused by the **entity type ID mismatch** discovered later — `generate_id()` produced 13-digit IDs, but Fabric assigned 19-digit IDs, so data bindings were attached to non-existent entity type IDs. If correct IDs produce a populated GraphModel, the manual build below is unnecessary. See session 2026-03-04b for test plan.
+> **✅ Confirmed (2026-03-04b):** Tested with correct IDs (63-bit range, matching Fabric). GraphModel is still empty after data binding upload. This IS product behavior — the manual GraphModel definition build is required.
 
 ### Solution: Build GraphModel Definition Ourselves
 
