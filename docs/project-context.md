@@ -299,9 +299,47 @@ fabric_rdf_translation/
 - [ ] F5.4 Graph Materialization - verify RefreshGraph populates Graph
 
 **Pending (Next Session):**
-- [ ] Run NB09 end-to-end in Fabric to verify Graph is populated
+- [ ] Re-run NB07→NB08→NB09 in Fabric with fixed ID generation
 - [ ] Verify Graph nodes/edges visible in Fabric portal
-- [ ] F6.1 SHACL Shape Parser
+
+---
+
+## Session: 2026-03-04b - Entity Type ID Mismatch Fix
+
+**Topics:** Fabric-assigned IDs differ from locally generated IDs
+
+### Problem
+
+Multiple NB09 runs showed entity type IDs in the local definition file (13-digit) do not match Fabric's actual IDs (19-digit). Example:
+- Local file: `5735535045641`
+- Fabric UI: `8298755735535045641`
+
+The suffix matches, but Fabric prepends additional digits. This means binding paths like `EntityTypes/{local_id}/DataBindings/...` reference IDs that don't exist in the Fabric-stored definition.
+
+### Root Cause
+
+1. **`generate_id()` in NB07** truncates to 13 digits: `raw_int % 10_000_000_000_000`
+2. **NB09** loads entity types from the local definition file (which has our 13-digit IDs)
+3. Fabric assigns its own IDs when processing the definition upload
+4. Binding paths built with local IDs don't match the Fabric entity type IDs
+
+### Fix
+
+**NB07:** Updated `generate_id()` to use full 63-bit positive integer range (up to 19 digits):
+```python
+int_64 = raw_int & 0x7FFFFFFFFFFFFFFF  # Max: 9,223,372,036,854,775,807
+```
+
+**NB09:** Added a new cell after API helpers that fetches authoritative entity/relationship types from the Fabric API and overrides the local-file-loaded IDs. The API is always the source of truth. Also cleaned up debug cell with hardcoded Bridge ID comparison.
+
+### Files Changed
+- `src/notebooks/07_ontology_definition_generator.ipynb` — `generate_id()` range fix
+- `src/notebooks/09_data_binding.ipynb` — API ID override cell, diagnostic cleanup
+
+### Next Steps
+- [ ] Delete existing ontology in Fabric (old 13-digit IDs)
+- [ ] Re-run NB07→NB08→NB09 with new ID generation
+- [ ] Verify Graph nodes/edges visible in Fabric portal
 
 ---
 
