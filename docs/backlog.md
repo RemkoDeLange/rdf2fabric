@@ -1206,16 +1206,35 @@ class TestShaclParser:
 ---
 
 ### F6.2 - SHACL Validator
-**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** L
+**Priority:** 🟡 P2 | **Status:** 🔄 In Progress | **Estimate:** L
 
 **Description:** Validate RDF data against SHACL shapes before loading.
 
+**Implementation:** `src/notebooks/11_shacl_validator.ipynb`
+
+**Implementation Notes:**
+- Uses `silver_shacl_shapes` table from F6.1
+- Validates instances of each target class against property constraints
+- Outputs: `silver_validation_results` Delta table + `/config/validation_report.json`
+- Configurable severity threshold (Violation/Warning/Info)
+- Option to fail pipeline on violations or continue with warnings
+
+**Constraints Validated:**
+| Constraint | Implementation |
+|------------|----------------|
+| sh:minCount | Count check on property values |
+| sh:maxCount | Count check on property values |
+| sh:datatype | Type match for literals |
+| sh:class | Check object is instance of expected class |
+| sh:pattern | Regex match for literal values |
+| sh:nodeKind | IRI/Literal/BlankNode check |
+
 **Acceptance Criteria:**
-- [ ] Validate data graph against shapes graph
-- [ ] Return conformance result (pass/fail)
-- [ ] Return detailed violation report
-- [ ] Support severity levels (Violation, Warning, Info)
-- [ ] Option to continue on warnings
+- [x] Validate data graph against shapes graph
+- [x] Return conformance result (pass/fail)
+- [x] Return detailed violation report
+- [x] Support severity levels (Violation, Warning, Info)
+- [x] Option to continue on warnings
 
 **Tests:**
 ```python

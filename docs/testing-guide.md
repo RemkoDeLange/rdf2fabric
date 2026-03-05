@@ -1,4 +1,4 @@
-# Testing Guide: F2.2, F3.2, F6.1
+# Testing Guide: F2.2, F3.2, F6.1, F6.2
 
 ## Overview
 
@@ -212,6 +212,80 @@ INPUT_PATHS = ["/lakehouse/default/Files/normative_nen2660/nen2660-shacl.ttl"]
 # Expected: All shapes show "(no target)" because owl:Class declarations are missing
 ```
 
+---
+
+### Test 4: F6.2 SHACL Validator
+
+**Goal:** Validate instance data against parsed SHACL constraints.
+
+**Prerequisites:** Run F6.1 (10_shacl_parser) first to populate `silver_shacl_shapes`.
+
+#### Test 4.1: Validate Schema + Examples
+```python
+# First parse schema AND examples together:
+# 01_rdf_parser_jena.ipynb with:
+INPUT_PATHS = [
+    "/lakehouse/default/Files/normative_nen2660",   # Schema with SHACL
+    "/lakehouse/default/Files/examples_nen2660"     # Instance data to validate
+]
+
+# Run 10_shacl_parser.ipynb (populates silver_shacl_shapes)
+# Run 11_shacl_validator.ipynb
+```
+
+**Expected Output:**
+- Instances of NEN 2660 classes validated against their shapes
+- minCount/maxCount constraints checked
+- datatype constraints checked for literal properties
+- class constraints checked for object properties
+
+#### Test 4.2: Schema Only (No Instances)
+```python
+# Parse only schema files (no examples)
+INPUT_PATHS = ["/lakehouse/default/Files/normative_nen2660"]
+
+# Run validator - should report 0 instances checked
+```
+
+#### Test 4.3: Severity Filtering
+```python
+# In 11_shacl_validator.ipynb, configure:
+SEVERITY_THRESHOLD = "Violation"  # Ignore warnings
+FAIL_ON_VIOLATION = False         # Continue even with violations
+```
+
+#### Verification
+```python
+# Check validation results table
+spark.sql("SELECT * FROM silver_validation_results LIMIT 20").show(truncate=False)
+
+# Count by severity
+spark.sql("""
+    SELECT severity, COUNT(*) as count 
+    FROM silver_validation_results 
+    GROUP BY severity
+""").show()
+
+# Count by constraint type
+spark.sql("""
+    SELECT constraint_type, COUNT(*) as count 
+    FROM silver_validation_results 
+    GROUP BY constraint_type
+    ORDER BY count DESC
+""").show()
+
+# Check JSON report
+import json
+with open("/lakehouse/default/Files/config/validation_report.json") as f:
+    report = json.load(f)
+    
+print(f"Conforms: {report['result']['conforms']}")
+print(f"Violations: {report['result']['violationCount']}")
+print(f"Warnings: {report['result']['warningCount']}")
+```
+
+---
+
 #### Verification
 ```python
 # Check Delta table
@@ -325,4 +399,7 @@ Check:
 | F6.1: SHACL parsing | ✅ | nen2660-shacl.ttl |
 | F6.1: Implicit targeting | ✅ | Requires full normative files (owl:Class + sh:NodeShape) |
 | F6.1: Constraints table | ✅ | silver_shacl_shapes |
-| Full pipeline | ✅ | All steps in sequence |
+| F6.2: SHACL validation | ⬜ | silver_validation_results |
+| F6.2: Severity filtering | ⬜ | Configure SEVERITY_THRESHOLD |
+| F6.2: Validation report | ⬜ | Files/config/validation_report.json |
+| Full pipeline | ⬜ | All steps in sequence |
