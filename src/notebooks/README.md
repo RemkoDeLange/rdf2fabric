@@ -26,6 +26,21 @@ XX_name_technology.ipynb
 | 08 | `08_ontology_api_client` | Ontology → Fabric | Upload Ontology definition via REST API |
 | 09 | `09_data_binding` | Ontology → Graph | Bind Lakehouse tables to Ontology for Graph materialization |
 | 10 | `10_shacl_parser` | Bronze → Silver | Parse SHACL shapes to `silver_shacl_shapes` for validation (F6.1) |
+| 99 | `99_test_runner` | Testing | Automated test orchestrator for F2.2, F3.2, F6.1 |
+
+## Parameterized Notebooks
+
+### 01_rdf_parser_jena
+
+Supports Fabric widgets for flexible input configuration:
+
+| Widget | Default | Description |
+|--------|---------|-------------|
+| `input_paths` | `normative_nen2660,examples_nen2660` | Comma-separated folder/file paths |
+| `output_table` | `bronze_triples` | Target Delta table |
+| `mode` | `overwrite` | `overwrite` or `append` |
+
+**Manual override:** Edit the widget defaults in the notebook UI, or call via pipeline/test runner with arguments.
 
 ## Prerequisites
 
