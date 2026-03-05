@@ -171,21 +171,46 @@ print(f"Properties: {stats.get('propertyStatistics', {}).get('propertyCount', 0)
 
 ### Test 3: F6.1 SHACL Parser
 
-**Goal:** Verify SHACL constraints are extracted correctly.
+**Goal:** Verify SHACL constraints are extracted correctly, including implicit class targeting.
 
-#### Test 3.1: Parse NEN 2660 SHACL
+#### Test 3.1: Parse NEN 2660 SHACL (Full Schema Required for Implicit Targeting)
 ```python
-# First load the SHACL file:
-INPUT_PATHS = ["/lakehouse/default/Files/normative_nen2660/nen2660-shacl.ttl"]
+# IMPORTANT: Parse ALL normative files (not just SHACL) to enable implicit targeting detection
+# The owl:Class declarations are in nen2660-owl.ttl, shapes are in nen2660-shacl.ttl
+INPUT_PATHS = ["/lakehouse/default/Files/normative_nen2660"]
 
-# Run 01_rdf_parser_jena
+# Run 01_rdf_parser_jena (will parse all 4 .ttl files)
 # Then run 10_shacl_parser
 ```
 
 **Expected Output:**
-- NodeShapes found: > 0
-- PropertyShapes with constraints
-- Constraint types: minCount, maxCount, datatype, class, etc.
+- NodeShapes found: 30
+- 27 shapes with implicit class targets (Activity → Activity, Matter → Matter, etc.)
+- 3 shapes without targets (AllDisjointClassesShape, hasQuantityKindShape, hasUnitShape)
+- PropertyShapes with constraints: minCount, maxCount, datatype, class, pattern, etc.
+
+#### Test 3.2: Implicit Class Targeting Verification
+```python
+# After running 10_shacl_parser, check that implicit targeting works:
+spark.sql("""
+    SELECT shape_name, target_class, COUNT(*) as constraints
+    FROM silver_shacl_shapes
+    WHERE target_class IS NOT NULL
+    GROUP BY shape_name, target_class
+    ORDER BY shape_name
+""").show(50, truncate=False)
+
+# Should show shape_name matching target_class for domain classes
+# e.g., Activity | Activity | 5
+```
+
+#### Test 3.3: Without Full Schema (Expected: No Targets)
+```python
+# If only SHACL file is parsed (without OWL file), implicit targeting won't work
+INPUT_PATHS = ["/lakehouse/default/Files/normative_nen2660/nen2660-shacl.ttl"]
+
+# Expected: All shapes show "(no target)" because owl:Class declarations are missing
+```
 
 #### Verification
 ```python
@@ -289,14 +314,15 @@ Check:
 
 | Test | Status | Notes |
 |------|--------|-------|
-| F2.2: TTL parsing | ⬜ | normative_nen2660/*.ttl |
-| F2.2: RDF/XML parsing | ⬜ | informative_nen2660/nen2660.rdf |
-| F2.2: JSON-LD parsing | ⬜ | informative_nen2660/nen2660.jsonld |
-| F2.2: TriG parsing | ⬜ | informative_nen2660/nen2660.trig |
-| F2.2: Mixed formats | ⬜ | All informative_nen2660/* |
-| F3.2: Level 4 detection | ⬜ | All normative files |
+| F2.2: TTL parsing | ✅ | normative_nen2660/*.ttl |
+| F2.2: RDF/XML parsing | ✅ | informative_nen2660/nen2660.rdf |
+| F2.2: JSON-LD parsing | ✅ | informative_nen2660/nen2660.jsonld |
+| F2.2: TriG parsing | ✅ | informative_nen2660/nen2660.trig |
+| F2.2: Mixed formats | ✅ | All informative_nen2660/* |
+| F3.2: Level 4 detection | ✅ | All normative files |
 | F3.2: Level 0 detection | ⬜ | Examples only |
-| F3.2: Statistics JSON | ⬜ | Files/config/schema_statistics.json |
-| F6.1: SHACL parsing | ⬜ | nen2660-shacl.ttl |
-| F6.1: Constraints table | ⬜ | silver_shacl_shapes |
-| Full pipeline | ⬜ | All steps in sequence |
+| F3.2: Statistics JSON | ✅ | Files/config/schema_statistics.json |
+| F6.1: SHACL parsing | ✅ | nen2660-shacl.ttl |
+| F6.1: Implicit targeting | ✅ | Requires full normative files (owl:Class + sh:NodeShape) |
+| F6.1: Constraints table | ✅ | silver_shacl_shapes |
+| Full pipeline | ✅ | All steps in sequence |

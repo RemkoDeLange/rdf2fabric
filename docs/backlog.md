@@ -1,7 +1,7 @@
 # RDF2Fabric - Feature Backlog
 
 > **Purpose:** Comprehensive feature list with acceptance criteria and tests.  
-> **Last Updated:** 2026-02-24  
+> **Last Updated:** 2026-03-05  
 > **Version:** v0.1.0 (Documentation Complete)
 
 ---
@@ -1156,6 +1156,14 @@ class TestLakehouseDataBinding:
 - [x] Extract sh:path, sh:datatype, sh:minCount, sh:maxCount
 - [x] Extract sh:class, sh:nodeKind constraints
 - [x] List all shapes and their targets
+- [x] Detect implicit class targeting (SHACL 2.1.3) when NodeShape is also owl:Class/rdfs:Class
+
+**Implementation Notes:**
+- Output: `silver_shacl_shapes` Delta table + `/config/shacl_shapes.json`
+- 30 NodeShapes parsed from NEN 2660-2
+- 27 shapes with implicit class targeting (Activity → Activity, etc.)
+- 3 utility shapes without targets (AllDisjointClassesShape, hasQuantityKindShape, hasUnitShape)
+- Supports: targetClass (explicit), targetClass (implicit via class type), PropertyShape constraints
 
 **Tests:**
 ```python

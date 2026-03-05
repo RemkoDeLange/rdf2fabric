@@ -1,6 +1,6 @@
 # Research Spike Results: Fabric Graph & Ontology API
 
-**Date**: February 24, 2026  
+**Date**: February 24, 2026 (updated March 5, 2026)  
 **Status**: Completed
 
 ## Executive Summary

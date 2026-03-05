@@ -1,7 +1,7 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-02-24  
+**Date:** 2026-03-05  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
 
@@ -28,6 +28,7 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R13 | **Blank nodes as entity types** | Include / Filter out | Filter out | Blank nodes (`_:`) are structural (restrictions, lists, reification), not domain concepts; unstable IDs; can't be externally referenced | B1 | ✅ Implemented |
 | R14 | **Label language fallback** | Preferred only / Fallback to any / Show original | Fallback with warning | When preferred language label missing, use any available; notebook logs warnings for visibility | B10 | ✅ Implemented |
 | R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` are skipped in edge creation (cannot determine source node type). **Known limitation:** Properties like `designLifespan`, `length`, `width` may be defined in ontology but have no declared domain - these become orphaned. Future: F7.10 UI to assign domains manually, or Phase 2 instance-based inference. | B2 | ✅ Implemented |
+| R16 | **Implicit SHACL class targeting** | Explicit only / Include implicit (SHACL 2.1.3) | Include implicit | Per SHACL spec 2.1.3, a NodeShape that is also an `owl:Class` or `rdfs:Class` implicitly targets itself. NEN 2660-2 uses this pattern (e.g., `nen2660:Activity a owl:Class, sh:NodeShape`). Parser now detects both explicit `sh:targetClass` and implicit class-as-shape targeting. | B3 | ✅ Implemented |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:
