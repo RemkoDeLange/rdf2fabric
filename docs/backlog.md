@@ -1144,16 +1144,18 @@ class TestLakehouseDataBinding:
 ## Epic 6: SHACL Validation (Pre-Load)
 
 ### F6.1 - SHACL Shape Parser
-**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟡 P2 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Parse SHACL shapes to understand validation constraints.
 
+**Implementation:** `src/notebooks/10_shacl_parser.ipynb`
+
 **Acceptance Criteria:**
-- [ ] Parse sh:NodeShape definitions
-- [ ] Parse sh:PropertyShape definitions
-- [ ] Extract sh:path, sh:datatype, sh:minCount, sh:maxCount
-- [ ] Extract sh:class, sh:nodeKind constraints
-- [ ] List all shapes and their targets
+- [x] Parse sh:NodeShape definitions
+- [x] Parse sh:PropertyShape definitions
+- [x] Extract sh:path, sh:datatype, sh:minCount, sh:maxCount
+- [x] Extract sh:class, sh:nodeKind constraints
+- [x] List all shapes and their targets
 
 **Tests:**
 ```python

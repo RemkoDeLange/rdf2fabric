@@ -25,6 +25,7 @@ XX_name_technology.ipynb
 | 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition from silver tables |
 | 08 | `08_ontology_api_client` | Ontology → Fabric | Upload Ontology definition via REST API |
 | 09 | `09_data_binding` | Ontology → Graph | Bind Lakehouse tables to Ontology for Graph materialization |
+| 10 | `10_shacl_parser` | Bronze → Silver | Parse SHACL shapes to `silver_shacl_shapes` for validation (F6.1) |
 
 ## Prerequisites
 
