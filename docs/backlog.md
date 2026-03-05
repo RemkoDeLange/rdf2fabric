@@ -201,11 +201,14 @@ class TurtleParserTest extends AnyFunSuite {
 
 **Description:** Extend parser to support all common RDF formats.
 
+**Implementation:** `src/notebooks/01_rdf_parser_jena.ipynb`
+
 **Implementation Notes:**
-- Updated `src/notebooks/01_rdf_parser_jena.ipynb`
-- Format auto-detected from file extension
+- Format auto-detected from file extension via `RDF_EXTENSIONS` map
 - Uses Apache Jena's Lang enum for format-specific parsing
 - Graceful error handling with fallback to Jena auto-detection
+- Test configurations built into notebook (uncomment to select test case)
+- Tested with NEN 2660-2: normative (4 TTL files), informative (TTL, RDF/XML, JSON-LD, TriG), examples
 
 **Supported Formats:**
 | Extension | Jena Lang | Description |
@@ -214,8 +217,18 @@ class TurtleParserTest extends AnyFunSuite {
 | .rdf, .xml, .owl | RDFXML | XML-based |
 | .nt | NTRIPLES | Line-based, simple |
 | .nq | NQUADS | N-Triples with named graphs |
-| .jsonld | JSONLD | JSON-based linked data |
+| .jsonld, .json | JSONLD | JSON-based linked data |
 | .trig | TRIG | Turtle with named graphs |
+
+**Test Results (NEN 2660-2):**
+| Test | Input | Triples |
+|------|-------|---------|
+| T1: Schema + instances | normative + examples | ~2,285 |
+| T2: Turtle | nen2660.ttl | ~3,294 |
+| T3: RDF/XML | nen2660.rdf | ~3,294 |
+| T4: JSON-LD | nen2660.json | ~3,294 |
+| T5: TriG | nen2660.trig | ~3,294 |
+| T6: All normative | normative_nen2660 | ~10,000+ |
 
 **Acceptance Criteria:**
 - [x] Support Turtle (.ttl)
