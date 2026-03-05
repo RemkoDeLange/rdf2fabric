@@ -17,7 +17,7 @@ XX_name_technology.ipynb
 | # | Notebook | Layer | Description |
 |---|----------|-------|-------------|
 | 01 | `01_rdf_parser_jena` | Raw → Bronze | Parse RDF files to `bronze_triples` using Apache Jena (TTL, RDF/XML, JSON-LD, TriG, N-Triples, N-Quads) |
-| 02 | `02_schema_detector` | Bronze → Analysis | Detect schema richness level (0-4) for adaptive guidance |
+| 02 | `02_schema_detector` | Bronze → Analysis | Detect schema richness level (0-4) and extract statistics (F3.1 + F3.2) |
 | 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) |
 | 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
 | 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |

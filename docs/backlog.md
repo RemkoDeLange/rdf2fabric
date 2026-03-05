@@ -465,18 +465,41 @@ class TestSchemaDetector:
 ---
 
 ### F3.2 - Schema Statistics Extractor
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Extract detailed statistics from schema for UI display.
 
+**Implementation Notes:**
+- Added to `src/notebooks/02_schema_detector.ipynb` (12 new cells)
+- `SchemaStatistics` dataclass with counts, hierarchy, domain/range mappings
+- Exports JSON to `Files/config/schema_statistics.json` for frontend
+
+**Output Structure:**
+```json
+{
+  "counts": {
+    "classes": 160,
+    "objectProperties": 45,
+    "datatypeProperties": 23,
+    "instances": 1237
+  },
+  "classes": [...],
+  "classHierarchy": [{"child": "...", "parent": "..."}],
+  "properties": [...],
+  "instancesByClass": {"Bridge": 5, "Road": 12},
+  "domainRangeMap": [...],
+  "namespaces": {...}
+}
+```
+
 **Acceptance Criteria:**
-- [ ] Count classes defined
-- [ ] Count properties (datatype + object)
-- [ ] Count instances per class
-- [ ] List class hierarchy (subClassOf)
-- [ ] List property domains and ranges
-- [ ] Count named graphs (if present)
-- [ ] Return in JSON format for UI
+- [x] Count classes defined
+- [x] Count properties (datatype + object + annotation)
+- [x] Count instances per class
+- [x] List class hierarchy (subClassOf)
+- [x] List property domains and ranges
+- [x] Count named graphs (if present)
+- [x] Return in JSON format for UI
 
 **Tests:**
 ```python
