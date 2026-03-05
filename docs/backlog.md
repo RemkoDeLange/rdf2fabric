@@ -197,18 +197,34 @@ class TurtleParserTest extends AnyFunSuite {
 ---
 
 ### F2.2 - Multi-Format RDF Parser
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Extend parser to support all common RDF formats.
 
+**Implementation Notes:**
+- Updated `src/notebooks/01_rdf_parser_jena.ipynb`
+- Format auto-detected from file extension
+- Uses Apache Jena's Lang enum for format-specific parsing
+- Graceful error handling with fallback to Jena auto-detection
+
+**Supported Formats:**
+| Extension | Jena Lang | Description |
+|-----------|-----------|-------------|
+| .ttl | TURTLE | Compact, human-readable |
+| .rdf, .xml, .owl | RDFXML | XML-based |
+| .nt | NTRIPLES | Line-based, simple |
+| .nq | NQUADS | N-Triples with named graphs |
+| .jsonld | JSONLD | JSON-based linked data |
+| .trig | TRIG | Turtle with named graphs |
+
 **Acceptance Criteria:**
-- [ ] Support Turtle (.ttl)
-- [ ] Support RDF/XML (.rdf, .xml)
-- [ ] Support N-Triples (.nt)
-- [ ] Support N-Quads (.nq)
-- [ ] Support JSON-LD (.jsonld)
-- [ ] Support TriG (.trig) with named graphs
-- [ ] Auto-detect format from file extension or content
+- [x] Support Turtle (.ttl)
+- [x] Support RDF/XML (.rdf, .xml, .owl)
+- [x] Support N-Triples (.nt)
+- [x] Support N-Quads (.nq)
+- [x] Support JSON-LD (.jsonld)
+- [x] Support TriG (.trig) with named graphs
+- [x] Auto-detect format from file extension
 
 **Tests:**
 ```scala
