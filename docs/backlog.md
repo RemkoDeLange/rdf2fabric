@@ -1206,7 +1206,7 @@ class TestShaclParser:
 ---
 
 ### F6.2 - SHACL Validator
-**Priority:** 🟡 P2 | **Status:** 🔄 In Progress | **Estimate:** L
+**Priority:** 🟡 P2 | **Status:** ✅ Complete | **Estimate:** L
 
 **Description:** Validate RDF data against SHACL shapes before loading.
 
@@ -1219,13 +1219,21 @@ class TestShaclParser:
 - Configurable severity threshold (Violation/Warning/Info)
 - Option to fail pipeline on violations or continue with warnings
 
+**Test Results (NEN 2660-2 examples):**
+- ✅ Data conforms (0 violations)
+- ⚠️ 8 warnings for `sh:class` constraints (expected - see Known Limitations)
+- Validated: `Interface/connectsPort`, `Interface/connectsObject`, `PlannedEntity/hasPart`
+
+**Known Limitations:**
+- **No RDFS inference**: `sh:class` checks direct `rdf:type` only, not subclass relationships. Objects typed as subclasses (e.g., `Room` → `PlannedEntity`) generate warnings. Future: add rdfs:subClassOf traversal or pre-compute type closure.
+
 **Constraints Validated:**
 | Constraint | Implementation |
 |------------|----------------|
 | sh:minCount | Count check on property values |
 | sh:maxCount | Count check on property values |
 | sh:datatype | Type match for literals |
-| sh:class | Check object is instance of expected class |
+| sh:class | Check object is instance of expected class (direct type only) |
 | sh:pattern | Regex match for literal values |
 | sh:nodeKind | IRI/Literal/BlankNode check |
 
