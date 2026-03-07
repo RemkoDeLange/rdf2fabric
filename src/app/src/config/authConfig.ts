@@ -13,9 +13,17 @@ import { Configuration, LogLevel } from '@azure/msal-browser';
 // Replace with your app registration client ID
 const CLIENT_ID = import.meta.env.VITE_MSAL_CLIENT_ID || 'YOUR_CLIENT_ID';
 
+// Check if running in Electron
+export const isElectron = typeof window !== 'undefined' && 
+  typeof window.process === 'object' &&
+  (window.process as NodeJS.Process)?.type === 'renderer';
+
 export const msalConfig: Configuration = {
   auth: {
     clientId: CLIENT_ID,
+    // Use 'common' for multi-tenant (any Microsoft account)
+    // Use 'organizations' for work/school accounts only
+    // Use specific tenant ID for single-tenant
     authority: 'https://login.microsoftonline.com/common',
     redirectUri: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
     postLogoutRedirectUri: '/',
@@ -53,11 +61,24 @@ export const msalConfig: Configuration = {
 export const fabricScopes = {
   // Power BI / Fabric API scope
   fabric: ['https://analysis.windows.net/powerbi/api/.default'],
-  // OneLake storage scope
+  // OneLake storage scope  
   storage: ['https://storage.azure.com/.default'],
+  // Graph API scope (for user info)
+  graph: ['User.Read'],
 };
 
 // Login request configuration
 export const loginRequest = {
   scopes: ['openid', 'profile', 'email', ...fabricScopes.fabric],
 };
+
+// Device code flow configuration (for Electron main process)
+// This requires @azure/msal-node in the Electron main process
+export const deviceCodeRequest = {
+  scopes: [...fabricScopes.fabric],
+  deviceCodeCallback: (response: { userCode: string; verificationUri: string; message: string }) => {
+    console.log(response.message);
+    // In Electron, you would show this in a dialog or copy to clipboard
+  },
+};
+

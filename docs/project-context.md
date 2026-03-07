@@ -297,12 +297,63 @@ fabric_rdf_translation/
 - [x] **Create shortcuts to NEN 2660 test data** (F1.3)
 
 **In Progress:**
-- [ ] F5.4 Graph Materialization - RefreshGraph instantly cancels (service-side issue)
+- [ ] F5.4 Graph Materialization - clean slate ontology rebuild in progress
 
 **Pending (Next Session):**
-- [ ] File Microsoft support ticket with rootActivityId for RefreshGraph cancellation
-- [ ] Try RefreshGraph from Fabric Portal UI (may bypass API-only limitations)
+- [ ] Complete NB01-NB09 pipeline execution with clean ontology
+- [ ] Verify RefreshGraph succeeds with concurrency handling
 - [ ] Fix upstream RDF property extraction (gold tables have empty properties MAP)
+
+---
+
+## Session: 2026-03-07 - RefreshGraph ConcurrentOperation Root Cause ✅ RESOLVED
+
+**Topics:** Microsoft support clarified RefreshGraph cancellation is NOT a bug — ConcurrentOperation behavior
+
+### Summary
+
+Microsoft support analyzed the RefreshGraph job cancellations and determined the root cause: **ConcurrentOperation** — a previous RefreshGraph job was still running when subsequent jobs were triggered, causing Fabric to automatically cancel them.
+
+### Key Finding
+
+| Previous Status | Actual Status |
+|-----------------|---------------|
+| RefreshGraph bug (instant cancel) | **NOT A BUG** — ConcurrentOperation behavior |
+| Service-side limitation | User-triggered job overlap |
+
+**From support dashboard:**
+- Job `ff8de413...` was still running (active)
+- All follow-up jobs (`9ca54d06...`, `f56f1843...`, etc.) cancelled due to `GraphRefreshSnapshot.UserError.ConcurrentOperation`
+
+### Solution Implemented
+
+1. **Clean slate approach:** Deleted existing corrupted ontology (160 entities, 40 relationships, 115 bindings) and GraphModel
+2. **Added concurrency handling:** New `wait_for_running_graph_jobs()` function checks for running jobs before triggering RefreshGraph
+3. **Extended timeout:** Full graph refresh can take 30+ minutes; increased wait timeout from 5 min to 30 min
+
+### Files Changed
+
+- `research/refresh_workaround.py` — Created new script with 3-phase approach (cleanup, inspect, rename workaround)
+- `research/update_nb09_timeout.py` — Helper script to update NB09 timeout configuration
+- `src/notebooks/09_data_binding.ipynb` — Added `wait_for_running_graph_jobs()` with extended timeouts:
+  - 30 minute timeout waiting for running jobs
+  - 30 second polling interval
+  - 60 minute max wait for new RefreshGraph job completion
+
+### Timeout Parameters (NB09 Step 4)
+
+| Parameter | Old | New |
+|-----------|-----|-----|
+| Wait for running jobs timeout | 5 min | **30 min** |
+| Polling interval | 30 sec | 30 sec |
+| Max wait for new job | ~30 min | **60 min** |
+
+### Next Steps
+
+- [ ] Sync updated NB09 to Fabric workspace
+- [ ] User to complete running NB01-NB08 in Fabric
+- [ ] Run NB09 with concurrency handling
+- [ ] Verify graph materialization succeeds
 
 ---
 
