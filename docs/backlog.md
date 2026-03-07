@@ -686,6 +686,9 @@ class TestPropertyMapping:
 - [x] Create edge records from object property triples
 - [x] Handle blank nodes (generate stable IDs)
 - [x] Handle multi-valued properties
+- [x] **Schema-first edge naming:** Use `silver_properties.property_name` when predicate matches defined ObjectProperty
+- [x] **Data-driven fallback:** Extract local name from predicate URI when no schema match
+- [x] **Log unmapped predicates:** Warn when instance uses predicate not in schema
 
 **Implementation Notes:**
 - Notebook: `src/notebooks/05_instance_translator.ipynb`
@@ -1062,6 +1065,7 @@ Relationship contextualization (`RelationshipTypes/{id}/Contextualizations/{uuid
 - [x] Generate relationship contextualization for gold_edges
 - [x] Include all existing definition parts when uploading bindings
 - [x] Keep all IDs as strings throughout
+- [x] **Instance-driven relationship types:** Discover edge types from gold_edges not in schema, infer source/target entity types, create relationship type definitions automatically
 - [ ] Validate binding columns exist in source tables
 - [x] Handle binding errors from API
 
