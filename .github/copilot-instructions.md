@@ -2,18 +2,17 @@ You are helping with a proof of concept exploring RDF import into Microsoft Fabr
 
 ## Project Context
 
-Before answering questions, read the project context file at `docs/project-context.md` to understand:
+**Quick reference:** Read `docs/project-status.md` for current state, key decisions, and architecture overview.
 
-- Decisions already made
-- Current project status
-- Findings and limitations discovered
+**Full history:** Read `docs/project-context.md` for detailed session logs, investigation notes, and decision rationale.
 
 ## Key Files
 
+- `docs/project-status.md` - **START HERE** - Current state, decisions summary, architecture
+- `docs/project-context.md` - Full session history and detailed decisions
 - `docs/requirements.md` - Business & technical requirements
 - `docs/architecture.md` - System design
 - `docs/data-sources.md` - Test data (NEN 2660-2)
-- `docs/project-context.md` - Session history and decisions
 
 ## Project Focus
 
