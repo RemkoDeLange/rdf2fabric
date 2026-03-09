@@ -16,8 +16,8 @@
 
 | Day | Task | Status | Notes |
 |-----|------|--------|-------|
-| 1-2 | **R18: Catch-all entity type** | 🔄 In Progress | Add `AdHocEntity` for untyped nodes |
-| 2 | Rerun NB01-NB09 | ⬜ | Verify 90%+ edge coverage |
+| 1-2 | **R18: Catch-all entity type** | ✅ Done | NB05+NB07 updated |
+| 2 | Rerun NB01-NB09 | ⬜ Pending | Verify 90%+ edge coverage |
 | 3 | Workspace config UI (F7.3) | ⬜ | First-run setup |
 | 4 | Fabric API service | ⬜ | Bridge UI to notebooks |
 | 5 | File browser UI (F7.5) | ⬜ | Select RDF files |
@@ -53,7 +53,7 @@
 
 ---
 
-## Key Limitation (R18) — 🔄 FIXING NOW
+## Key Limitation (R18) — ✅ IMPLEMENTED
 
 **39% of edges (`haspart`) not queryable** — target nodes don't exist in gold tables.
 
@@ -66,10 +66,11 @@
 
 **Root cause:** NB05 only creates nodes for typed instances. Part objects (`Pillar_K`, `WebPlate_east`, etc.) have no explicit `rdf:type` in RDF data.
 
-**Solution (Day 1-2):** Add `AdHocEntity` catch-all entity type:
-- Capture all 157 orphan node IDs
-- Minimal schema: `id` + `label` (orphans have no properties in bronze_triples)
-- Expected result: 90%+ edge coverage
+**Solution (Implemented):** `AdHocEntity` catch-all entity type:
+- NB05: Extract orphan URIs, expand node_id_map, create AdHocEntity nodes  
+- NB07: Add synthetic AdHocEntity to ontology definition
+- NB09: Auto-binds based on labels array (no changes needed)
+- **Next:** Rerun NB01-NB09, verify 90%+ edge coverage
 
 ---
 
@@ -94,7 +95,7 @@
 | R15 | Missing domain/range | Leave open | ✅ |
 | R16 | Implicit SHACL class targeting | Include implicit | ✅ |
 | R17 | Instance-driven relationship types | Hybrid | 🔄 |
-| R18 | Orphan edge targets | **Catch-all AdHocEntity** | 🔄 In Progress |
+| R18 | Orphan edge targets | **Catch-all AdHocEntity** | ✅ Implemented |
 
 ---
 
