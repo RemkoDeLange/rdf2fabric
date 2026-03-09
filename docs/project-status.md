@@ -2,9 +2,42 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-07  
+**Last Updated:** 2026-03-09  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
+
+---
+
+## 2-Week Sprint (Mar 9-23): Demo-Ready Application
+
+**Goal:** Scenario A (12 decisions) vs Scenario E (3-4 decisions) contrast with maximized Graph population.
+
+### Week 1: Data Completeness + Backend
+
+| Day | Task | Status | Notes |
+|-----|------|--------|-------|
+| 1-2 | **R18: Catch-all entity type** | 🔄 In Progress | Add `AdHocEntity` for untyped nodes |
+| 2 | Rerun NB01-NB09 | ⬜ | Verify 90%+ edge coverage |
+| 3 | Workspace config UI (F7.3) | ⬜ | First-run setup |
+| 4 | Fabric API service | ⬜ | Bridge UI to notebooks |
+| 5 | File browser UI (F7.5) | ⬜ | Select RDF files |
+
+### Week 2: Decision Dashboard + Polish
+
+| Day | Task | Status | Notes |
+|-----|------|--------|-------|
+| 6-7 | Decision Dashboard (F7.6) | ⬜ | Show all 12 B-decisions |
+| 8 | Schema detection + presets | ⬜ | Scenario A/E buttons |
+| 9 | Execute translation UI | ⬜ | Trigger pipeline |
+| 10 | Demo polish | ⬜ | Screenshots, script |
+
+### Expected After R18
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Gold table nodes | ~11 | ~168 |
+| Queryable edges | ~25 | ~170+ |
+| Edge coverage | 13% | **90%+** |
 
 ---
 
@@ -20,19 +53,23 @@
 
 ---
 
-## Key Limitation (R18)
+## Key Limitation (R18) — 🔄 FIXING NOW
 
 **39% of edges (`haspart`) not queryable** — target nodes don't exist in gold tables.
 
 | Metric | Value |
 |--------|-------|
+| Orphan node IDs | 157 |
 | `haspart` edges | 72 |
 | Unique targets | 71 |
 | Targets in gold tables | ~0 |
 
-**Root cause:** NB05 only creates nodes for typed instances. Part objects (`AllSameLongitudinalBulbStiffeners`, `Pillar_F`, etc.) have no explicit `rdf:type` in RDF data.
+**Root cause:** NB05 only creates nodes for typed instances. Part objects (`Pillar_K`, `WebPlate_east`, etc.) have no explicit `rdf:type` in RDF data.
 
-**Decision:** Accept for PoC. Phase 2 option: catch-all `AdHocEntity` type.
+**Solution (Day 1-2):** Add `AdHocEntity` catch-all entity type:
+- Capture all 157 orphan node IDs
+- Minimal schema: `id` + `label` (orphans have no properties in bronze_triples)
+- Expected result: 90%+ edge coverage
 
 ---
 
@@ -57,7 +94,7 @@
 | R15 | Missing domain/range | Leave open | ✅ |
 | R16 | Implicit SHACL class targeting | Include implicit | ✅ |
 | R17 | Instance-driven relationship types | Hybrid | 🔄 |
-| R18 | Orphan edge targets | Accept gap (PoC) | ⬜ P2 |
+| R18 | Orphan edge targets | **Catch-all AdHocEntity** | 🔄 In Progress |
 
 ---
 

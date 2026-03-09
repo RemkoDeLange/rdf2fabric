@@ -30,7 +30,7 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` are skipped in edge creation (cannot determine source node type). **Known limitation:** Properties like `designLifespan`, `length`, `width` may be defined in ontology but have no declared domain - these become orphaned. Future: F7.10 UI to assign domains manually, or Phase 2 instance-based inference. | B2 | ✅ Implemented |
 | R16 | **Implicit SHACL class targeting** | Explicit only / Include implicit (SHACL 2.1.3) | Include implicit | Per SHACL spec 2.1.3, a NodeShape that is also an `owl:Class` or `rdfs:Class` implicitly targets itself. NEN 2660-2 uses this pattern (e.g., `nen2660:Activity a owl:Class, sh:NodeShape`). Parser now detects both explicit `sh:targetClass` and implicit class-as-shape targeting. | B3 | ✅ Implemented |
 | R17 | **Instance-driven relationship types** | Schema-only / Instance-driven fallback / Hybrid | Hybrid (schema + instance) | Schema defines abstract predicates (e.g., `hasFunctionalPart`) but instance data uses concrete predicates (e.g., `hasPart`). NB09 now discovers edge types from `gold_edges.type` not in schema, infers source/target entity types from actual edge data, creates relationship type definitions. Aligns with RDF open world semantics. | B2, B8 | 🔄 Partial |
-| R18 | **Orphan edge targets** | Accept gap / Catch-all entity type / Fix instance extraction | Accept gap (PoC) | Many RDF instances are referenced as edge targets but have no explicit `rdf:type` in data. `haspart` (72 edges) targets 71 unique nodes, but most don't exist in gold tables. Root cause: NB05 only creates nodes for instances with recognized class types. **Impact:** 39% of edges (`haspart`) not queryable. Phase 2 could add catch-all `AdHocEntity` type or improve NB05 instance extraction. | B1, B2 | ⬜ Phase 2 |
+| R18 | **Orphan edge targets** | Accept gap / Catch-all entity type / Fix instance extraction | **Catch-all AdHocEntity** | SQL analysis found 157 orphan IDs (edge endpoints with no gold table). Orphans have NO properties in bronze_triples (only appear as edge targets). Solution: Add `AdHocEntity` type with `id` + `label` columns. Expected: 90%+ edge coverage (up from 13%). | B1, B2 | 🔄 In Progress |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:
@@ -299,15 +299,60 @@ fabric_rdf_translation/
 - [x] **Create shortcuts to NEN 2660 test data** (F1.3)
 
 **In Progress:**
+- [ ] **R18: Catch-all AdHocEntity type** — Day 1-2 of 2-week sprint
 - [ ] F5.4 Graph Materialization - clean slate ontology rebuild in progress
 
 **Investigated (Documented):**
 - [x] Edge coverage gap root cause identified: orphan target nodes (R18)
 - [x] `haspart` (72 edges, 39%) targets don't exist in gold tables — data completeness issue, not Fabric limitation
+- [x] SQL analysis: 157 orphan IDs, orphans have NO properties in bronze_triples
 
-**Pending (Phase 2):**
-- [ ] Catch-all entity type for untyped instances
-- [ ] Improve NB05 to extract all subjects/objects as nodes
+**2-Week Sprint (Mar 9-23):**
+- [ ] Week 1: R18 fix + backend integration (workspace config, file browser)
+- [ ] Week 2: Decision Dashboard UI + demo polish
+- [ ] Demo goal: Scenario A (12 decisions) vs Scenario E (3-4 decisions) contrast
+
+---
+
+## Session: 2026-03-09 - Sprint Start: R18 Catch-All Entity Type 🔄 IN PROGRESS
+
+**Topics:** Implementing AdHocEntity to capture orphan edge targets, 2-week demo sprint planning
+
+### Sprint Goal
+
+Demo application showing Scenario A (data only, 12 decisions) vs Scenario E (full schema, 3-4 decisions) contrast.
+
+### R18 Implementation Plan
+
+**Problem:** 157 orphan node IDs appear in edges but have no gold table entries.
+
+**SQL Analysis Results:**
+- Query 1: 157 orphan IDs (edge endpoints not in any gold table)
+- Query 2: 123 unique target_ids not in gold tables
+- Query 3: **Orphans have NO properties in bronze_triples** (they only appear as edge objects)
+
+**Solution:** Add `AdHocEntity` catch-all entity type:
+
+| Component | Change |
+|-----------|--------|
+| NB05 | Extract orphan IDs from edges, assign `AdHocEntity` label |
+| NB06 | Create `gold_adhocentity` table with `id`, `label` columns |
+| NB07 | Add `AdHocEntity` to Ontology definition |
+| NB09 | Bind `gold_adhocentity` to GraphModel |
+
+**Expected Results:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Gold table nodes | ~11 | ~168 |
+| Queryable edges | ~25 | ~170+ |
+| Edge coverage | 13% | **90%+** |
+
+### Files to Modify
+
+1. `src/notebooks/05_instance_translator.ipynb` — Extract orphan nodes
+2. `src/notebooks/06_delta_writer.ipynb` — Write gold_adhocentity table
+3. `src/notebooks/07_ontology_definition_generator.ipynb` — Add AdHocEntity type
+4. `src/notebooks/09_data_binding.ipynb` — Bind AdHocEntity to GraphModel
 
 ---
 
