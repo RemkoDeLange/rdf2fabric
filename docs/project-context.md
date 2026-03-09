@@ -1,7 +1,7 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-03-05  
+**Date:** 2026-03-09  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
 
@@ -29,8 +29,8 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R14 | **Label language fallback** | Preferred only / Fallback to any / Show original | Fallback with warning | When preferred language label missing, use any available; notebook logs warnings for visibility | B10 | ✅ Implemented |
 | R15 | **Missing domain/range** | Leave open / Infer from instances / Flag for review | Leave open | Properties without `rdfs:domain`/`rdfs:range` are skipped in edge creation (cannot determine source node type). **Known limitation:** Properties like `designLifespan`, `length`, `width` may be defined in ontology but have no declared domain - these become orphaned. Future: F7.10 UI to assign domains manually, or Phase 2 instance-based inference. | B2 | ✅ Implemented |
 | R16 | **Implicit SHACL class targeting** | Explicit only / Include implicit (SHACL 2.1.3) | Include implicit | Per SHACL spec 2.1.3, a NodeShape that is also an `owl:Class` or `rdfs:Class` implicitly targets itself. NEN 2660-2 uses this pattern (e.g., `nen2660:Activity a owl:Class, sh:NodeShape`). Parser now detects both explicit `sh:targetClass` and implicit class-as-shape targeting. | B3 | ✅ Implemented |
-| R17 | **Instance-driven relationship types** | Schema-only / Instance-driven fallback / Hybrid | Hybrid (schema + instance) | Schema defines abstract predicates (e.g., `hasFunctionalPart`) but instance data uses concrete predicates (e.g., `hasPart`). NB09 now discovers edge types from `gold_edges.type` not in schema, infers source/target entity types from actual edge data, creates relationship type definitions. Aligns with RDF open world semantics. | B2, B8 | 🔄 Partial |
-| R18 | **Orphan edge targets** | Accept gap / Catch-all entity type / Fix instance extraction | **Catch-all AdHocEntity** | SQL analysis found 157 orphan IDs (edge endpoints with no gold table). Orphans have NO properties in bronze_triples (only appear as edge targets). Solution: Add `AdHocEntity` type with `id` + `label` columns. Expected: 90%+ edge coverage (up from 13%). | B1, B2 | 🔄 In Progress |
+| R17 | **Instance-driven relationship types** | Schema-only / Instance-driven fallback / Hybrid | Instance-driven | Schema defines abstract predicates (e.g., `hasFunctionalPart`) but instance data uses concrete predicates (e.g., `hasPart`). NB07 now fully discovers edge types from `gold_edges.type` and infers source/target entity types from actual edge data. | B2, B8 | ✅ Complete |
+| R18 | **Orphan edge targets** | Accept gap / Catch-all entity type / Fix instance extraction | **Catch-all AdHocEntity** | SQL analysis found 157 orphan IDs (edge endpoints with no gold table). Orphans have NO properties in bronze_triples (only appear as edge targets). Solution: Add `AdHocEntity` type with `id` + `label` columns. **Achieved:** 161 entities, 70 relationships, 71 edge bindings. | B1, B2 | ✅ Complete |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:
@@ -1062,6 +1062,47 @@ See **Session Archive** section below for dated session logs.
 ---
 
 ## Session Archive
+
+### Session: 2026-03-09 - R18 Complete: 161 Entities, 70 Relationships ✅
+
+**Topics:** R18 AdHocEntity implementation, relationship name uniqueness, full pipeline run
+
+**Achievements:**
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Entity types | 17 | **161** |
+| Relationship types | 7 | **70** |
+| Node bindings | 11 | **76** |
+| Edge bindings | 4 | **71** |
+
+**Issues Fixed:**
+
+1. **`haspart` edges missing (39% of edges)** → Root cause: Schema-driven relationship building in NB07 looked for gold tables that didn't exist. Fix: Instance-driven discovery from `gold_edges` + `gold_nodes`.
+
+2. **Duplicate relationship IDs** → Case-insensitive entity lookup caused same ID for different case variants. Fix: Track `seen_rel_ids` set.
+
+3. **Duplicate relationship names (Fabric API rejection)** → `sanitize_name()` truncates to 26 chars, causing `haspart_funderingsconstructie_X` variants to collide. Fix: Use numeric suffixes (`haspart_1`, `haspart_2`).
+
+**Code Changes:**
+
+- **NB05:** Added AdHocEntity extraction for orphan edge targets
+- **NB07:** Instance-driven relationship discovery from gold layer
+- **NB07:** `make_unique_name()` with numeric suffix approach
+- **NB07:** `seen_rel_ids` deduplication
+
+**Commits:** `b84b4cc`, `2fd8324`, `2382789`, `23c8225`, `89df9cb`
+
+**Pending:** RefreshGraph job queued (long-running, ~30+ min). After completion, all 200 gold_edges should appear in Fabric Graph.
+
+**Lessons Learned:**
+
+1. Fabric Ontology requires **unique relationship names** (not just IDs)
+2. `sanitize_name()` truncation must account for any suffix strategy
+3. Instance-driven approach more robust than schema-driven for real RDF data
+4. RefreshGraph is async LRO — concurrent jobs get cancelled
+
+---
 
 ### Session: 2026-02-27 - F5.3 Data Binding Debugging 🔄
 

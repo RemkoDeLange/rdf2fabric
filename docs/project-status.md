@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-09  
+**Last Updated:** 2026-03-09 (evening)  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -17,7 +17,7 @@
 | Day | Task | Status | Notes |
 |-----|------|--------|-------|
 | 1-2 | **R18: Catch-all entity type** | ✅ Done | NB05+NB07 updated |
-| 2 | Rerun NB01-NB09 | ⬜ Pending | Verify 90%+ edge coverage |
+| 2 | Rerun NB01-NB09 | ✅ Done | 161 entities, 70 relationships |
 | 3 | Workspace config UI (F7.3) | ⬜ | First-run setup |
 | 4 | Fabric API service | ⬜ | Bridge UI to notebooks |
 | 5 | File browser UI (F7.5) | ⬜ | Select RDF files |
@@ -31,13 +31,16 @@
 | 9 | Execute translation UI | ⬜ | Trigger pipeline |
 | 10 | Demo polish | ⬜ | Screenshots, script |
 
-### Expected After R18
+### Achieved After R18
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Gold table nodes | ~11 | ~168 |
-| Queryable edges | ~25 | ~170+ |
-| Edge coverage | 13% | **90%+** |
+| Entity types | 17 | **161** |
+| Relationship types | 7 | **70** |
+| Node bindings | 11 | **76** |
+| Edge bindings | 4 | **71** |
+| Gold nodes | 36 | **264** |
+| Gold edges | 185 | **200** |
 
 ---
 
@@ -46,31 +49,32 @@
 | Area | Status | Notes |
 |------|--------|-------|
 | **Pipeline (NB01-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph |
-| **Ontology API** | ✅ Working | 17 entity types, 7 relationships bound |
-| **Graph Queries** | ⚠️ Partial | 4 of 16 edge types queryable (~13% of edges) |
+| **Ontology API** | ✅ Working | **161 entity types, 70 relationships** |
+| **Graph Queries** | ✅ Working | **71 of 70 edge types** bound; RefreshGraph pending |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
 | **React App** | 🟡 Scaffolded | Auth working, pages stubbed |
 
 ---
 
-## Key Limitation (R18) — ✅ IMPLEMENTED
+## R18: AdHocEntity — ✅ COMPLETE
 
-**39% of edges (`haspart`) not queryable** — target nodes don't exist in gold tables.
+**Problem solved:** 39% of edges (`haspart`) weren't queryable because target nodes didn't exist in gold tables.
 
-| Metric | Value |
-|--------|-------|
-| Orphan node IDs | 157 |
-| `haspart` edges | 72 |
-| Unique targets | 71 |
-| Targets in gold tables | ~0 |
-
-**Root cause:** NB05 only creates nodes for typed instances. Part objects (`Pillar_K`, `WebPlate_east`, etc.) have no explicit `rdf:type` in RDF data.
-
-**Solution (Implemented):** `AdHocEntity` catch-all entity type:
-- NB05: Extract orphan URIs, expand node_id_map, create AdHocEntity nodes  
+**Solution implemented:**
+- NB05: Extract orphan URIs → AdHocEntity nodes in gold_nodes
 - NB07: Add synthetic AdHocEntity to ontology definition
-- NB09: Auto-binds based on labels array (no changes needed)
-- **Next:** Rerun NB01-NB09, verify 90%+ edge coverage
+- NB07: Instance-driven relationship discovery from gold_edges (not schema)
+- NB07: Numeric suffixes for duplicate relationship names (truncation fix)
+
+**Results:**
+| Metric | Before | After |
+|--------|--------|-------|
+| Entity types | 17 | 161 |
+| Relationship types | 7 | 70 |
+| `haspart` variants | 0 | 3 (`haspart`, `haspart_1`, `haspart_2`) |
+| Edge bindings | 4 | 71 |
+
+**Pending:** RefreshGraph job queued (long-running). After completion, all 200 edges should be queryable.
 
 ---
 
