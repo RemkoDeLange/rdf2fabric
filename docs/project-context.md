@@ -525,6 +525,73 @@ The instance-driven approach aligns with RDF open world semantics — if a predi
 
 ---
 
+## Session: 2026-03-10 - RefreshGraph Auto-Trigger Discovery ✅ DOCUMENTED
+
+**Topics:** GraphModel item creation vs Graph data population; RefreshGraph auto-trigger behavior; Updated understanding shared with Fabric product team
+
+### Terminology
+
+We use these terms to distinguish between two distinct operations:
+
+| Term | Meaning |
+|------|---------|
+| **GraphModel item creation** | The GraphModel item appearing in the Fabric workspace (metadata/shell) |
+| **Graph data population** | Nodes and edges becoming queryable via GQL (via RefreshGraph) |
+
+### Key Discovery: updateDefinition Auto-Triggers RefreshGraph
+
+When calling `POST /ontologies/{id}/updateDefinition` (or `POST /graphModels/{id}/updateDefinition`), **Fabric automatically triggers a RefreshGraph job**. This was not documented in the API but observed through job monitoring:
+
+| Event | What Happens |
+|-------|--------------|
+| `updateDefinition` completes | Fabric immediately starts RefreshGraph (auto-triggered) |
+| Explicit `POST RefreshGraph` | Returns **Cancelled** if auto-triggered job still running |
+
+### Observations (With Caveats)
+
+| Step | Observation |
+|------|-------------|
+| Ontology created | GraphModel item appeared ✓ |
+| Immediate RefreshGraph | Status = **Cancelled** |
+| After uploading `graphDefinition` + RefreshGraph | Status = **Succeeded**, data queryable |
+
+However, the **Cancelled** status we saw could have been due to:
+
+| Possibility | Explanation |
+|-------------|-------------|
+| ❓ An already-running job | We didn't check for concurrent jobs initially |
+| ❓ Empty GraphModel definition | Our initial assumption (likely not the cause) |
+| ❓ Timing/race condition | We may have triggered RefreshGraph too quickly after ontology creation, before Fabric finished its internal setup |
+| ✅ Auto-triggered job | **Most likely:** `updateDefinition` auto-triggered RefreshGraph, and our explicit trigger was cancelled as `ConcurrentOperation` |
+
+### Updated NB09 Recommendation
+
+Based on this discovery, Step 4 of NB09 should change from:
+
+**Current behavior:**
+1. Wait for running RefreshGraph jobs to complete
+2. Trigger explicit `POST /jobs/instances?jobType=RefreshGraph`
+3. Poll for completion
+
+**Recommended behavior:**
+1. Wait for the auto-triggered RefreshGraph job (from Step 3's `updateDefinition`) to complete
+2. No explicit RefreshGraph trigger needed (already running)
+3. Poll for completion
+
+### Impact on Development
+
+| Before | After |
+|--------|-------|
+| Explicit RefreshGraph required | Auto-triggered by `updateDefinition` |
+| Cancelled jobs = bug | Cancelled jobs = concurrent operation (expected) |
+| Workaround needed | Just wait for auto-triggered job |
+
+### Shared with Fabric Product Team
+
+This finding was shared with the Fabric product team for documentation consideration. The auto-trigger behavior is not currently documented in the REST API reference.
+
+---
+
 ## Session: 2026-03-07 - RefreshGraph ConcurrentOperation Root Cause ✅ RESOLVED
 
 **Topics:** Microsoft support clarified RefreshGraph cancellation is NOT a bug — ConcurrentOperation behavior
