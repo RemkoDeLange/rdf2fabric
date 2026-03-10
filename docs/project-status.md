@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-09 (evening)  
+**Last Updated:** 2026-03-10 (evening)  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -18,6 +18,8 @@
 |-----|------|--------|-------|
 | 1-2 | **R18: Catch-all entity type** | ✅ Done | NB05+NB07 updated |
 | 2 | Rerun NB01-NB09 | ✅ Done | 161 entities, 70 relationships |
+| 2 | **Fix edge filter bug** | ✅ Done | Suffixed names now map correctly |
+| 2 | **Fix property mapping** | ✅ Done | `uri` now exposed in GQL |
 | 3 | Workspace config UI (F7.3) | ⬜ | First-run setup |
 | 4 | Fabric API service | ⬜ | Bridge UI to notebooks |
 | 5 | File browser UI (F7.5) | ⬜ | Select RDF files |
@@ -31,16 +33,16 @@
 | 9 | Execute translation UI | ⬜ | Trigger pipeline |
 | 10 | Demo polish | ⬜ | Screenshots, script |
 
-### Achieved After R18
+### Current Graph Metrics (Mar 10)
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Entity types | 17 | **161** |
-| Relationship types | 7 | **70** |
-| Node bindings | 11 | **76** |
-| Edge bindings | 4 | **71** |
-| Gold nodes | 36 | **264** |
-| Gold edges | 185 | **200** |
+| Metric | Value | Notes |
+|--------|-------|-------|
+| Entity types (Ontology) | 86 | After skip schema classes |
+| Relationship types (Ontology) | 105 | Instance-driven |
+| Nodes in Graph | **159** | Verified via GQL |
+| Edges in Graph | **588** | After filter fix |
+| Node tables bound | 86 | Gold tables mapped |
+| Edge tables bound | 77 | Some skipped (missing source/target) |
 
 ---
 
@@ -49,55 +51,61 @@
 | Area | Status | Notes |
 |------|--------|-------|
 | **Pipeline (NB01-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph |
-| **Ontology API** | ✅ Working | **161 entity types, 70 relationships** |
-| **Graph Queries** | ✅ Working | **71 of 70 edge types** bound; RefreshGraph pending |
+| **Ontology API** | ✅ Working | 86 entity types, 105 relationships |
+| **Graph Materialization** | ✅ Working | 159 nodes, 588 edges queryable |
+| **GQL Queries** | ✅ Working | Basic patterns verified |
+| **Property Access** | 🔄 Pending | Fix deployed, needs re-run |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
 | **React App** | 🟡 Scaffolded | Auth working, pages stubbed |
 
 ---
 
-## R18: AdHocEntity — ✅ COMPLETE
+## Fixes Applied (Mar 10)
 
-**Problem solved:** 39% of edges (`haspart`) weren't queryable because target nodes didn't exist in gold tables.
+### Fix 1: Edge Filter Mismatch
+**Problem:** NB07 creates suffixed relationship names (`haspart_1`, `haspart_2`) for uniqueness, but NB09 used these suffixed names to filter `gold_edges.type` which contains the original names (`haspart`).
 
-**Solution implemented:**
-- NB05: Extract orphan URIs → AdHocEntity nodes in gold_nodes
-- NB07: Add synthetic AdHocEntity to ontology definition
-- NB07: Instance-driven relationship discovery from gold_edges (not schema)
-- NB07: Numeric suffixes for duplicate relationship names (truncation fix)
+**Symptom:** Only 90 edges materialized (expected ~193).
 
-**Results:**
-| Metric | Before | After |
-|--------|--------|-------|
-| Entity types | 17 | 161 |
-| Relationship types | 7 | 70 |
-| `haspart` variants | 0 | 3 (`haspart`, `haspart_1`, `haspart_2`) |
-| Edge bindings | 4 | 71 |
+**Solution:** In NB09, strip numeric suffix from rel_name to get original edge type:
+```python
+filter_value = re.sub(r'_\d+$', '', rel_name)
+```
 
-**Pending:** RefreshGraph job queued (long-running). After completion, all 200 edges should be queryable.
+**Result:** 588 edges now materialized (multiple relationship types correctly mapping to same edge data).
+
+### Fix 2: Property Mapping Skip
+**Problem:** `uri` property was skipped in GraphModel with comment "'id' column already covers the URI" — but `id` is an internal hash, `uri` is the actual RDF IRI.
+
+**Symptom:** `n.uri` returned error "Property 'uri' not found".
+
+**Solution:** Removed the `uri` skip logic in NB09 node type and property mapping code.
+
+### Fix 3: Step 4 Monitor-Only
+**Problem:** `updateDefinition` auto-triggers RefreshGraph, so Step 4's explicit trigger was redundant (double refresh = 80+ minutes).
+
+**Confirmed:** Via Fabric Monitor, jobs auto-start after updateDefinition.
+
+**Solution:** Step 4 now only monitors for completion, never triggers explicitly.
 
 ---
 
-## RDF Decisions Summary
+## Fabric GQL Limitations Discovered
 
-| ID | Decision | Choice | Status |
-|----|----------|--------|--------|
-| R1 | Language preference | `en` (English) | ✅ |
-| R2 | External ontology dereferencing | Local only | ⬜ P2 |
-| R3 | Class discovery sources | Include ranges + domains | ✅ |
-| R4 | Duplicate triple handling | Keep all (provenance) | ✅ |
-| R5 | OWL property type URIs | Full URI in bronze | ✅ |
-| R6 | Case sensitivity | Case-insensitive | ✅ |
-| R7 | Blank node handling | Include with `_:label` | ✅ |
-| R8 | SHACL constraint storage | Store in silver_constraints | ⬜ P2 |
-| R9 | Multi-valued properties | TBD | ⬜ |
-| R10 | Inverse properties | TBD | ⬜ |
-| R11 | Named graph handling | TBD | ⬜ |
-| R12 | rdf:type materialization | Node label | ✅ |
-| R13 | Blank nodes as entity types | Filter out | ✅ |
-| R14 | Label language fallback | Fallback with warning | ✅ |
-| R15 | Missing domain/range | Leave open | ✅ |
-| R16 | Implicit SHACL class targeting | Include implicit | ✅ |
+| Limitation | Workaround |
+|------------|------------|
+| No `labels()` function | Query specific node types |
+| No `type()` for edges | Query specific edge types |
+| No `STARTS WITH` | Use full string match |
+| Requires `AS` aliases | Always alias RETURN values |
+| GROUP BY strict | Include all non-aggregated columns |
+
+**Valid GQL patterns:**
+```gql
+MATCH (n) RETURN count(n) AS total
+MATCH (b:Steelgirderbridge)-[r]->(part) RETURN b, part LIMIT 5
+MATCH (a)-[:haspart]->(b) RETURN a.uri AS source, b.uri AS target LIMIT 10
+```
 | R17 | Instance-driven relationship types | Hybrid | 🔄 |
 | R18 | Orphan edge targets | **Catch-all AdHocEntity** | ✅ Implemented |
 

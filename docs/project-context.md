@@ -1890,3 +1890,73 @@ code .
 - [Microsoft Fabric Documentation](https://learn.microsoft.com/en-us/fabric/)
 - [OneLake Overview](https://learn.microsoft.com/en-us/fabric/onelake/onelake-overview)
 - [Fabric REST API](https://learn.microsoft.com/en-us/rest/api/fabric/)
+
+---
+
+## Session Log: 2026-03-10
+
+### Summary
+Fixed critical bugs in NB07 and NB09 that prevented proper edge and property mapping in the Fabric Graph.
+
+### Issues Found and Fixed
+
+#### Issue 1: Edge Filter Mismatch (Critical)
+**Discovery:** GQL query `MATCH ()-[e]->() RETURN count(e)` returned only 90 edges, expected 193 from `gold_edges`.
+
+**Root Cause:** NB07 creates suffixed relationship names for uniqueness (e.g., `haspart_1`, `haspart_2`) when multiple relationship types have the same base name. NB09 used these suffixed names in the GraphModel edge table filter:
+```python
+"filter": {"operator": "Equal", "columnName": "type", "value": "haspart_1"}
+```
+But `gold_edges.type` column contains the original unsuffixed names (`haspart`).
+
+**Fix Applied (NB09):** Strip numeric suffix to get original edge type:
+```python
+import re as _re_edge
+filter_value = _re_edge.sub(r'_\d+$', '', rel_name)
+```
+
+**Result:** 588 edges now materialized (up from 90). Multiple relationship types correctly map to the same base edge data.
+
+#### Issue 2: Property Mapping Skip
+**Discovery:** GQL query `RETURN n.uri` returned "Property 'uri' not found".
+
+**Root Cause:** NB09 had logic that skipped the `uri` property with comment "'id' column already covers the URI". But `id` is an internal hash identifier, while `uri` is the actual RDF IRI users need to query.
+
+**Fix Applied (NB09):** Removed the skip logic in two places:
+1. Node type property definitions
+2. Property mappings
+
+#### Issue 3: Redundant RefreshGraph Trigger
+**Discovery:** RefreshGraph jobs took ~40 minutes each, and two were being triggered.
+
+**Root Cause:** `updateDefinition` API call auto-triggers RefreshGraph (undocumented behavior). Step 4's explicit trigger was redundant.
+
+**Confirmed via:** Fabric Monitor showing two jobs - one starting immediately after Step 3, another after Step 4's trigger.
+
+**Fix Applied (NB09):** Step 4 now only monitors for completion, never triggers explicitly.
+
+### Fabric GQL Limitations Documented
+
+| Limitation | Workaround |
+|------------|------------|
+| No `labels()` function | Query specific node types |
+| No `type()` for edges | Query specific edge types |
+| No `STARTS WITH` | Use full string match |
+| Requires `AS` aliases | Always alias RETURN values |
+| GROUP BY strict | Include all non-aggregated columns |
+
+### Final Metrics (After Fixes)
+| Metric | Before | After |
+|--------|--------|-------|
+| Nodes in Graph | 159 | 159 |
+| Edges in Graph | 90 | **588** |
+| Property access | ❌ Error | ✅ Pending re-run |
+
+### Files Modified
+- `src/notebooks/07_ontology_definition_generator.ipynb` - Added `sourceFilterValue` to relationship types (partial, not used)
+- `src/notebooks/09_data_binding.ipynb` - Edge filter fix, property mapping fix, monitor-only Step 4
+
+### Next Steps
+1. Re-run NB09 to apply property mapping fix
+2. Verify `n.uri` queries work
+3. Continue with Week 1 UI tasks
