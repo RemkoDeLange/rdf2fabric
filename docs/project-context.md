@@ -525,9 +525,9 @@ The instance-driven approach aligns with RDF open world semantics — if a predi
 
 ---
 
-## Session: 2026-03-10 - RefreshGraph Auto-Trigger Discovery ✅ DOCUMENTED
+## Session: 2026-03-10 - RefreshGraph Observations ✅ DOCUMENTED
 
-**Topics:** GraphModel item creation vs Graph data population; RefreshGraph auto-trigger behavior; Updated understanding shared with Fabric product team
+**Topics:** GraphModel item creation vs Graph data population; RefreshGraph job behavior observations
 
 ### Terminology
 
@@ -538,16 +538,19 @@ We use these terms to distinguish between two distinct operations:
 | **GraphModel item creation** | The GraphModel item appearing in the Fabric workspace (metadata/shell) |
 | **Graph data population** | Nodes and edges becoming queryable via GQL (via RefreshGraph) |
 
-### Key Discovery: updateDefinition Auto-Triggers RefreshGraph
+### What We Confirmed
 
-When calling `POST /ontologies/{id}/updateDefinition` (or `POST /graphModels/{id}/updateDefinition`), **Fabric automatically triggers a RefreshGraph job**. This was not documented in the API but observed through job monitoring:
+| Behavior | Status |
+|----------|--------|
+| "Ontology creation triggers Graph creation" (GraphModel item appears) | ✅ Confirmed |
+| Graph materialization (actual data) requires explicit steps | ✅ Confirmed |
 
-| Event | What Happens |
-|-------|--------------|
-| `updateDefinition` completes | Fabric immediately starts RefreshGraph (auto-triggered) |
-| Explicit `POST RefreshGraph` | Returns **Cancelled** if auto-triggered job still running |
+**Graph materialization requires:**
+1. Building GraphModel definition (`dataSources`, `graphType`, `graphDefinition`)
+2. Uploading via `updateDefinition` API
+3. Triggering `RefreshGraph` job
 
-### Observations (With Caveats)
+### Observations (2026-03-10)
 
 | Step | Observation |
 |------|-------------|
@@ -555,40 +558,39 @@ When calling `POST /ontologies/{id}/updateDefinition` (or `POST /graphModels/{id
 | Immediate RefreshGraph | Status = **Cancelled** |
 | After uploading `graphDefinition` + RefreshGraph | Status = **Succeeded**, data queryable |
 
-However, the **Cancelled** status we saw could have been due to:
+**Additional observation:** When running NB09 Step 4 (RefreshGraph trigger), a job was already running. This job (`9da70b1a`) completed successfully. Our explicit trigger (`1eb01181`) was cancelled.
+
+### Possible Explanations (Inconclusive)
+
+The **Cancelled** status and the "already running" job could be due to:
 
 | Possibility | Explanation |
 |-------------|-------------|
-| ❓ An already-running job | We didn't check for concurrent jobs initially |
-| ❓ Empty GraphModel definition | Our initial assumption (likely not the cause) |
-| ❓ Timing/race condition | We may have triggered RefreshGraph too quickly after ontology creation, before Fabric finished its internal setup |
-| ✅ Auto-triggered job | **Most likely:** `updateDefinition` auto-triggered RefreshGraph, and our explicit trigger was cancelled as `ConcurrentOperation` |
+| ❓ `updateDefinition` auto-triggers RefreshGraph | Undocumented behavior — we can't confirm |
+| ❓ A previous notebook run | Job may have been from earlier execution |
+| ❓ Timing/race condition | We may have triggered too quickly |
+| ❓ Concurrent operation from another source | Something else in the system |
 
-### Updated NB09 Recommendation
+**Note:** We do NOT have conclusive evidence that `updateDefinition` auto-triggers RefreshGraph. Our data is inconclusive.
 
-Based on this discovery, Step 4 of NB09 should change from:
+### NB09 Update (2026-03-10)
 
-**Current behavior:**
-1. Wait for running RefreshGraph jobs to complete
-2. Trigger explicit `POST /jobs/instances?jobType=RefreshGraph`
-3. Poll for completion
+Changed Step 4 to be more robust:
 
-**Recommended behavior:**
-1. Wait for the auto-triggered RefreshGraph job (from Step 3's `updateDefinition`) to complete
-2. No explicit RefreshGraph trigger needed (already running)
-3. Poll for completion
+**New behavior:**
+1. Check for running RefreshGraph jobs
+2. If found: wait for completion (don't trigger new one)
+3. If none running: trigger explicit RefreshGraph
+4. Poll until completion
 
-### Impact on Development
+This avoids double-triggering and handles both scenarios (whether auto-trigger exists or not).
 
-| Before | After |
-|--------|-------|
-| Explicit RefreshGraph required | Auto-triggered by `updateDefinition` |
-| Cancelled jobs = bug | Cancelled jobs = concurrent operation (expected) |
-| Workaround needed | Just wait for auto-triggered job |
+### Communicated to Fabric Product Team
 
-### Shared with Fabric Product Team
-
-This finding was shared with the Fabric product team for documentation consideration. The auto-trigger behavior is not currently documented in the REST API reference.
+Our observations were shared with the product team:
+- Ontology creation → GraphModel item appears (automatic) ✅
+- Graph data population → requires explicit `updateDefinition` + `RefreshGraph`
+- Observed "Cancelled" status on early RefreshGraph attempts (explained by ConcurrentOperation)
 
 ---
 
