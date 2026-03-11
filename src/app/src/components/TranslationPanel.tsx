@@ -5,7 +5,8 @@
  * Runs notebooks NB01-NB09 in sequence and shows status for each step.
  */
 
-import { useState, useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
+import { useMsal } from '@azure/msal-react';
 import {
   makeStyles,
   tokens,
@@ -27,18 +28,8 @@ import {
   ArrowClockwise24Regular,
   Stop24Regular,
 } from '@fluentui/react-icons';
-import { getFabricService, TRANSLATION_PIPELINE, NotebookJob, PipelineConfig } from '../services/fabricService';
-import { useAppStore } from '../stores/appStore';
-
-type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
-
-interface StepState {
-  status: StepStatus;
-  jobId?: string;
-  startTime?: number;
-  endTime?: number;
-  error?: string;
-}
+import { FabricService, TRANSLATION_PIPELINE, NotebookJob, PipelineConfig } from '../services/fabricService';
+import { useAppStore, StepState } from '../stores/appStore';
 
 const useStyles = makeStyles({
   container: {
@@ -92,6 +83,9 @@ const useStyles = makeStyles({
   },
   stepInfo: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
   },
   stepTime: {
     fontSize: '12px',
@@ -120,52 +114,56 @@ interface TranslationPanelProps {
   onComplete?: () => void;
 }
 
-export function TranslationPanel({ projectName, sourceFiles, schemaLevel, decisions, onComplete }: TranslationPanelProps) {
+export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLevel, decisions, onComplete }: TranslationPanelProps) {
   const styles = useStyles();
-  const { workspaceId, lakehouseId } = useAppStore();
+  const { 
+    workspaceId, 
+    lakehouseId,
+    pipelineExecution,
+    startPipelineExecution,
+    updatePipelineStep,
+    addPipelineLog,
+    setPipelineStatus,
+  } = useAppStore();
   
-  const [isRunning, setIsRunning] = useState(false);
-  const [stepStates, setStepStates] = useState<Record<string, StepState>>({});
-  const [logs, setLogs] = useState<string[]>([]);
-  const [overallStatus, setOverallStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Derive state from global store
+  const isRunning = pipelineExecution?.projectId === projectId && pipelineExecution.isRunning;
+  const stepStates = pipelineExecution?.projectId === projectId ? pipelineExecution.stepStates : {};
+  const logs = pipelineExecution?.projectId === projectId ? pipelineExecution.logs : [];
+  const overallStatus = pipelineExecution?.projectId === projectId ? pipelineExecution.overallStatus : 'idle';
+  const errorMessage = pipelineExecution?.projectId === projectId ? pipelineExecution.errorMessage : null;
+
+  // Create FabricService instance (same pattern as SettingsPage)
+  const { instance } = useMsal();
+  const fabricService = useMemo(() => new FabricService(instance), [instance]);
 
   const addLog = useCallback((message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
-  }, []);
+    addPipelineLog(message);
+  }, [addPipelineLog]);
 
   const updateStepState = useCallback((stepId: string, update: Partial<StepState>) => {
-    setStepStates(prev => ({
-      ...prev,
-      [stepId]: { ...prev[stepId], ...update }
-    }));
-  }, []);
+    updatePipelineStep(stepId, update);
+  }, [updatePipelineStep]);
 
   const runPipeline = async () => {
     if (!workspaceId) {
-      setErrorMessage('Workspace not configured. Go to Settings to configure workspace.');
+      setPipelineStatus('failed', 'Workspace not configured. Go to Settings to configure workspace.');
       return;
     }
 
     if (!lakehouseId) {
-      setErrorMessage('Lakehouse not configured. Go to Settings to configure lakehouse.');
+      setPipelineStatus('failed', 'Lakehouse not configured. Go to Settings to configure lakehouse.');
       return;
     }
 
-    setIsRunning(true);
-    setOverallStatus('running');
-    setErrorMessage(null);
-    setLogs([]);
+    // Initialize pipeline execution in global store
+    startPipelineExecution(projectId);
     
     // Reset step states
-    const initialStates: Record<string, StepState> = {};
     TRANSLATION_PIPELINE.forEach(step => {
-      initialStates[step.id] = { status: 'pending' };
+      updateStepState(step.id, { status: 'pending' });
     });
-    setStepStates(initialStates);
 
-    const fabricService = getFabricService();
     const outputFolder = projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
     addLog('Starting translation pipeline...');
     addLog(`Workspace: ${workspaceId}`);
@@ -197,11 +195,16 @@ export function TranslationPanel({ projectName, sourceFiles, schemaLevel, decisi
         },
         decisions,
       };
-      await fabricService.writePipelineConfig(workspaceId, lakehouseId, pipelineConfig);
-      addLog('✓ Pipeline config written to Files/config/pipeline_run.json');
-      addLog(`  Project: ${projectName}`);
-      addLog(`  Schema Level: ${schemaLevel}`);
-      addLog(`  Decisions: ${Object.keys(decisions).length} configured`);
+      try {
+        await fabricService.writePipelineConfig(workspaceId, lakehouseId, pipelineConfig);
+        addLog('✓ Pipeline config written to Files/config/pipeline_run.json');
+        addLog(`  Project: ${projectName}`);
+        addLog(`  Schema Level: ${schemaLevel}`);
+        addLog(`  Decisions: ${Object.keys(decisions).length} configured`);
+      } catch (configError) {
+        addLog(`⚠️ Could not write config: ${configError instanceof Error ? configError.message : 'Unknown error'}`);
+        addLog('  Notebooks will use default settings');
+      }
 
       // Step 3: Find all notebooks
       addLog('Discovering notebooks...');
@@ -271,19 +274,16 @@ export function TranslationPanel({ projectName, sourceFiles, schemaLevel, decisi
       }
 
       // All steps completed
-      setOverallStatus('completed');
+      setPipelineStatus('completed');
       addLog('✓ Translation pipeline completed successfully!');
       
       if (onComplete) {
         onComplete();
       }
     } catch (error) {
-      setOverallStatus('failed');
       const errorMsg = error instanceof Error ? error.message : 'Pipeline failed';
-      setErrorMessage(errorMsg);
+      setPipelineStatus('failed', errorMsg);
       addLog(`✗ Pipeline failed: ${errorMsg}`);
-    } finally {
-      setIsRunning(false);
     }
   };
 
@@ -379,9 +379,11 @@ export function TranslationPanel({ projectName, sourceFiles, schemaLevel, decisi
                 </div>
                 <div className={styles.stepInfo}>
                   <Body2 style={{ fontWeight: 600 }}>{step.id}: {step.name}</Body2>
-                  <Body2 style={{ color: tokens.colorNeutralForeground2 }}>{step.description}</Body2>
+                  <Body1 style={{ color: tokens.colorNeutralForeground3, fontSize: '12px' }}>{step.description}</Body1>
                   {state?.error && (
-                    <Body2 style={{ color: tokens.colorPaletteRedForeground1 }}>{state.error}</Body2>
+                    <Body1 style={{ color: tokens.colorPaletteRedForeground1, fontSize: '11px', wordBreak: 'break-word' }}>
+                      {state.error.length > 100 ? state.error.substring(0, 100) + '...' : state.error}
+                    </Body1>
                   )}
                 </div>
                 {state?.startTime && (

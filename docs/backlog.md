@@ -2219,44 +2219,51 @@ class TestPreviewPipeline:
 ---
 
 ### F13.1 - Decision Config Export
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Write project decisions to OneLake config file that notebooks can read.
 
 **Acceptance Criteria:**
-- [ ] Export `project.decisions` to `Files/config/translation_config.json`
-- [ ] Include schema level and all decision values
-- [ ] Upload before pipeline execution
-- [ ] Include file selection (which RDF files to process)
+- [x] Export `project.decisions` to `Files/config/pipeline_run.json`
+- [x] Include schema level and all decision values
+- [x] Upload before pipeline execution
+- [x] Include file selection (which RDF files to process)
 
 **Config Schema:**
 ```json
 {
-  "projectId": "uuid",
-  "schemaLevel": 3,
-  "sourceFiles": ["path/to/file1.ttl", "path/to/file2.ttl"],
+  "project_name": "My Project",
+  "folder_id": "uuid-or-null",
+  "created_at": "2026-03-11T22:26:04Z",
+  "created_by": "app",
+  "source": {
+    "files": ["path/to/file1.ttl"],
+    "schema_level": 3
+  },
   "decisions": {
     "B1": "class",
     "B2": "generate",
-    "B5": "suffix",
-    "B7": "strict",
     ...
   }
 }
 ```
+
+**Implementation:** TranslationPanel.tsx calls `fabricService.writePipelineConfig()` before running notebooks.
 
 **Dependencies:** F7.6, F7.8
 
 ---
 
 ### F13.2 - Notebook Config Reader
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** 🔄 In Progress | **Estimate:** M
 
 **Description:** Notebooks read config file and branch logic based on decisions.
 
 **Acceptance Criteria:**
-- [ ] NB01-NB09 check for `Files/config/translation_config.json`
-- [ ] Fall back to defaults if config missing
+- [x] NB08 reads `Files/config/pipeline_run.json`
+- [x] Uses `folder_id` for ontology output folder
+- [x] Uses `project_name` for ontology display name
+- [ ] NB01-NB07, NB09 read config (not yet implemented)
 - [ ] Log which config values are being used
 
 **Implementation Pattern:**

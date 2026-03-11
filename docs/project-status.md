@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-11 (evening)  
+**Last Updated:** 2026-03-11 (late evening)  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -32,6 +32,8 @@
 | 6 | Project naming/rename | ✅ Done | Create with name, rename dialog |
 | 7 | Scenario presets | ✅ Done | A/C/E buttons, one-click demo |
 | 8 | Execute translation UI | ✅ Done | Pipeline progress, logs, status |
+| 8 | **Config file architecture** | ✅ Done | App writes config, notebooks read it |
+| 8 | **App → Fabric pipeline execution** | ✅ Done | Full pipeline running from app |
 | 9-10 | Demo polish | ⬜ | Screenshots, script |
 
 ### Current Graph Metrics (Mar 11 - Ziekenhuis minimal)
@@ -57,30 +59,35 @@
 | **GQL Queries** | ✅ Working | Basic patterns verified |
 | **Property Access** | ✅ Working | `uri` property accessible via GQL |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
-| **React App** | ✅ Functional | Auth, workspace config, file browser |
+| **React App** | ✅ Working | Auth, workspace config, file browser |
 | **Decision Dashboard** | ✅ Working | 12 B-decisions with schema-based auto-resolve |
 | **Project Management** | ✅ Working | Create, rename, delete projects |
-| **Translation Execution** | ✅ Working | Pipeline progress UI with logs |
+| **Translation Execution** | ✅ Working | Full pipeline from app UI |
+| **Config File Export** | ✅ Working | App writes `pipeline_run.json` to OneLake |
+| **Workspace Folders** | ✅ Working | Output items organized in folders |
 
 ---
 
 ## ⚠️ Known Gaps (POC Scope)
 
-### Decision Enforcement Not Implemented
+### Decision Enforcement Partially Implemented
 
 **Current State:**
-- UI captures 12 B-decisions based on schema level
-- Decisions stored in browser localStorage
-- Pipeline runs with **hardcoded defaults** — decisions are NOT enforced
+- ✅ UI captures 12 B-decisions based on schema level
+- ✅ Decisions stored in browser localStorage AND exported to OneLake
+- ✅ App writes `Files/config/pipeline_run.json` with project settings
+- ✅ NB08 reads config file and uses `folder_id` + `project_name`
+- ⚠️ **Decision branching logic** NOT yet implemented in notebooks
 
 **What This Means:**
-- Changing a decision (e.g., B2: Blank Node Handling) in the UI has no effect on translation output
-- The demo shows the *concept* of schema-driven decision reduction
-- Actual pipeline behavior is fixed regardless of UI settings
+- Changing a decision (e.g., B2: Blank Node Handling) in the UI writes to config
+- Notebooks **can read** the config but don't yet **act on** decision values
+- The demo shows schema-driven decision reduction + config export
+- Actual translation behavior still uses defaults (decision branches not implemented)
 
 **Phase 2 Work Required (Epic 13):**
-1. **F13.1** - Export decisions to OneLake config file
-2. **F13.2** - Notebooks read config and branch logic
+1. ~~**F13.1** - Export decisions to OneLake config file~~ ✅ Complete
+2. **F13.2** - Notebooks read config and branch logic (partially done)
 3. **F13.3** - Implement decision logic in notebooks (XL effort: ~2-3 weeks)
 
 **See:** `docs/backlog.md` → Epic 13: Decision Enforcement

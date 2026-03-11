@@ -60,8 +60,8 @@ export const msalConfig: Configuration = {
 
 // Scopes for Fabric Graph API access
 export const fabricScopes = {
-  // Power BI / Fabric API scope
-  fabric: ['https://analysis.windows.net/powerbi/api/.default'],
+  // Fabric API scope (required for notebooks, items, workspaces)
+  fabric: ['https://api.fabric.microsoft.com/.default'],
   // OneLake storage scope  
   storage: ['https://storage.azure.com/.default'],
   // Graph API scope (for user info)

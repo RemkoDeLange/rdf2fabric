@@ -15,6 +15,26 @@ export interface Project {
   status: 'draft' | 'configured' | 'translated' | 'loaded';
 }
 
+// Pipeline execution state (not persisted - runtime only)
+export type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+
+export interface StepState {
+  status: StepStatus;
+  jobId?: string;
+  startTime?: number;
+  endTime?: number;
+  error?: string;
+}
+
+export interface PipelineExecution {
+  projectId: string;
+  isRunning: boolean;
+  overallStatus: 'idle' | 'running' | 'completed' | 'failed';
+  stepStates: Record<string, StepState>;
+  logs: string[];
+  errorMessage: string | null;
+}
+
 interface AppState {
   // Workspace configuration
   workspaceUrl: string | null;
@@ -28,6 +48,9 @@ interface AppState {
   projects: Project[];
   currentProjectId: string | null;
 
+  // Pipeline execution (runtime, not persisted)
+  pipelineExecution: PipelineExecution | null;
+
   // Actions
   setWorkspace: (url: string, workspaceId: string, lakehouseId: string) => void;
   clearWorkspace: () => void;
@@ -39,6 +62,14 @@ interface AppState {
   deleteProject: (id: string) => void;
   setCurrentProject: (id: string | null) => void;
   getCurrentProject: () => Project | null;
+
+  // Pipeline execution actions
+  startPipelineExecution: (projectId: string) => void;
+  updatePipelineStep: (stepId: string, update: Partial<StepState>) => void;
+  addPipelineLog: (message: string) => void;
+  setPipelineStatus: (status: 'idle' | 'running' | 'completed' | 'failed', errorMessage?: string | null) => void;
+  clearPipelineExecution: () => void;
+  getPipelineExecution: (projectId: string) => PipelineExecution | null;
 }
 
 export const useAppStore = create<AppState>()(
@@ -51,6 +82,7 @@ export const useAppStore = create<AppState>()(
       isLoading: false,
       projects: [],
       currentProjectId: null,
+      pipelineExecution: null,
 
       // Workspace actions
       setWorkspace: (url, workspaceId, lakehouseId) =>
@@ -83,6 +115,71 @@ export const useAppStore = create<AppState>()(
       getCurrentProject: () => {
         const state = get();
         return state.projects.find((p) => p.id === state.currentProjectId) || null;
+      },
+
+      // Pipeline execution actions
+      startPipelineExecution: (projectId) =>
+        set({
+          pipelineExecution: {
+            projectId,
+            isRunning: true,
+            overallStatus: 'running',
+            stepStates: {},
+            logs: [],
+            errorMessage: null,
+          },
+        }),
+
+      updatePipelineStep: (stepId, update) =>
+        set((state) => {
+          if (!state.pipelineExecution) return state;
+          return {
+            pipelineExecution: {
+              ...state.pipelineExecution,
+              stepStates: {
+                ...state.pipelineExecution.stepStates,
+                [stepId]: {
+                  ...state.pipelineExecution.stepStates[stepId],
+                  ...update,
+                },
+              },
+            },
+          };
+        }),
+
+      addPipelineLog: (message) =>
+        set((state) => {
+          if (!state.pipelineExecution) return state;
+          const timestamp = new Date().toLocaleTimeString();
+          return {
+            pipelineExecution: {
+              ...state.pipelineExecution,
+              logs: [...state.pipelineExecution.logs, `[${timestamp}] ${message}`],
+            },
+          };
+        }),
+
+      setPipelineStatus: (status, errorMessage = null) =>
+        set((state) => {
+          if (!state.pipelineExecution) return state;
+          return {
+            pipelineExecution: {
+              ...state.pipelineExecution,
+              isRunning: status === 'running',
+              overallStatus: status,
+              errorMessage,
+            },
+          };
+        }),
+
+      clearPipelineExecution: () => set({ pipelineExecution: null }),
+
+      getPipelineExecution: (projectId) => {
+        const state = get();
+        if (state.pipelineExecution?.projectId === projectId) {
+          return state.pipelineExecution;
+        }
+        return null;
       },
     }),
     {

@@ -441,13 +441,48 @@ export class FabricService {
 
   /**
    * Run a notebook job
+   * Returns job info from 202 Accepted response
    */
   async runNotebook(workspaceId: string, notebookId: string): Promise<NotebookJob> {
-    const response = await this.fetchFabric<NotebookJob>(
-      `/workspaces/${workspaceId}/items/${notebookId}/jobs/instances?jobType=RunNotebook`,
-      { method: 'POST' }
-    );
-    return response;
+    const token = await this.getAccessToken();
+    const endpoint = `/workspaces/${workspaceId}/items/${notebookId}/jobs/instances?jobType=RunNotebook`;
+    
+    const response = await fetch(`${FABRIC_API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Fabric API error (${response.status}): ${errorText}`);
+    }
+
+    // 202 Accepted - extract job ID from Location header
+    // Location format: /workspaces/{wsId}/items/{itemId}/jobs/instances/{jobId}
+    const location = response.headers.get('Location');
+    if (location) {
+      const jobIdMatch = location.match(/instances\/([a-f0-9-]+)/i);
+      if (jobIdMatch) {
+        return {
+          id: jobIdMatch[1],
+          itemId: notebookId,
+          jobType: 'RunNotebook',
+          invokeType: 'Manual',
+          status: 'NotStarted',
+        };
+      }
+    }
+
+    // Try to parse body if present
+    const text = await response.text();
+    if (text) {
+      return JSON.parse(text);
+    }
+
+    throw new Error('No job ID returned from notebook execution');
   }
 
   /**
