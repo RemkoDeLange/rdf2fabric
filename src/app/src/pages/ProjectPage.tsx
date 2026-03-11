@@ -29,6 +29,7 @@ import {
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
+import { DecisionPanel, DECISION_DEFINITIONS, getDecisionStatus } from '../components/DecisionPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -48,11 +49,6 @@ const useStyles = makeStyles({
   },
   tabs: {
     marginBottom: '24px',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '24px',
   },
   card: {
     padding: '16px',
@@ -78,42 +74,7 @@ const useStyles = makeStyles({
     borderRadius: tokens.borderRadiusMedium,
     border: `1px dashed ${tokens.colorNeutralStroke1}`,
   },
-  decisionGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: '12px',
-  },
-  decisionCard: {
-    padding: '12px',
-    borderRadius: tokens.borderRadiusMedium,
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke1}`,
-  },
-  decisionPending: {
-    border: `1px solid ${tokens.colorPaletteYellowBorder1}`,
-    backgroundColor: tokens.colorPaletteYellowBackground1,
-  },
-  decisionComplete: {
-    border: `1px solid ${tokens.colorPaletteGreenBorder1}`,
-    backgroundColor: tokens.colorPaletteGreenBackground1,
-  },
 });
-
-// Placeholder decision categories
-const DECISIONS = [
-  { id: 'B1', name: 'Node Type Mapping', description: 'How to map OWL classes to node types' },
-  { id: 'B2', name: 'Property Mapping', description: 'How to handle datatype properties' },
-  { id: 'B3', name: 'Edge Type Mapping', description: 'How to map object properties' },
-  { id: 'B4', name: 'Blank Nodes', description: 'How to handle anonymous resources' },
-  { id: 'B5', name: 'Multi-valued Properties', description: 'Arrays vs separate nodes' },
-  { id: 'B6', name: 'Language Tags', description: 'How to handle multilingual literals' },
-  { id: 'B7', name: 'Datatypes', description: 'RDF to Fabric type mapping' },
-  { id: 'B8', name: 'Named Graphs', description: 'How to handle graph context' },
-  { id: 'B9', name: 'Class Hierarchy', description: 'Flatten or preserve' },
-  { id: 'B10', name: 'IRI Handling', description: 'Full URI vs local name' },
-  { id: 'B11', name: 'Validation', description: 'Pre-load SHACL validation' },
-  { id: 'B12', name: 'Provenance', description: 'Track source information' },
-];
 
 export function ProjectPage() {
   const styles = useStyles();
@@ -131,6 +92,10 @@ export function ProjectPage() {
   }
 
   const completedDecisions = Object.keys(project.decisions).length;
+  const autoDecisions = DECISION_DEFINITIONS.filter(d => getDecisionStatus(d, project.schemaLevel) === 'auto').length;
+  const manualRemaining = DECISION_DEFINITIONS.filter(d => 
+    getDecisionStatus(d, project.schemaLevel) !== 'auto' && !(d.id in project.decisions)
+  ).length;
 
   const handleBrowseFiles = (mode: 'rdf' | 'schema') => {
     setBrowseMode(mode);
@@ -168,6 +133,15 @@ export function ProjectPage() {
     }
   };
 
+  const handleDecisionChange = (decisionId: string, value: string) => {
+    updateProject(project.id, {
+      decisions: { ...project.decisions, [decisionId]: value }
+    });
+  };
+
+  // Check if project is ready for translation
+  const isReadyForTranslation = project.source.files.length > 0 && manualRemaining === 0;
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -180,13 +154,15 @@ export function ProjectPage() {
             {' · '}
             Schema Level: {project.schemaLevel ?? 'Not detected'}
             {' · '}
-            Decisions: {completedDecisions}/12
+            Decisions: {autoDecisions} auto, {completedDecisions} configured
+            {manualRemaining > 0 && `, ${manualRemaining} remaining`}
           </Body1>
         </div>
         <Button
           appearance="primary"
           icon={<Play24Regular />}
-          disabled={project.source.files.length === 0}
+          disabled={!isReadyForTranslation}
+          title={!isReadyForTranslation ? 'Select source files and configure all decisions first' : 'Run translation'}
         >
           Run Translation
         </Button>
@@ -303,32 +279,19 @@ export function ProjectPage() {
             </div>
             <Body1 style={{ marginBottom: '16px' }}>
               Configure how RDF constructs should be translated to Fabric Graph.
-              Some decisions are auto-resolved based on detected schema level.
+              Click on any decision card to configure it.
+              {project.schemaLevel !== null && project.schemaLevel > 0 && (
+                <span style={{ fontWeight: 600 }}>
+                  {' '}Schema Level {project.schemaLevel} detected — some decisions are auto-resolved.
+                </span>
+              )}
             </Body1>
             
-            <div className={styles.decisionGrid}>
-              {DECISIONS.map((decision) => {
-                const isComplete = decision.id in project.decisions;
-                return (
-                  <div
-                    key={decision.id}
-                    className={`${styles.decisionCard} ${
-                      isComplete ? styles.decisionComplete : styles.decisionPending
-                    }`}
-                  >
-                    <Body1 style={{ fontWeight: 600 }}>{decision.id}: {decision.name}</Body1>
-                    <Caption1>{decision.description}</Caption1>
-                    <Badge
-                      appearance="tint"
-                      color={isComplete ? 'success' : 'warning'}
-                      style={{ marginTop: '8px' }}
-                    >
-                      {isComplete ? 'Configured' : 'Pending'}
-                    </Badge>
-                  </div>
-                );
-              })}
-            </div>
+            <DecisionPanel
+              schemaLevel={project.schemaLevel}
+              decisions={project.decisions as Record<string, string>}
+              onDecisionChange={handleDecisionChange}
+            />
           </div>
         </Card>
       )}
@@ -374,9 +337,4 @@ export function ProjectPage() {
       </Dialog>
     </div>
   );
-}
-
-// Helper for Caption1 import
-function Caption1({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return <Body1 style={{ fontSize: '12px', color: tokens.colorNeutralForeground2, ...style }}>{children}</Body1>;
 }
