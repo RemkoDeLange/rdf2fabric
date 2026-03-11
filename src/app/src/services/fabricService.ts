@@ -51,6 +51,25 @@ export interface NotebookJob {
   };
 }
 
+export interface FabricFolder {
+  id: string;
+  displayName: string;
+  workspaceId: string;
+  parentFolderId?: string;
+}
+
+export interface PipelineConfig {
+  project_name: string;
+  folder_id: string | null;
+  created_at: string;
+  created_by: 'app' | 'manual';
+  source: {
+    files: string[];
+    schema_level: number | null;
+  };
+  decisions: Record<string, string>;
+}
+
 export interface TranslationStep {
   id: string;
   name: string;
@@ -252,6 +271,165 @@ export class FabricService {
       size: p.contentLength,
       lastModified: p.lastModified,
     }));
+  }
+
+  /**
+   * Create a folder in a workspace
+   * https://learn.microsoft.com/en-us/rest/api/fabric/core/folders/create-folder
+   */
+  async createFolder(
+    workspaceId: string,
+    displayName: string,
+    parentFolderId?: string
+  ): Promise<FabricFolder> {
+    const body: { displayName: string; parentFolderId?: string } = { displayName };
+    if (parentFolderId) {
+      body.parentFolderId = parentFolderId;
+    }
+
+    const response = await this.fetchFabric<FabricFolder>(
+      `/workspaces/${workspaceId}/folders`,
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }
+    );
+    return response;
+  }
+
+  /**
+   * List folders in a workspace
+   */
+  async listFolders(workspaceId: string): Promise<FabricFolder[]> {
+    const response = await this.fetchFabric<{ value: FabricFolder[] }>(
+      `/workspaces/${workspaceId}/folders`
+    );
+    return response.value;
+  }
+
+  /**
+   * Find or create a folder by name
+   */
+  async findOrCreateFolder(workspaceId: string, displayName: string): Promise<FabricFolder> {
+    // First, try to find existing folder
+    const folders = await this.listFolders(workspaceId);
+    const existing = folders.find(f => f.displayName === displayName);
+    if (existing) {
+      return existing;
+    }
+    // Create new folder
+    return this.createFolder(workspaceId, displayName);
+  }
+
+  /**
+   * Create a directory in OneLake
+   */
+  async createOneLakeDirectory(
+    workspaceId: string,
+    lakehouseId: string,
+    path: string
+  ): Promise<void> {
+    const token = await this.getAccessToken(fabricScopes.storage);
+    const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files/${path}`;
+
+    const response = await fetch(
+      `${dfsBase}${fullPath}?resource=directory`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!response.ok && response.status !== 409) { // 409 = already exists, that's ok
+      throw new Error(`OneLake error (${response.status}): ${await response.text()}`);
+    }
+  }
+
+  /**
+   * Write a file to OneLake
+   */
+  async writeOneLakeFile(
+    workspaceId: string,
+    lakehouseId: string,
+    path: string,
+    content: string
+  ): Promise<void> {
+    const token = await this.getAccessToken(fabricScopes.storage);
+    const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files/${path}`;
+
+    // Create file
+    const createResponse = await fetch(
+      `${dfsBase}${fullPath}?resource=file`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!createResponse.ok) {
+      throw new Error(`OneLake create error (${createResponse.status}): ${await createResponse.text()}`);
+    }
+
+    // Write content
+    const contentBytes = new TextEncoder().encode(content);
+    const appendResponse = await fetch(
+      `${dfsBase}${fullPath}?action=append&position=0`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/octet-stream',
+        },
+        body: contentBytes,
+      }
+    );
+
+    if (!appendResponse.ok) {
+      throw new Error(`OneLake append error (${appendResponse.status}): ${await appendResponse.text()}`);
+    }
+
+    // Flush to complete write
+    const flushResponse = await fetch(
+      `${dfsBase}${fullPath}?action=flush&position=${contentBytes.length}`,
+      {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    if (!flushResponse.ok) {
+      throw new Error(`OneLake flush error (${flushResponse.status}): ${await flushResponse.text()}`);
+    }
+  }
+
+  /**
+   * Write pipeline configuration to OneLake
+   * This config file is read by all notebooks to get project settings
+   */
+  async writePipelineConfig(
+    workspaceId: string,
+    lakehouseId: string,
+    config: PipelineConfig
+  ): Promise<void> {
+    // Ensure config directory exists
+    await this.createOneLakeDirectory(workspaceId, lakehouseId, 'config');
+
+    // Write config file
+    const configJson = JSON.stringify(config, null, 2);
+    await this.writeOneLakeFile(
+      workspaceId,
+      lakehouseId,
+      'config/pipeline_run.json',
+      configJson
+    );
   }
 
   /**

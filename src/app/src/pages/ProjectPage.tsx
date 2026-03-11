@@ -414,6 +414,9 @@ export function ProjectPage() {
           <TranslationPanel 
             projectId={project.id}
             projectName={project.name}
+            sourceFiles={project.source.files}
+            schemaLevel={project.schemaLevel ?? null}
+            decisions={project.decisions as Record<string, string>}
             onComplete={() => {
               updateProject(project.id, { status: 'translated' });
             }}

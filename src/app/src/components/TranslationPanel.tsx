@@ -27,7 +27,7 @@ import {
   ArrowClockwise24Regular,
   Stop24Regular,
 } from '@fluentui/react-icons';
-import { getFabricService, TRANSLATION_PIPELINE, NotebookJob } from '../services/fabricService';
+import { getFabricService, TRANSLATION_PIPELINE, NotebookJob, PipelineConfig } from '../services/fabricService';
 import { useAppStore } from '../stores/appStore';
 
 type StepStatus = 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
@@ -114,12 +114,15 @@ const useStyles = makeStyles({
 interface TranslationPanelProps {
   projectId: string;
   projectName: string;
+  sourceFiles: string[];
+  schemaLevel: number | null;
+  decisions: Record<string, string>;
   onComplete?: () => void;
 }
 
-export function TranslationPanel({ projectName, onComplete }: TranslationPanelProps) {
+export function TranslationPanel({ projectName, sourceFiles, schemaLevel, decisions, onComplete }: TranslationPanelProps) {
   const styles = useStyles();
-  const { workspaceId } = useAppStore();
+  const { workspaceId, lakehouseId } = useAppStore();
   
   const [isRunning, setIsRunning] = useState(false);
   const [stepStates, setStepStates] = useState<Record<string, StepState>>({});
@@ -145,6 +148,11 @@ export function TranslationPanel({ projectName, onComplete }: TranslationPanelPr
       return;
     }
 
+    if (!lakehouseId) {
+      setErrorMessage('Lakehouse not configured. Go to Settings to configure lakehouse.');
+      return;
+    }
+
     setIsRunning(true);
     setOverallStatus('running');
     setErrorMessage(null);
@@ -161,11 +169,41 @@ export function TranslationPanel({ projectName, onComplete }: TranslationPanelPr
     const outputFolder = projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
     addLog('Starting translation pipeline...');
     addLog(`Workspace: ${workspaceId}`);
-    addLog(`Output folder: ${outputFolder}/`);
-    addLog('Note: Created Fabric items (Graph, Ontology) will be placed in the output folder');
+    addLog(`Lakehouse: ${lakehouseId}`);
 
     try {
-      // Find all notebooks first
+      // Step 1: Create workspace folder for output items
+      addLog(`Creating workspace folder: ${outputFolder}/`);
+      let folderId: string | null = null;
+      try {
+        const folder = await fabricService.findOrCreateFolder(workspaceId, outputFolder);
+        folderId = folder.id;
+        addLog(`✓ Folder ready: ${folder.displayName} (${folder.id})`);
+      } catch (folderError) {
+        addLog(`⚠️ Could not create folder: ${folderError instanceof Error ? folderError.message : 'Unknown error'}`);
+        addLog('  Continuing without folder - items will be created at workspace root');
+      }
+
+      // Step 2: Write pipeline configuration to OneLake
+      addLog('Writing pipeline configuration...');
+      const pipelineConfig: PipelineConfig = {
+        project_name: projectName,
+        folder_id: folderId,
+        created_at: new Date().toISOString(),
+        created_by: 'app',
+        source: {
+          files: sourceFiles,
+          schema_level: schemaLevel,
+        },
+        decisions,
+      };
+      await fabricService.writePipelineConfig(workspaceId, lakehouseId, pipelineConfig);
+      addLog('✓ Pipeline config written to Files/config/pipeline_run.json');
+      addLog(`  Project: ${projectName}`);
+      addLog(`  Schema Level: ${schemaLevel}`);
+      addLog(`  Decisions: ${Object.keys(decisions).length} configured`);
+
+      // Step 3: Find all notebooks
       addLog('Discovering notebooks...');
       const notebooks = await fabricService.listNotebooks(workspaceId);
       addLog(`Found ${notebooks.length} notebooks in workspace`);
