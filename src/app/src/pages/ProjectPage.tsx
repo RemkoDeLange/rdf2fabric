@@ -6,6 +6,7 @@ import {
   Title2,
   Title3,
   Body1,
+  Body2,
   Button,
   Badge,
   Divider,
@@ -17,6 +18,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Dropdown,
+  Option,
+  Field,
 } from '@fluentui/react-components';
 import {
   DocumentMultiple24Regular,
@@ -224,6 +228,46 @@ export function ProjectPage() {
                 </Button>
               </div>
             )}
+          </div>
+
+          <Divider />
+
+          <div className={styles.section} style={{ marginTop: '24px' }}>
+            <div className={styles.sectionTitle}>
+              <DataTreemap24Regular />
+              <Title3>Schema Level</Title3>
+            </div>
+            
+            <Body2 style={{ marginBottom: '12px', color: tokens.colorNeutralForeground2 }}>
+              Select the richness of your RDF schema. This determines which translation decisions 
+              can be auto-resolved. A future version will auto-detect this from your files.
+            </Body2>
+
+            <Field label="Schema Level">
+              <Dropdown
+                placeholder="Select schema level"
+                value={
+                  project.schemaLevel === null ? 'Not detected' :
+                  project.schemaLevel === 0 ? 'Level 0 - Instance data only' :
+                  project.schemaLevel === 1 ? 'Level 1 - SKOS vocabulary' :
+                  project.schemaLevel === 2 ? 'Level 2 - RDFS schema' :
+                  project.schemaLevel === 3 ? 'Level 3 - OWL ontology' :
+                  'Level 4 - SHACL shapes'
+                }
+                selectedOptions={project.schemaLevel !== null ? [String(project.schemaLevel)] : []}
+                onOptionSelect={(_, data) => {
+                  const level = data.optionValue ? parseInt(data.optionValue) : null;
+                  updateProject(project.id, { schemaLevel: level });
+                }}
+                style={{ maxWidth: '300px' }}
+              >
+                <Option value="0">Level 0 - Instance data only (12 manual decisions)</Option>
+                <Option value="1">Level 1 - SKOS vocabulary (11 manual decisions)</Option>
+                <Option value="2">Level 2 - RDFS schema (7 manual decisions)</Option>
+                <Option value="3">Level 3 - OWL ontology (5 manual decisions)</Option>
+                <Option value="4">Level 4 - SHACL shapes (3-4 manual decisions)</Option>
+              </Dropdown>
+            </Field>
           </div>
 
           <Divider />

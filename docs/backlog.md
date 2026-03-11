@@ -553,6 +553,77 @@ class TestSchemaStatistics:
 
 ---
 
+### F3.3 - Automated Schema Detection API
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Provide automated schema level detection from the web app by invoking a Fabric notebook or API endpoint that parses selected RDF files and returns the detected schema level.
+
+**Current State:**
+- Manual schema level selector implemented in UI (user picks 0-4)
+- Schema detection logic exists in `02_schema_detector.ipynb`
+- No API bridge between web app and notebook
+
+**Implementation Options:**
+1. **Fabric Notebook via REST API** - Call notebook run endpoint, read results from lakehouse
+2. **Azure Function** - Deploy schema detector as serverless function
+3. **Client-side parsing** - Parse TTL in browser (limited, only for demo)
+
+**Acceptance Criteria:**
+- [ ] Web app can trigger schema detection for selected files
+- [ ] Returns schema level (0-4) and confidence score
+- [ ] Lists detected constructs (e.g., "owl:Class found", "sh:NodeShape found")
+- [ ] Results update project.schemaLevel automatically
+- [ ] Decision Dashboard updates to reflect auto-resolved decisions
+
+**Proposed Flow:**
+```
+User clicks "Detect Schema" button
+    ↓
+Web app calls Fabric Notebook API (or Azure Function)
+    ↓
+Notebook parses RDF files from OneLake
+    ↓
+Returns JSON: { level: 3, confidence: "high", constructs: [...] }
+    ↓
+Web app updates project.schemaLevel
+    ↓
+Decision cards re-render with correct auto/manual status
+```
+
+**Tests:**
+```python
+# test_schema_detection_api.py
+class TestSchemaDetectionAPI:
+    
+    def test_detect_level_from_files(self):
+        """API returns correct level for OWL file."""
+        result = api.detect_schema(files=["nen2660-owl.ttl"])
+        assert result.level == 3
+        assert "owl:Class" in result.constructs
+    
+    def test_combined_file_detection(self):
+        """API detects highest level from multiple files."""
+        result = api.detect_schema(files=[
+            "nen2660-rdfs.ttl",
+            "nen2660-shacl.ttl"
+        ])
+        assert result.level == 4  # SHACL is highest
+    
+    def test_ui_updates_project(self):
+        """Schema detection updates project state."""
+        project = create_test_project()
+        assert project.schemaLevel is None
+        
+        api.detect_schema_for_project(project.id)
+        
+        project.refresh()
+        assert project.schemaLevel is not None
+```
+
+**Dependencies:** F3.1, F3.2, F7.5 (File Browser)
+
+---
+
 ## Epic 4: RDF → LPG Translation
 
 ### F4.1 - Class to Node Type Mapping
