@@ -60,6 +60,30 @@
 | **React App** | ✅ Functional | Auth, workspace config, file browser |
 | **Decision Dashboard** | ✅ Working | 12 B-decisions with schema-based auto-resolve |
 | **Project Management** | ✅ Working | Create, rename, delete projects |
+| **Translation Execution** | ✅ Working | Pipeline progress UI with logs |
+
+---
+
+## ⚠️ Known Gaps (POC Scope)
+
+### Decision Enforcement Not Implemented
+
+**Current State:**
+- UI captures 12 B-decisions based on schema level
+- Decisions stored in browser localStorage
+- Pipeline runs with **hardcoded defaults** — decisions are NOT enforced
+
+**What This Means:**
+- Changing a decision (e.g., B2: Blank Node Handling) in the UI has no effect on translation output
+- The demo shows the *concept* of schema-driven decision reduction
+- Actual pipeline behavior is fixed regardless of UI settings
+
+**Phase 2 Work Required (Epic 13):**
+1. **F13.1** - Export decisions to OneLake config file
+2. **F13.2** - Notebooks read config and branch logic
+3. **F13.3** - Implement decision logic in notebooks (XL effort: ~2-3 weeks)
+
+**See:** `docs/backlog.md` → Epic 13: Decision Enforcement
 
 ---
 

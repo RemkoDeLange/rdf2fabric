@@ -2196,6 +2196,134 @@ class TestPreviewPipeline:
 
 ---
 
+## Epic 13: Decision Enforcement (Phase 2)
+
+> **Status:** ⚠️ Known Gap  
+> **Context:** The UI captures translation decisions (B1-B12) but notebooks currently use hardcoded defaults.
+
+### Current State (POC)
+
+**What Works:**
+- UI displays 12 B-decisions with schema-based auto-resolution
+- Decisions stored in `project.decisions` (localStorage)
+- Schema level affects which decisions need manual input
+- Visual demonstration of schema richness impact
+
+**What's Missing:**
+- Decisions are NOT enforced in notebooks
+- No config file written to OneLake
+- Pipeline runs with hardcoded defaults regardless of UI settings
+
+**Impact:** The POC demonstrates the *concept* that richer schemas reduce decisions, but the actual translation behavior doesn't change based on user choices.
+
+---
+
+### F13.1 - Decision Config Export
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Write project decisions to OneLake config file that notebooks can read.
+
+**Acceptance Criteria:**
+- [ ] Export `project.decisions` to `Files/config/translation_config.json`
+- [ ] Include schema level and all decision values
+- [ ] Upload before pipeline execution
+- [ ] Include file selection (which RDF files to process)
+
+**Config Schema:**
+```json
+{
+  "projectId": "uuid",
+  "schemaLevel": 3,
+  "sourceFiles": ["path/to/file1.ttl", "path/to/file2.ttl"],
+  "decisions": {
+    "B1": "class",
+    "B2": "generate",
+    "B5": "suffix",
+    "B7": "strict",
+    ...
+  }
+}
+```
+
+**Dependencies:** F7.6, F7.8
+
+---
+
+### F13.2 - Notebook Config Reader
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** M
+
+**Description:** Notebooks read config file and branch logic based on decisions.
+
+**Acceptance Criteria:**
+- [ ] NB01-NB09 check for `Files/config/translation_config.json`
+- [ ] Fall back to defaults if config missing
+- [ ] Log which config values are being used
+
+**Implementation Pattern:**
+```python
+# In each notebook
+config = load_translation_config()  # Returns defaults if not found
+blank_node_strategy = config.get("decisions", {}).get("B2", "generate")
+
+if blank_node_strategy == "generate":
+    # Generate UUIDs for blank nodes
+elif blank_node_strategy == "inline":
+    # Collapse blank nodes into properties
+elif blank_node_strategy == "skolemize":
+    # Replace with well-known URIs
+```
+
+**Dependencies:** F13.1
+
+---
+
+### F13.3 - Decision Logic Implementation
+**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** XL
+
+**Description:** Implement actual decision logic in notebooks for each B-decision.
+
+**Per-Decision Implementation Effort:**
+
+| Decision | Notebook(s) | Effort | Notes |
+|----------|-------------|--------|-------|
+| B1: Node Type Strategy | NB03, NB05 | M | Class vs predicate vs URI pattern |
+| B2: Blank Node Handling | NB01, NB05 | M | Generate vs inline vs skolemize |
+| B3: Multi-Type Resources | NB05 | M | Primary vs first vs duplicate |
+| B4: Named Graph Strategy | NB01, NB05 | S | Property vs partition vs ignore |
+| B5: Language Tag Handling | NB04, NB06 | M | Suffix vs preferred vs array |
+| B6: Edge Type Derivation | NB04 | S | Property name vs domain-range |
+| B7: Datatype Coercion | NB06 | M | Strict vs string vs infer |
+| B8: Property Attachment | NB04 | S | Subject vs reified |
+| B9: Edge vs Property | NB04, NB05 | M | All edges vs enum properties |
+| B10: Inverse Properties | NB04, NB07 | M | Materialize vs single direction |
+| B11: URI → ID Generation | NB05 | S | Local name vs label vs hash |
+| B12: Hierarchy Strategy | NB03, NB07 | M | Flatten vs preserve vs inherit |
+
+**Total Estimate:** XL (likely 2-3 weeks of focused work)
+
+**Acceptance Criteria:**
+- [ ] Each decision has corresponding code paths
+- [ ] Unit tests for each decision variant
+- [ ] Integration tests with NEN 2660 data
+
+**Dependencies:** F13.2
+
+---
+
+### F13.4 - Decision Preview
+**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** L
+
+**Description:** Show impact of decisions before running pipeline (dry-run preview).
+
+**Acceptance Criteria:**
+- [ ] Preview how many nodes/edges will be created
+- [ ] Show sample transformations
+- [ ] Highlight decisions that significantly impact output
+
+**Dependencies:** F13.3
+
+---
+
 ## Test Infrastructure
 
 ### Unit Tests
