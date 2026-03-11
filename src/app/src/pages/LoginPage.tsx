@@ -1,4 +1,5 @@
-import { useMsal } from '@azure/msal-react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
+import { Navigate } from 'react-router-dom';
 import {
   makeStyles,
   tokens,
@@ -44,6 +45,12 @@ const useStyles = makeStyles({
 export function LoginPage() {
   const styles = useStyles();
   const { instance } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+
+  // Redirect to settings if already authenticated
+  if (isAuthenticated) {
+    return <Navigate to="/settings" replace />;
+  }
 
   const handleLogin = () => {
     instance.loginRedirect(loginRequest);
