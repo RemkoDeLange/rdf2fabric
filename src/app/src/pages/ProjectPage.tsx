@@ -37,6 +37,7 @@ import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
 import { DecisionPanel, DECISION_DEFINITIONS, getDecisionStatus } from '../components/DecisionPanel';
+import { TranslationPanel } from '../components/TranslationPanel';
 
 const useStyles = makeStyles({
   container: {
@@ -193,6 +194,7 @@ export function ProjectPage() {
           icon={<Play24Regular />}
           disabled={!isReadyForTranslation}
           title={!isReadyForTranslation ? 'Select source files and configure all decisions first' : 'Run translation'}
+          onClick={() => setSelectedTab('execute')}
         >
           Run Translation
         </Button>
@@ -208,6 +210,9 @@ export function ProjectPage() {
         </Tab>
         <Tab value="decisions" icon={<DataTreemap24Regular />}>
           Decisions ({manualRemaining > 0 ? `${manualRemaining} remaining` : '✓ Ready'})
+        </Tab>
+        <Tab value="execute" icon={<Play24Regular />}>
+          Execute
         </Tab>
         <Tab value="preview" icon={<Checkmark24Regular />}>
           Preview
@@ -407,6 +412,17 @@ export function ProjectPage() {
               onDecisionChange={handleDecisionChange}
             />
           </div>
+        </Card>
+      )}
+
+      {selectedTab === 'execute' && (
+        <Card className={styles.card}>
+          <TranslationPanel 
+            projectId={project.id}
+            onComplete={() => {
+              updateProject(project.id, { status: 'translated' });
+            }}
+          />
         </Card>
       )}
 

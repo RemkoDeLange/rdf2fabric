@@ -37,6 +37,40 @@ export interface OneLakeFile {
   lastModified?: string;
 }
 
+export interface NotebookJob {
+  id: string;
+  itemId: string;
+  jobType: string;
+  invokeType: string;
+  status: 'NotStarted' | 'InProgress' | 'Completed' | 'Failed' | 'Cancelled' | 'Deduped';
+  startTimeUtc?: string;
+  endTimeUtc?: string;
+  failureReason?: {
+    message: string;
+    errorCode?: string;
+  };
+}
+
+export interface TranslationStep {
+  id: string;
+  name: string;
+  notebookName: string;
+  description: string;
+}
+
+// Pipeline steps - notebooks to run in order
+export const TRANSLATION_PIPELINE: TranslationStep[] = [
+  { id: 'NB01', name: 'Parse RDF', notebookName: '01_rdf_parser_jena', description: 'Parse RDF files with Apache Jena' },
+  { id: 'NB02', name: 'Detect Schema', notebookName: '02_schema_detector', description: 'Detect schema richness level' },
+  { id: 'NB03', name: 'Map Classes', notebookName: '03_class_to_nodetype', description: 'Map RDF classes to node types' },
+  { id: 'NB04', name: 'Map Properties', notebookName: '04_property_mapping', description: 'Map RDF properties to edges/properties' },
+  { id: 'NB05', name: 'Translate Instances', notebookName: '05_instance_translator', description: 'Translate RDF instances to nodes' },
+  { id: 'NB06', name: 'Write Delta Tables', notebookName: '06_delta_writer', description: 'Write gold Delta tables' },
+  { id: 'NB07', name: 'Generate Ontology', notebookName: '07_ontology_definition_generator', description: 'Generate Fabric Ontology JSON' },
+  { id: 'NB08', name: 'Push to API', notebookName: '08_ontology_api_client', description: 'Push definition to Ontology API' },
+  { id: 'NB09', name: 'Bind to Graph', notebookName: '09_data_binding', description: 'Bind tables to GraphModel' },
+];
+
 export class FabricService {
   private msalInstance: IPublicClientApplication;
 
@@ -218,6 +252,73 @@ export class FabricService {
       size: p.contentLength,
       lastModified: p.lastModified,
     }));
+  }
+
+  /**
+   * List notebooks in a workspace
+   */
+  async listNotebooks(workspaceId: string): Promise<FabricItem[]> {
+    return this.listItems(workspaceId, 'Notebook');
+  }
+
+  /**
+   * Run a notebook job
+   */
+  async runNotebook(workspaceId: string, notebookId: string): Promise<NotebookJob> {
+    const response = await this.fetchFabric<NotebookJob>(
+      `/workspaces/${workspaceId}/items/${notebookId}/jobs/instances?jobType=RunNotebook`,
+      { method: 'POST' }
+    );
+    return response;
+  }
+
+  /**
+   * Get job status
+   */
+  async getJobStatus(workspaceId: string, itemId: string, jobId: string): Promise<NotebookJob> {
+    return this.fetchFabric<NotebookJob>(
+      `/workspaces/${workspaceId}/items/${itemId}/jobs/instances/${jobId}`
+    );
+  }
+
+  /**
+   * Poll job until completion
+   */
+  async waitForJob(
+    workspaceId: string,
+    itemId: string,
+    jobId: string,
+    onProgress?: (job: NotebookJob) => void,
+    pollIntervalMs: number = 5000,
+    timeoutMs: number = 600000 // 10 minutes
+  ): Promise<NotebookJob> {
+    const startTime = Date.now();
+    
+    while (true) {
+      const job = await this.getJobStatus(workspaceId, itemId, jobId);
+      
+      if (onProgress) {
+        onProgress(job);
+      }
+
+      if (job.status === 'Completed' || job.status === 'Failed' || job.status === 'Cancelled') {
+        return job;
+      }
+
+      if (Date.now() - startTime > timeoutMs) {
+        throw new Error(`Job timed out after ${timeoutMs / 1000} seconds`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+    }
+  }
+
+  /**
+   * Find notebook by display name
+   */
+  async findNotebookByName(workspaceId: string, displayName: string): Promise<FabricItem | undefined> {
+    const notebooks = await this.listNotebooks(workspaceId);
+    return notebooks.find(nb => nb.displayName === displayName);
   }
 }
 
