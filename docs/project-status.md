@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-10 (evening)  
+**Last Updated:** 2026-03-11 (afternoon)  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -33,16 +33,16 @@
 | 9 | Execute translation UI | ⬜ | Trigger pipeline |
 | 10 | Demo polish | ⬜ | Screenshots, script |
 
-### Current Graph Metrics (Mar 10)
+### Current Graph Metrics (Mar 11 - Ziekenhuis minimal)
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| Entity types (Ontology) | 86 | After skip schema classes |
-| Relationship types (Ontology) | 105 | Instance-driven |
-| Nodes in Graph | **159** | Verified via GQL |
-| Edges in Graph | **588** | After filter fix |
-| Node tables bound | 86 | Gold tables mapped |
-| Edge tables bound | 77 | Some skipped (missing source/target) |
+| Entity types (Ontology) | 74 | Minimal test (ziekenhuis only) |
+| Relationship types (Ontology) | 48 | Type-specific (haspart_1, haspart_2, etc.) |
+| Nodes in Graph | **59** | Verified via GQL |
+| Edges in Graph | **372** | After bindings refresh |
+| Node tables bound | 34 | Per-entity gold tables |
+| Edge tables bound | 48 | Type-specific bindings |
 
 ---
 
@@ -51,10 +51,10 @@
 | Area | Status | Notes |
 |------|--------|-------|
 | **Pipeline (NB01-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph |
-| **Ontology API** | ✅ Working | 86 entity types, 105 relationships |
-| **Graph Materialization** | ✅ Working | 159 nodes, 588 edges queryable |
+| **Ontology API** | ✅ Working | 74 entity types, 48 relationships |
+| **Graph Materialization** | ✅ Working | 59 nodes, 372 edges queryable |
 | **GQL Queries** | ✅ Working | Basic patterns verified |
-| **Property Access** | 🔄 Pending | Fix deployed, needs re-run |
+| **Property Access** | ✅ Working | `uri` property accessible via GQL |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
 | **React App** | 🟡 Scaffolded | Auth working, pages stubbed |
 
@@ -95,19 +95,28 @@ filter_value = re.sub(r'_\d+$', '', rel_name)
 | Limitation | Workaround |
 |------------|------------|
 | No `labels()` function | Query specific node types |
-| No `type()` for edges | Query specific edge types |
+| No `type()` function for edges | Query specific edge types or return edge directly |
 | No `STARTS WITH` | Use full string match |
 | Requires `AS` aliases | Always alias RETURN values |
 | GROUP BY strict | Include all non-aggregated columns |
+| **Type-specific relationships** | Use exact rel type with suffix (e.g. `haspart_1`) |
 
 **Valid GQL patterns:**
 ```gql
 MATCH (n) RETURN count(n) AS total
 MATCH (b:Steelgirderbridge)-[r]->(part) RETURN b, part LIMIT 5
-MATCH (a)-[:haspart]->(b) RETURN a.uri AS source, b.uri AS target LIMIT 10
+-- Note: Relationship types are source-target specific!
+MATCH (z:Ziekenhuis)-[:haspart_1]->(r:Installatieruimte) RETURN DISTINCT z.uri, r.uri
+MATCH (z:Ziekenhuis)-[:haspart_7]->(r:Operatiekamer) RETURN DISTINCT z.uri, r.uri
 ```
-| R17 | Instance-driven relationship types | Hybrid | 🔄 |
-| R18 | Orphan edge targets | **Catch-all AdHocEntity** | ✅ Implemented |
+
+**Key Discovery (Mar 11):** Fabric Ontology creates **separate relationship types per source-target pair**. A single RDF property like `nen2660:hasPart` becomes multiple Fabric relationships:
+- `haspart`: Gebouw → Gebouwconstructie
+- `haspart_1`: Ziekenhuis → Installatieruimte
+- `haspart_7`: Ziekenhuis → Operatiekamer
+- etc.
+
+This is different from Neo4j where one relationship type can connect any node types.
 
 ---
 
