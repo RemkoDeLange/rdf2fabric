@@ -33,6 +33,7 @@ export interface PipelineExecution {
   stepStates: Record<string, StepState>;
   logs: string[];
   errorMessage: string | null;
+  lastUpdated: number; // Timestamp of last update (for stale state detection)
 }
 
 interface AppState {
@@ -127,6 +128,7 @@ export const useAppStore = create<AppState>()(
             stepStates: {},
             logs: [],
             errorMessage: null,
+            lastUpdated: Date.now(),
           },
         }),
 
@@ -136,6 +138,7 @@ export const useAppStore = create<AppState>()(
           return {
             pipelineExecution: {
               ...state.pipelineExecution,
+              lastUpdated: Date.now(),
               stepStates: {
                 ...state.pipelineExecution.stepStates,
                 [stepId]: {
@@ -154,6 +157,7 @@ export const useAppStore = create<AppState>()(
           return {
             pipelineExecution: {
               ...state.pipelineExecution,
+              lastUpdated: Date.now(),
               logs: [...state.pipelineExecution.logs, `[${timestamp}] ${message}`],
             },
           };
@@ -168,6 +172,7 @@ export const useAppStore = create<AppState>()(
               isRunning: status === 'running',
               overallStatus: status,
               errorMessage,
+              lastUpdated: Date.now(),
             },
           };
         }),
@@ -190,6 +195,8 @@ export const useAppStore = create<AppState>()(
         workspaceId: state.workspaceId,
         lakehouseId: state.lakehouseId,
         projects: state.projects,
+        // Persist pipeline execution so it survives refresh/navigation
+        pipelineExecution: state.pipelineExecution,
       }),
     }
   )

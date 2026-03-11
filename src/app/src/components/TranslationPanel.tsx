@@ -124,10 +124,15 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     updatePipelineStep,
     addPipelineLog,
     setPipelineStatus,
+    clearPipelineExecution,
   } = useAppStore();
   
   // Derive state from global store
   const isRunning = pipelineExecution?.projectId === projectId && pipelineExecution.isRunning;
+  
+  // Detect stale running state (running but no update in last 2 minutes)
+  const isStale = isRunning && pipelineExecution?.lastUpdated && 
+    (Date.now() - pipelineExecution.lastUpdated > 120000);
   const stepStates = pipelineExecution?.projectId === projectId ? pipelineExecution.stepStates : {};
   const logs = pipelineExecution?.projectId === projectId ? pipelineExecution.logs : [];
   const overallStatus = pipelineExecution?.projectId === projectId ? pipelineExecution.overallStatus : 'idle';
@@ -347,6 +352,14 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
           <MessageBarBody>
             <MessageBarTitle>Error</MessageBarTitle>
             {errorMessage}
+            <Button 
+              appearance="subtle" 
+              size="small" 
+              style={{ marginLeft: '8px' }}
+              onClick={() => clearPipelineExecution()}
+            >
+              Clear &amp; Retry
+            </Button>
           </MessageBarBody>
         </MessageBar>
       )}
@@ -356,6 +369,24 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
           <MessageBarBody>
             <MessageBarTitle>Success</MessageBarTitle>
             Translation completed! Your RDF data has been loaded into Fabric Graph.
+          </MessageBarBody>
+        </MessageBar>
+      )}
+
+      {isStale && (
+        <MessageBar intent="warning">
+          <MessageBarBody>
+            <MessageBarTitle>Pipeline Status Unknown</MessageBarTitle>
+            The pipeline was running but tracking was interrupted (browser refreshed or navigated away). 
+            Check the Fabric Portal for actual job status.
+            <Button 
+              appearance="subtle" 
+              size="small" 
+              style={{ marginLeft: '8px' }}
+              onClick={() => clearPipelineExecution()}
+            >
+              Clear &amp; Start Fresh
+            </Button>
           </MessageBarBody>
         </MessageBar>
       )}
