@@ -38,6 +38,7 @@ import { useAppStore } from '../stores/appStore';
 import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
 import { DecisionPanel, DECISION_DEFINITIONS, getDecisionStatus } from '../components/DecisionPanel';
 import { TranslationPanel } from '../components/TranslationPanel';
+import { ScenarioPreview } from '../components/ScenarioPreview';
 
 const useStyles = makeStyles({
   container: {
@@ -162,9 +163,6 @@ export function ProjectPage() {
     setShowRenameDialog(false);
   };
 
-  // Check if project is ready for translation
-  const isReadyForTranslation = project.source.files.length > 0 && manualRemaining === 0;
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -189,15 +187,6 @@ export function ProjectPage() {
             {manualRemaining > 0 && `, ${manualRemaining} remaining`}
           </Body1>
         </div>
-        <Button
-          appearance="primary"
-          icon={<Play24Regular />}
-          disabled={!isReadyForTranslation}
-          title={!isReadyForTranslation ? 'Select source files and configure all decisions first' : 'Run translation'}
-          onClick={() => setSelectedTab('execute')}
-        >
-          Run Translation
-        </Button>
       </div>
 
       <TabList
@@ -211,11 +200,11 @@ export function ProjectPage() {
         <Tab value="decisions" icon={<DataTreemap24Regular />}>
           Decisions ({manualRemaining > 0 ? `${manualRemaining} remaining` : '✓ Ready'})
         </Tab>
-        <Tab value="execute" icon={<Play24Regular />}>
-          Execute
-        </Tab>
         <Tab value="preview" icon={<Checkmark24Regular />}>
           Preview
+        </Tab>
+        <Tab value="execute" icon={<Play24Regular />}>
+          Execute
         </Tab>
       </TabList>
 
@@ -405,6 +394,11 @@ export function ProjectPage() {
                 Scenario E — SHACL (5 decisions)
               </Button>
             </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: tokens.colorNeutralForeground3, fontSize: '12px' }}>
+              <Flash24Regular style={{ fontSize: '14px' }} />
+              <span>Settings are automatically saved • Last updated: {new Date(project.updated).toLocaleTimeString()}</span>
+            </div>
             
             <DecisionPanel
               schemaLevel={project.schemaLevel}
@@ -419,6 +413,7 @@ export function ProjectPage() {
         <Card className={styles.card}>
           <TranslationPanel 
             projectId={project.id}
+            projectName={project.name}
             onComplete={() => {
               updateProject(project.id, { status: 'translated' });
             }}
@@ -428,12 +423,10 @@ export function ProjectPage() {
 
       {selectedTab === 'preview' && (
         <Card className={styles.card}>
-          <div className={styles.emptyFiles}>
-            <Body1>Graph preview will appear here after running schema detection.</Body1>
-            <Button appearance="primary" style={{ marginTop: '16px' }}>
-              Detect Schema
-            </Button>
-          </div>
+          <ScenarioPreview 
+            decisions={project.decisions as Record<string, string>} 
+            schemaLevel={project.schemaLevel ?? null}
+          />
         </Card>
       )}
 

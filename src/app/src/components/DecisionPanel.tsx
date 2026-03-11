@@ -32,6 +32,8 @@ import {
   Info16Regular,
 } from '@fluentui/react-icons';
 
+import { DecisionExample } from './DecisionExamples';
+
 // Decision status based on schema level
 export type DecisionStatus = 'auto' | 'hints' | 'manual';
 
@@ -437,7 +439,7 @@ export function DecisionPanel({ schemaLevel, decisions, onDecisionChange }: Deci
 
       {/* Decision Configuration Dialog */}
       <Dialog open={!!selectedDecision} onOpenChange={(_, data) => !data.open && setSelectedDecision(null)}>
-        <DialogSurface style={{ maxWidth: '600px' }}>
+        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
           <DialogBody>
             <DialogTitle>
               {selectedDecision?.id}: {selectedDecision?.name}
@@ -466,6 +468,13 @@ export function DecisionPanel({ schemaLevel, decisions, onDecisionChange }: Deci
                   </div>
                 ))}
               </RadioGroup>
+
+              {selectedDecision && (
+                <DecisionExample 
+                  decisionId={selectedDecision.id} 
+                  selectedOption={pendingValue}
+                />
+              )}
             </DialogContent>
             <DialogActions>
               <Button appearance="secondary" onClick={() => setSelectedDecision(null)}>

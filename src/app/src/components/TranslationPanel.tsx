@@ -113,10 +113,11 @@ const useStyles = makeStyles({
 
 interface TranslationPanelProps {
   projectId: string;
+  projectName: string;
   onComplete?: () => void;
 }
 
-export function TranslationPanel({ onComplete }: TranslationPanelProps) {
+export function TranslationPanel({ projectName, onComplete }: TranslationPanelProps) {
   const styles = useStyles();
   const { workspaceId } = useAppStore();
   
@@ -157,8 +158,11 @@ export function TranslationPanel({ onComplete }: TranslationPanelProps) {
     setStepStates(initialStates);
 
     const fabricService = getFabricService();
+    const outputFolder = projectName.replace(/[^a-zA-Z0-9_-]/g, '_');
     addLog('Starting translation pipeline...');
     addLog(`Workspace: ${workspaceId}`);
+    addLog(`Output folder: ${outputFolder}/`);
+    addLog('Note: Created Fabric items (Graph, Ontology) will be placed in the output folder');
 
     try {
       // Find all notebooks first
