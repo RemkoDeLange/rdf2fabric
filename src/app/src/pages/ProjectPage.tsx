@@ -21,6 +21,7 @@ import {
   Dropdown,
   Option,
   Field,
+  Input,
 } from '@fluentui/react-components';
 import {
   DocumentMultiple24Regular,
@@ -29,6 +30,7 @@ import {
   Checkmark24Regular,
   Dismiss24Regular,
   FolderOpen24Regular,
+  Edit24Regular,
 } from '@fluentui/react-icons';
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
@@ -87,6 +89,8 @@ export function ProjectPage() {
   const [showFileBrowser, setShowFileBrowser] = useState(false);
   const [browseMode, setBrowseMode] = useState<'rdf' | 'schema'>('rdf');
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [newName, setNewName] = useState('');
   
   const { projects, updateProject } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
@@ -143,6 +147,19 @@ export function ProjectPage() {
     });
   };
 
+  const openRenameDialog = () => {
+    setNewName(project.name);
+    setShowRenameDialog(true);
+  };
+
+  const handleRename = () => {
+    const trimmedName = newName.trim();
+    if (trimmedName && trimmedName !== project.name) {
+      updateProject(project.id, { name: trimmedName });
+    }
+    setShowRenameDialog(false);
+  };
+
   // Check if project is ready for translation
   const isReadyForTranslation = project.source.files.length > 0 && manualRemaining === 0;
 
@@ -150,7 +167,15 @@ export function ProjectPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <div className={styles.headerLeft}>
-          <Title2>{project.name}</Title2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Title2>{project.name}</Title2>
+            <Button
+              appearance="subtle"
+              icon={<Edit24Regular />}
+              onClick={openRenameDialog}
+              title="Rename project"
+            />
+          </div>
           <Body1>
             <Badge appearance="filled" color="informative">
               {project.status}
@@ -181,7 +206,7 @@ export function ProjectPage() {
           Source Files
         </Tab>
         <Tab value="decisions" icon={<DataTreemap24Regular />}>
-          Decisions ({completedDecisions}/12)
+          Decisions ({manualRemaining > 0 ? `${manualRemaining} remaining` : '✓ Ready'})
         </Tab>
         <Tab value="preview" icon={<Checkmark24Regular />}>
           Preview
@@ -263,9 +288,9 @@ export function ProjectPage() {
               >
                 <Option value="0">Level 0 - Instance data only (12 manual decisions)</Option>
                 <Option value="1">Level 1 - SKOS vocabulary (11 manual decisions)</Option>
-                <Option value="2">Level 2 - RDFS schema (7 manual decisions)</Option>
-                <Option value="3">Level 3 - OWL ontology (5 manual decisions)</Option>
-                <Option value="4">Level 4 - SHACL shapes (3-4 manual decisions)</Option>
+                <Option value="2">Level 2 - RDFS schema (8 manual decisions)</Option>
+                <Option value="3">Level 3 - OWL ontology (6 manual decisions)</Option>
+                <Option value="4">Level 4 - SHACL shapes (5 manual decisions)</Option>
               </Dropdown>
             </Field>
           </div>
@@ -374,6 +399,32 @@ export function ProjectPage() {
                 disabled={pendingFiles.length === 0}
               >
                 Add {pendingFiles.length} File{pendingFiles.length !== 1 ? 's' : ''}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={(_, data) => setShowRenameDialog(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Rename Project</DialogTitle>
+            <DialogContent>
+              <Field label="Project Name" required>
+                <Input
+                  value={newName}
+                  onChange={(_, data) => setNewName(data.value)}
+                  placeholder="Enter project name"
+                />
+              </Field>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setShowRenameDialog(false)}>
+                Cancel
+              </Button>
+              <Button appearance="primary" onClick={handleRename}>
+                Rename
               </Button>
             </DialogActions>
           </DialogBody>

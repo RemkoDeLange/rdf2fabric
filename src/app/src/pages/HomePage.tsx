@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   makeStyles,
@@ -10,6 +11,14 @@ import {
   Body1,
   Caption1,
   Badge,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Input,
+  Field,
 } from '@fluentui/react-components';
 import {
   Add24Regular,
@@ -73,11 +82,14 @@ export function HomePage() {
   const styles = useStyles();
   const navigate = useNavigate();
   const { projects, addProject, setCurrentProject } = useAppStore();
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
 
   const handleCreateProject = () => {
+    const name = newProjectName.trim() || `Project ${projects.length + 1}`;
     const newProject: Project = {
       id: crypto.randomUUID(),
-      name: `Project ${projects.length + 1}`,
+      name,
       created: new Date().toISOString(),
       updated: new Date().toISOString(),
       source: {
@@ -91,7 +103,14 @@ export function HomePage() {
 
     addProject(newProject);
     setCurrentProject(newProject.id);
+    setShowCreateDialog(false);
+    setNewProjectName('');
     navigate(`/project/${newProject.id}`);
+  };
+
+  const openCreateDialog = () => {
+    setNewProjectName(`Project ${projects.length + 1}`);
+    setShowCreateDialog(true);
   };
 
   const handleOpenProject = (project: Project) => {
@@ -106,7 +125,7 @@ export function HomePage() {
         <Button
           appearance="primary"
           icon={<Add24Regular />}
-          onClick={handleCreateProject}
+          onClick={openCreateDialog}
         >
           New Project
         </Button>
@@ -120,7 +139,7 @@ export function HomePage() {
           <Button
             appearance="primary"
             icon={<Add24Regular />}
-            onClick={handleCreateProject}
+            onClick={openCreateDialog}
             style={{ marginTop: '24px' }}
           >
             Create your first project
@@ -166,6 +185,31 @@ export function HomePage() {
           ))}
         </div>
       )}
+
+      <Dialog open={showCreateDialog} onOpenChange={(_, data) => setShowCreateDialog(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Create New Project</DialogTitle>
+            <DialogContent>
+              <Field label="Project Name" required>
+                <Input
+                  value={newProjectName}
+                  onChange={(_, data) => setNewProjectName(data.value)}
+                  placeholder="Enter project name"
+                />
+              </Field>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setShowCreateDialog(false)}>
+                Cancel
+              </Button>
+              <Button appearance="primary" onClick={handleCreateProject}>
+                Create
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }

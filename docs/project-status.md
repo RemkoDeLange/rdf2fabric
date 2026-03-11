@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-11 (afternoon)  
+**Last Updated:** 2026-03-11 (evening)  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -20,18 +20,19 @@
 | 2 | Rerun NB01-NB09 | ✅ Done | 161 entities, 70 relationships |
 | 2 | **Fix edge filter bug** | ✅ Done | Suffixed names now map correctly |
 | 2 | **Fix property mapping** | ✅ Done | `uri` now exposed in GQL |
-| 3 | Workspace config UI (F7.3) | ⬜ | First-run setup |
-| 4 | Fabric API service | ⬜ | Bridge UI to notebooks |
-| 5 | File browser UI (F7.5) | ⬜ | Select RDF files |
+| 3 | Workspace config UI (F7.3) | ✅ Done | Settings page with workspace/lakehouse |
+| 4 | File browser UI (F7.5) | ✅ Done | OneLake DFS API integration |
+| 5 | Decision Dashboard (F7.6) | ✅ Done | 12 B-decisions with auto-resolve |
 
 ### Week 2: Decision Dashboard + Polish
 
 | Day | Task | Status | Notes |
 |-----|------|--------|-------|
-| 6-7 | Decision Dashboard (F7.6) | ⬜ | Show all 12 B-decisions |
-| 8 | Schema detection + presets | ⬜ | Scenario A/E buttons |
-| 9 | Execute translation UI | ⬜ | Trigger pipeline |
-| 10 | Demo polish | ⬜ | Screenshots, script |
+| 6 | Schema level selector | ✅ Done | Manual dropdown (0-4), auto-resolve |
+| 6 | Project naming/rename | ✅ Done | Create with name, rename dialog |
+| 7 | Scenario presets | ⬜ | "Apply Scenario A/E" buttons |
+| 8 | Execute translation UI | ⬜ | Trigger pipeline |
+| 9-10 | Demo polish | ⬜ | Screenshots, script |
 
 ### Current Graph Metrics (Mar 11 - Ziekenhuis minimal)
 
@@ -56,7 +57,9 @@
 | **GQL Queries** | ✅ Working | Basic patterns verified |
 | **Property Access** | ✅ Working | `uri` property accessible via GQL |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
-| **React App** | 🟡 Scaffolded | Auth working, pages stubbed |
+| **React App** | ✅ Functional | Auth, workspace config, file browser |
+| **Decision Dashboard** | ✅ Working | 12 B-decisions with schema-based auto-resolve |
+| **Project Management** | ✅ Working | Create, rename, delete projects |
 
 ---
 
