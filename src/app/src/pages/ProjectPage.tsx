@@ -31,6 +31,7 @@ import {
   Dismiss24Regular,
   FolderOpen24Regular,
   Edit24Regular,
+  Flash24Regular,
 } from '@fluentui/react-icons';
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
@@ -355,6 +356,50 @@ export function ProjectPage() {
                 </span>
               )}
             </Body1>
+
+            {/* Scenario Presets */}
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              marginBottom: '24px',
+              padding: '16px',
+              backgroundColor: tokens.colorNeutralBackground3,
+              borderRadius: tokens.borderRadiusMedium,
+              alignItems: 'center',
+              flexWrap: 'wrap'
+            }}>
+              <Body2 style={{ fontWeight: 600, marginRight: '8px' }}>
+                <Flash24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                Quick Scenarios:
+              </Body2>
+              <Button
+                appearance={project.schemaLevel === 0 ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  updateProject(project.id, { schemaLevel: 0, decisions: {} });
+                }}
+              >
+                Scenario A — No Schema (12 decisions)
+              </Button>
+              <Button
+                appearance={project.schemaLevel === 2 ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  updateProject(project.id, { schemaLevel: 2, decisions: {} });
+                }}
+              >
+                Scenario C — RDFS (8 decisions)
+              </Button>
+              <Button
+                appearance={project.schemaLevel === 4 ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  updateProject(project.id, { schemaLevel: 4, decisions: {} });
+                }}
+              >
+                Scenario E — SHACL (5 decisions)
+              </Button>
+            </div>
             
             <DecisionPanel
               schemaLevel={project.schemaLevel}

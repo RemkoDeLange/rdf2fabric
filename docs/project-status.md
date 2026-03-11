@@ -30,7 +30,7 @@
 |-----|------|--------|-------|
 | 6 | Schema level selector | ✅ Done | Manual dropdown (0-4), auto-resolve |
 | 6 | Project naming/rename | ✅ Done | Create with name, rename dialog |
-| 7 | Scenario presets | ⬜ | "Apply Scenario A/E" buttons |
+| 7 | Scenario presets | ✅ Done | A/C/E buttons, one-click demo |
 | 8 | Execute translation UI | ⬜ | Trigger pipeline |
 | 9-10 | Demo polish | ⬜ | Screenshots, script |
 
