@@ -1,8 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
-import { PublicClientApplication, AccountInfo, InteractionStatus } from '@azure/msal-browser';
-import { AuthService, initializeAuthService, getAuthService } from '../services/authService';
-import { msalConfig } from '../config/authConfig';
+import { PublicClientApplication, AccountInfo } from '@azure/msal-browser';
+import { AuthService, initializeAuthService } from '../services/authService';
 
 // Mock MSAL
 vi.mock('@azure/msal-browser', async () => {

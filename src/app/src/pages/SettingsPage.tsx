@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useIsAuthenticated } from '@azure/msal-react';
+import { useState, useEffect } from 'react';
+import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import {
   makeStyles,
   tokens,
@@ -8,7 +8,8 @@ import {
   Title3,
   Body1,
   Button,
-  Input,
+  Dropdown,
+  Option,
   Field,
   MessageBar,
   MessageBarBody,
@@ -18,8 +19,10 @@ import {
   Checkmark24Regular,
   Warning24Regular,
   Link24Regular,
+  ArrowSync24Regular,
 } from '@fluentui/react-icons';
 import { useAppStore } from '../stores/appStore';
+import { FabricService, FabricWorkspace, FabricLakehouse } from '../services/fabricService';
 
 const useStyles = makeStyles({
   container: {
@@ -71,48 +74,102 @@ const useStyles = makeStyles({
 export function SettingsPage() {
   const styles = useStyles();
   const isAuthenticated = useIsAuthenticated();
-  const { workspaceUrl, workspaceId, lakehouseId, setWorkspace, clearWorkspace } = useAppStore();
+  const { instance } = useMsal();
+  const { workspaceId, lakehouseId, setWorkspace, clearWorkspace } = useAppStore();
 
-  const [inputUrl, setInputUrl] = useState(workspaceUrl || '');
-  const [inputWorkspaceId, setInputWorkspaceId] = useState(workspaceId || '');
-  const [inputLakehouseId, setInputLakehouseId] = useState(lakehouseId || '');
-  const [isValidating, setIsValidating] = useState(false);
+  // State
+  const [workspaces, setWorkspaces] = useState<FabricWorkspace[]>([]);
+  const [lakehouses, setLakehouses] = useState<FabricLakehouse[]>([]);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>(workspaceId || '');
+  const [selectedLakehouseId, setSelectedLakehouseId] = useState<string>(lakehouseId || '');
+  const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(false);
+  const [isLoadingLakehouses, setIsLoadingLakehouses] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const isConnected = Boolean(workspaceUrl && workspaceId && lakehouseId);
+  const isConnected = Boolean(workspaceId && lakehouseId);
+  const fabricService = isAuthenticated ? new FabricService(instance) : null;
+
+  // Load workspaces when authenticated
+  useEffect(() => {
+    if (isAuthenticated && fabricService) {
+      loadWorkspaces();
+    }
+  }, [isAuthenticated]);
+
+  // Load lakehouses when workspace selected
+  useEffect(() => {
+    if (selectedWorkspaceId && fabricService) {
+      loadLakehouses(selectedWorkspaceId);
+    } else {
+      setLakehouses([]);
+      setSelectedLakehouseId('');
+    }
+  }, [selectedWorkspaceId]);
+
+  const loadWorkspaces = async () => {
+    if (!fabricService) return;
+    setIsLoadingWorkspaces(true);
+    setError(null);
+    try {
+      const ws = await fabricService.listWorkspaces();
+      setWorkspaces(ws);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load workspaces');
+    } finally {
+      setIsLoadingWorkspaces(false);
+    }
+  };
+
+  const loadLakehouses = async (wsId: string) => {
+    if (!fabricService) return;
+    setIsLoadingLakehouses(true);
+    setError(null);
+    try {
+      const lh = await fabricService.listLakehouses(wsId);
+      setLakehouses(lh);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load lakehouses');
+    } finally {
+      setIsLoadingLakehouses(false);
+    }
+  };
 
   const handleSave = async () => {
     setError(null);
-    setIsValidating(true);
+    setSuccessMessage(null);
+    setIsSaving(true);
 
     try {
-      // Basic validation
-      if (!inputUrl.trim()) {
-        throw new Error('Workspace URL is required');
+      if (!selectedWorkspaceId) {
+        throw new Error('Please select a workspace');
       }
-      if (!inputWorkspaceId.trim()) {
-        throw new Error('Workspace ID is required');
-      }
-      if (!inputLakehouseId.trim()) {
-        throw new Error('Lakehouse ID is required');
+      if (!selectedLakehouseId) {
+        throw new Error('Please select a lakehouse');
       }
 
-      // TODO: Validate connection to Fabric API
-      // For now, just save
-      setWorkspace(inputUrl.trim(), inputWorkspaceId.trim(), inputLakehouseId.trim());
+      const workspace = workspaces.find(w => w.id === selectedWorkspaceId);
+      const workspaceUrl = `https://app.fabric.microsoft.com/groups/${selectedWorkspaceId}`;
+      
+      setWorkspace(workspaceUrl, selectedWorkspaceId, selectedLakehouseId);
+      setSuccessMessage(`Connected to ${workspace?.displayName || 'workspace'}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save settings');
     } finally {
-      setIsValidating(false);
+      setIsSaving(false);
     }
   };
 
   const handleDisconnect = () => {
     clearWorkspace();
-    setInputUrl('');
-    setInputWorkspaceId('');
-    setInputLakehouseId('');
+    setSelectedWorkspaceId('');
+    setSelectedLakehouseId('');
+    setSuccessMessage(null);
   };
+
+  const selectedWorkspace = workspaces.find(w => w.id === selectedWorkspaceId);
+  const selectedLakehouse = lakehouses.find(l => l.id === selectedLakehouseId);
 
   return (
     <div className={styles.container}>
@@ -158,42 +215,63 @@ export function SettingsPage() {
           </MessageBar>
         )}
 
+        {successMessage && (
+          <MessageBar intent="success" style={{ marginBottom: '16px' }}>
+            <MessageBarBody>{successMessage}</MessageBarBody>
+          </MessageBar>
+        )}
+
         <div className={styles.form}>
-          <Field label="Workspace URL" required>
-            <Input
-              value={inputUrl}
-              onChange={(_, data) => setInputUrl(data.value)}
-              placeholder="https://app.fabric.microsoft.com/groups/..."
-              disabled={!isAuthenticated}
-            />
+          <Field label="Workspace" required>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+              <Dropdown
+                placeholder="Select a workspace"
+                value={selectedWorkspace?.displayName || ''}
+                selectedOptions={selectedWorkspaceId ? [selectedWorkspaceId] : []}
+                onOptionSelect={(_, data) => setSelectedWorkspaceId(data.optionValue as string || '')}
+                disabled={!isAuthenticated || isLoadingWorkspaces}
+                style={{ flex: 1 }}
+              >
+                {workspaces.map((ws) => (
+                  <Option key={ws.id} value={ws.id}>
+                    {ws.displayName}
+                  </Option>
+                ))}
+              </Dropdown>
+              <Button
+                icon={isLoadingWorkspaces ? <Spinner size="tiny" /> : <ArrowSync24Regular />}
+                onClick={loadWorkspaces}
+                disabled={!isAuthenticated || isLoadingWorkspaces}
+                title="Refresh workspaces"
+              />
+            </div>
           </Field>
 
-          <Field label="Workspace ID" required hint="GUID from workspace URL">
-            <Input
-              value={inputWorkspaceId}
-              onChange={(_, data) => setInputWorkspaceId(data.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              disabled={!isAuthenticated}
-            />
-          </Field>
-
-          <Field label="Lakehouse ID" required hint="GUID of the lakehouse to use">
-            <Input
-              value={inputLakehouseId}
-              onChange={(_, data) => setInputLakehouseId(data.value)}
-              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-              disabled={!isAuthenticated}
-            />
+          <Field label="Lakehouse" required>
+            <Dropdown
+              placeholder={selectedWorkspaceId ? "Select a lakehouse" : "Select a workspace first"}
+              value={selectedLakehouse?.displayName || ''}
+              selectedOptions={selectedLakehouseId ? [selectedLakehouseId] : []}
+              onOptionSelect={(_, data) => setSelectedLakehouseId(data.optionValue as string || '')}
+              disabled={!isAuthenticated || !selectedWorkspaceId || isLoadingLakehouses}
+            >
+              {lakehouses.map((lh) => (
+                <Option key={lh.id} value={lh.id}>
+                  {lh.displayName}
+                </Option>
+              ))}
+            </Dropdown>
+            {isLoadingLakehouses && <Spinner size="tiny" style={{ marginTop: '4px' }} />}
           </Field>
 
           <div className={styles.buttonRow}>
             <Button
               appearance="primary"
               onClick={handleSave}
-              disabled={!isAuthenticated || isValidating}
-              icon={isValidating ? <Spinner size="tiny" /> : undefined}
+              disabled={!isAuthenticated || !selectedWorkspaceId || !selectedLakehouseId || isSaving}
+              icon={isSaving ? <Spinner size="tiny" /> : undefined}
             >
-              {isValidating ? 'Validating...' : 'Save'}
+              {isSaving ? 'Saving...' : 'Save Connection'}
             </Button>
             {isConnected && (
               <Button appearance="secondary" onClick={handleDisconnect}>
@@ -206,19 +284,13 @@ export function SettingsPage() {
 
       <Card className={styles.card}>
         <div className={styles.section}>
-          <Title3>How to find your IDs</Title3>
+          <Title3>Connection Info</Title3>
           <Body1 style={{ marginTop: '12px' }}>
-            <ol style={{ paddingLeft: '20px', lineHeight: '1.8' }}>
-              <li>Open your Fabric workspace in the browser</li>
-              <li>
-                The <strong>Workspace ID</strong> is in the URL after{' '}
-                <code>/groups/</code>
-              </li>
-              <li>
-                Open your Lakehouse and find the <strong>Lakehouse ID</strong> in
-                the URL after <code>/lakehouses/</code>
-              </li>
-            </ol>
+            <p>Select your Fabric workspace and lakehouse from the dropdowns above.</p>
+            <p style={{ marginTop: '8px' }}>
+              The lakehouse should contain your RDF source files in the <code>Files/</code> folder
+              and will store the translated graph data in Delta tables.
+            </p>
           </Body1>
         </div>
       </Card>

@@ -3,7 +3,6 @@ import {
   makeStyles,
   tokens,
   Card,
-  CardHeader,
   Title2,
   Title3,
   Body1,
@@ -82,11 +81,11 @@ const useStyles = makeStyles({
     border: `1px solid ${tokens.colorNeutralStroke1}`,
   },
   decisionPending: {
-    borderColor: tokens.colorPaletteYellowBorder1,
+    border: `1px solid ${tokens.colorPaletteYellowBorder1}`,
     backgroundColor: tokens.colorPaletteYellowBackground1,
   },
   decisionComplete: {
-    borderColor: tokens.colorPaletteGreenBorder1,
+    border: `1px solid ${tokens.colorPaletteGreenBorder1}`,
     backgroundColor: tokens.colorPaletteGreenBackground1,
   },
 });
@@ -112,7 +111,7 @@ export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const [selectedTab, setSelectedTab] = useState('source');
   
-  const { projects, updateProject } = useAppStore();
+  const { projects } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
 
   if (!project) {

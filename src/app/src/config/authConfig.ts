@@ -16,7 +16,8 @@ const CLIENT_ID = import.meta.env.VITE_MSAL_CLIENT_ID || 'YOUR_CLIENT_ID';
 // Check if running in Electron
 export const isElectron = typeof window !== 'undefined' && 
   typeof window.process === 'object' &&
-  (window.process as NodeJS.Process)?.type === 'renderer';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (window as any).process?.type === 'renderer';
 
 export const msalConfig: Configuration = {
   auth: {

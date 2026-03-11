@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { FluentProvider, webLightTheme } from '@fluentui/react-components';
 import { BrowserRouter } from 'react-router-dom';
-import { MsalProvider, MsalAuthenticationTemplate } from '@azure/msal-react';
+import { MsalProvider } from '@azure/msal-react';
 import { PublicClientApplication, EventType, AuthenticationResult } from '@azure/msal-browser';
 import App from './App';
 import { msalConfig } from './config/authConfig';

@@ -123,7 +123,8 @@ export class AuthService {
     // Check for Electron-specific globals
     return typeof window !== 'undefined' && 
            typeof window.process === 'object' &&
-           (window.process as NodeJS.Process).type === 'renderer';
+           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           (window as any).process?.type === 'renderer';
   }
 
   /**
