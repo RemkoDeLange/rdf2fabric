@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useIsAuthenticated, useMsal } from '@azure/msal-react';
 import {
   makeStyles,
@@ -89,26 +89,12 @@ export function SettingsPage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const isConnected = Boolean(workspaceId && lakehouseId);
-  const fabricService = isAuthenticated ? new FabricService(instance) : null;
+  const fabricService = useMemo(
+    () => isAuthenticated ? new FabricService(instance) : null,
+    [isAuthenticated, instance]
+  );
 
-  // Load workspaces when authenticated
-  useEffect(() => {
-    if (isAuthenticated && fabricService) {
-      loadWorkspaces();
-    }
-  }, [isAuthenticated]);
-
-  // Load lakehouses when workspace selected
-  useEffect(() => {
-    if (selectedWorkspaceId && fabricService) {
-      loadLakehouses(selectedWorkspaceId);
-    } else {
-      setLakehouses([]);
-      setSelectedLakehouseId('');
-    }
-  }, [selectedWorkspaceId]);
-
-  const loadWorkspaces = async () => {
+  const loadWorkspaces = useCallback(async () => {
     if (!fabricService) return;
     setIsLoadingWorkspaces(true);
     setError(null);
@@ -120,21 +106,45 @@ export function SettingsPage() {
     } finally {
       setIsLoadingWorkspaces(false);
     }
-  };
+  }, [fabricService]);
 
-  const loadLakehouses = async (wsId: string) => {
-    if (!fabricService) return;
+  const loadLakehouses = useCallback(async (wsId: string) => {
+    if (!fabricService) {
+      setError('Not authenticated - please sign in');
+      return;
+    }
     setIsLoadingLakehouses(true);
-    setError(null);
     try {
+      console.log('Loading lakehouses for workspace:', wsId);
       const lh = await fabricService.listLakehouses(wsId);
+      console.log('Loaded lakehouses:', lh);
       setLakehouses(lh);
+      setError(null);
     } catch (err) {
+      console.error('Failed to load lakehouses:', err);
       setError(err instanceof Error ? err.message : 'Failed to load lakehouses');
+      setLakehouses([]);
     } finally {
       setIsLoadingLakehouses(false);
     }
-  };
+  }, [fabricService]);
+
+  // Load workspaces when authenticated
+  useEffect(() => {
+    if (isAuthenticated && fabricService) {
+      loadWorkspaces();
+    }
+  }, [isAuthenticated, fabricService, loadWorkspaces]);
+
+  // Load lakehouses when workspace selected
+  useEffect(() => {
+    if (selectedWorkspaceId && fabricService) {
+      loadLakehouses(selectedWorkspaceId);
+    } else {
+      setLakehouses([]);
+      setSelectedLakehouseId('');
+    }
+  }, [selectedWorkspaceId, fabricService, loadLakehouses]);
 
   const handleSave = async () => {
     setError(null);

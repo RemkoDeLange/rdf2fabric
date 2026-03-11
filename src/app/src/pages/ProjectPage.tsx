@@ -11,15 +11,24 @@ import {
   Divider,
   Tab,
   TabList,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@fluentui/react-components';
 import {
   DocumentMultiple24Regular,
   DataTreemap24Regular,
   Play24Regular,
   Checkmark24Regular,
+  Dismiss24Regular,
+  FolderOpen24Regular,
 } from '@fluentui/react-icons';
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
 
 const useStyles = makeStyles({
   container: {
@@ -110,8 +119,11 @@ export function ProjectPage() {
   const styles = useStyles();
   const { projectId } = useParams<{ projectId: string }>();
   const [selectedTab, setSelectedTab] = useState('source');
+  const [showFileBrowser, setShowFileBrowser] = useState(false);
+  const [browseMode, setBrowseMode] = useState<'rdf' | 'schema'>('rdf');
+  const [pendingFiles, setPendingFiles] = useState<string[]>([]);
   
-  const { projects } = useAppStore();
+  const { projects, updateProject } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
 
   if (!project) {
@@ -119,6 +131,42 @@ export function ProjectPage() {
   }
 
   const completedDecisions = Object.keys(project.decisions).length;
+
+  const handleBrowseFiles = (mode: 'rdf' | 'schema') => {
+    setBrowseMode(mode);
+    setPendingFiles([]);
+    setShowFileBrowser(true);
+  };
+
+  const handleFileSelectionChange = (files: string[]) => {
+    setPendingFiles(files);
+  };
+
+  const handleConfirmSelection = () => {
+    if (browseMode === 'rdf') {
+      updateProject(project.id, { 
+        source: { ...project.source, files: [...project.source.files, ...pendingFiles] }
+      });
+    } else {
+      updateProject(project.id, { 
+        source: { ...project.source, schemaFiles: [...project.source.schemaFiles, ...pendingFiles] }
+      });
+    }
+    setShowFileBrowser(false);
+    setPendingFiles([]);
+  };
+
+  const handleRemoveFile = (filePath: string, type: 'rdf' | 'schema') => {
+    if (type === 'rdf') {
+      updateProject(project.id, {
+        source: { ...project.source, files: project.source.files.filter(f => f !== filePath) }
+      });
+    } else {
+      updateProject(project.id, {
+        source: { ...project.source, schemaFiles: project.source.schemaFiles.filter(f => f !== filePath) }
+      });
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -171,15 +219,33 @@ export function ProjectPage() {
             {project.source.files.length === 0 ? (
               <div className={styles.emptyFiles}>
                 <Body1>No files selected yet.</Body1>
-                <Button appearance="primary" style={{ marginTop: '16px' }}>
+                <Button 
+                  appearance="primary" 
+                  icon={<FolderOpen24Regular />}
+                  style={{ marginTop: '16px' }}
+                  onClick={() => handleBrowseFiles('rdf')}
+                >
                   Browse Lakehouse Files
                 </Button>
               </div>
             ) : (
               <div className={styles.fileList}>
                 {project.source.files.map((file, i) => (
-                  <Body1 key={i}>{file}</Body1>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Body1 style={{ flex: 1 }}>{file}</Body1>
+                    <Button size="small" appearance="subtle" onClick={() => handleRemoveFile(file, 'rdf')}>
+                      <Dismiss24Regular />
+                    </Button>
+                  </div>
                 ))}
+                <Button 
+                  appearance="secondary" 
+                  icon={<FolderOpen24Regular />}
+                  style={{ marginTop: '8px' }}
+                  onClick={() => handleBrowseFiles('rdf')}
+                >
+                  Add More Files
+                </Button>
               </div>
             )}
           </div>
@@ -195,15 +261,33 @@ export function ProjectPage() {
             {project.source.schemaFiles.length === 0 ? (
               <div className={styles.emptyFiles}>
                 <Body1>No schema files selected. Schema will be inferred from data.</Body1>
-                <Button appearance="secondary" style={{ marginTop: '16px' }}>
+                <Button 
+                  appearance="secondary" 
+                  icon={<FolderOpen24Regular />}
+                  style={{ marginTop: '16px' }}
+                  onClick={() => handleBrowseFiles('schema')}
+                >
                   Add Schema Files
                 </Button>
               </div>
             ) : (
               <div className={styles.fileList}>
                 {project.source.schemaFiles.map((file, i) => (
-                  <Body1 key={i}>{file}</Body1>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Body1 style={{ flex: 1 }}>{file}</Body1>
+                    <Button size="small" appearance="subtle" onClick={() => handleRemoveFile(file, 'schema')}>
+                      <Dismiss24Regular />
+                    </Button>
+                  </div>
                 ))}
+                <Button 
+                  appearance="secondary" 
+                  icon={<FolderOpen24Regular />}
+                  style={{ marginTop: '8px' }}
+                  onClick={() => handleBrowseFiles('schema')}
+                >
+                  Add More Schema Files
+                </Button>
               </div>
             )}
           </div>
@@ -259,6 +343,35 @@ export function ProjectPage() {
           </div>
         </Card>
       )}
+
+      {/* File Browser Dialog */}
+      <Dialog open={showFileBrowser} onOpenChange={(_, data) => setShowFileBrowser(data.open)}>
+        <DialogSurface style={{ maxWidth: '800px', width: '90vw' }}>
+          <DialogBody>
+            <DialogTitle>
+              {browseMode === 'rdf' ? 'Select RDF Source Files' : 'Select Schema Files'}
+            </DialogTitle>
+            <DialogContent>
+              <FileBrowser
+                onSelectionChange={handleFileSelectionChange}
+                filter={rdfFileFilter}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setShowFileBrowser(false)}>
+                Cancel
+              </Button>
+              <Button 
+                appearance="primary" 
+                onClick={handleConfirmSelection}
+                disabled={pendingFiles.length === 0}
+              >
+                Add {pendingFiles.length} File{pendingFiles.length !== 1 ? 's' : ''}
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
     </div>
   );
 }

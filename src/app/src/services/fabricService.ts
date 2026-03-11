@@ -47,7 +47,7 @@ export class FabricService {
   /**
    * Get access token for Fabric API
    */
-  private async getAccessToken(): Promise<string> {
+  private async getAccessToken(scopes: string[] = fabricScopes.fabric): Promise<string> {
     const accounts = this.msalInstance.getAllAccounts();
     if (accounts.length === 0) {
       throw new Error('No authenticated account. Please sign in first.');
@@ -57,14 +57,14 @@ export class FabricService {
 
     try {
       const response = await this.msalInstance.acquireTokenSilent({
-        scopes: fabricScopes.fabric,
+        scopes,
         account,
       });
       return response.accessToken;
     } catch (error) {
       // Token expired or not available, try interactive
       const response = await this.msalInstance.acquireTokenPopup({
-        scopes: fabricScopes.fabric,
+        scopes,
       });
       return response.accessToken;
     }
@@ -191,15 +191,12 @@ export class FabricService {
     lakehouseId: string,
     path: string = ''
   ): Promise<OneLakeFile[]> {
-    // OneLake uses DFS endpoint
-    const token = await this.getAccessToken();
+    // OneLake DFS API requires storage scope
+    const token = await this.getAccessToken(fabricScopes.storage);
     
-    // Get lakehouse to find OneLake path
-    const lakehouse = await this.getLakehouse(workspaceId, lakehouseId);
-    
-    // OneLake DFS URL format
+    // OneLake DFS URL format - when using GUIDs, use {workspaceId}/{itemId} directly
     const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
-    const fullPath = `/${workspaceId}/${lakehouse.displayName}.Lakehouse/Files${path ? '/' + path : ''}`;
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files${path ? '/' + path : ''}`;
     
     const response = await fetch(
       `${dfsBase}${fullPath}?resource=filesystem&recursive=false`,
