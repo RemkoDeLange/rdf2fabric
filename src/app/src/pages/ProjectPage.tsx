@@ -373,7 +373,7 @@ export function ProjectPage() {
                   updateProject(project.id, { schemaLevel: 0, decisions: {} });
                 }}
               >
-                Level 0 — No Schema (12)
+                Level 0 — RDF (12)
               </Button>
               <Button
                 appearance={project.schemaLevel === 1 ? 'primary' : 'secondary'}
@@ -382,7 +382,7 @@ export function ProjectPage() {
                   updateProject(project.id, { schemaLevel: 1, decisions: {} });
                 }}
               >
-                Level 1 — rdf:type (11)
+                Level 1 — RDF + rdf:type (11)
               </Button>
               <Button
                 appearance={project.schemaLevel === 2 ? 'primary' : 'secondary'}
