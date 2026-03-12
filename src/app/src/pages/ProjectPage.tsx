@@ -364,7 +364,7 @@ export function ProjectPage() {
             }}>
               <Body2 style={{ fontWeight: 600, marginRight: '8px' }}>
                 <Flash24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                Quick Scenarios:
+                Schema Levels:
               </Body2>
               <Button
                 appearance={project.schemaLevel === 0 ? 'primary' : 'secondary'}
@@ -373,7 +373,16 @@ export function ProjectPage() {
                   updateProject(project.id, { schemaLevel: 0, decisions: {} });
                 }}
               >
-                Scenario A — No Schema (12 decisions)
+                Level 0 — No Schema (12)
+              </Button>
+              <Button
+                appearance={project.schemaLevel === 1 ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  updateProject(project.id, { schemaLevel: 1, decisions: {} });
+                }}
+              >
+                Level 1 — rdf:type (11)
               </Button>
               <Button
                 appearance={project.schemaLevel === 2 ? 'primary' : 'secondary'}
@@ -382,7 +391,16 @@ export function ProjectPage() {
                   updateProject(project.id, { schemaLevel: 2, decisions: {} });
                 }}
               >
-                Scenario C — RDFS (8 decisions)
+                Level 2 — RDFS (8)
+              </Button>
+              <Button
+                appearance={project.schemaLevel === 3 ? 'primary' : 'secondary'}
+                size="small"
+                onClick={() => {
+                  updateProject(project.id, { schemaLevel: 3, decisions: {} });
+                }}
+              >
+                Level 3 — OWL (6)
               </Button>
               <Button
                 appearance={project.schemaLevel === 4 ? 'primary' : 'secondary'}
@@ -391,7 +409,7 @@ export function ProjectPage() {
                   updateProject(project.id, { schemaLevel: 4, decisions: {} });
                 }}
               >
-                Scenario E — SHACL (5 decisions)
+                Level 4 — SHACL (5)
               </Button>
             </div>
 
