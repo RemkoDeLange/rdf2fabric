@@ -69,27 +69,38 @@
 
 ---
 
-## ⚠️ Known Gaps (POC Scope)
+## Decision Enforcement - Branch Status
 
-### Decision Enforcement Partially Implemented
+### `feature/decision-enforcement` Branch (Mar 12)
 
-**Current State:**
-- ✅ UI captures 12 B-decisions based on schema level
-- ✅ Decisions stored in browser localStorage AND exported to OneLake
-- ✅ App writes `Files/config/pipeline_run.json` with project settings
-- ✅ NB08 reads config file and uses `folder_id` + `project_name`
-- ⚠️ **Decision branching logic** NOT yet implemented in notebooks
+**Status:** 8/12 decisions fully implemented, 4 have partial options marked in UI.
 
-**What This Means:**
-- Changing a decision (e.g., B2: Blank Node Handling) in the UI writes to config
-- Notebooks **can read** the config but don't yet **act on** decision values
-- The demo shows schema-driven decision reduction + config export
-- Actual translation behavior still uses defaults (decision branches not implemented)
+**Branch Contains:**
+| Item | Description |
+|------|-------------|
+| NB03-NB06 | Decision branching logic implemented |
+| NB09 | Polling fix (case-insensitive status, limit=50) |
+| App | Reset Pipeline button, Delete Project, notImplemented UI flags |
 
-**Phase 2 Work Required (Epic 13):**
-1. ~~**F13.1** - Export decisions to OneLake config file~~ ✅ Complete
-2. **F13.2** - Notebooks read config and branch logic (partially done)
-3. **F13.3** - Implement decision logic in notebooks (XL effort: ~2-3 weeks)
+**Decision Implementation:**
+| Decision | Status | Notes |
+|----------|--------|-------|
+| B1, B2, B3, B5-B7, B10-B12 | ✅ Full | All options work |
+| B4 (Named Graph) | ⚠️ 2/3 | `partition` marked notImplemented |
+| B8 (Multi-value) | ⚠️ 1/3 | `reified`,`both` marked notImplemented |
+| B9 (Cardinality) | ⚠️ 1/3 | `enum-property`,`threshold` marked notImplemented |
+| B11 | ✅ Full | All 4 options work |
+
+**To Test Feature Branch:**
+1. `git checkout feature/decision-enforcement`
+2. Upload NB03, NB04, NB05, NB06, NB09 to Fabric
+3. Run app with decision variations
+
+### `main` Branch
+
+**Status:** Baseline without decision enforcement. Notebooks use default behavior.
+
+**Known Issue:** NB09 polling may timeout on large graphs (fixed in feature branch).
 
 **See:** `docs/backlog.md` → Epic 13: Decision Enforcement
 
