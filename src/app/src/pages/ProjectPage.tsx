@@ -1,4 +1,4 @@
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import {
   makeStyles,
   tokens,
@@ -32,6 +32,7 @@ import {
   FolderOpen24Regular,
   Edit24Regular,
   Flash24Regular,
+  Delete24Regular,
 } from '@fluentui/react-icons';
 import { useState } from 'react';
 import { useAppStore } from '../stores/appStore';
@@ -87,15 +88,17 @@ const useStyles = makeStyles({
 
 export function ProjectPage() {
   const styles = useStyles();
+  const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [selectedTab, setSelectedTab] = useState('source');
   const [showFileBrowser, setShowFileBrowser] = useState(false);
   const [browseMode, setBrowseMode] = useState<'rdf' | 'schema'>('rdf');
   const [pendingFiles, setPendingFiles] = useState<string[]>([]);
   const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newName, setNewName] = useState('');
   
-  const { projects, updateProject } = useAppStore();
+  const { projects, updateProject, deleteProject } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
 
   if (!project) {
@@ -163,6 +166,12 @@ export function ProjectPage() {
     setShowRenameDialog(false);
   };
 
+  const handleDelete = () => {
+    deleteProject(project.id);
+    setShowDeleteDialog(false);
+    navigate('/');
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -174,6 +183,12 @@ export function ProjectPage() {
               icon={<Edit24Regular />}
               onClick={openRenameDialog}
               title="Rename project"
+            />
+            <Button
+              appearance="subtle"
+              icon={<Delete24Regular />}
+              onClick={() => setShowDeleteDialog(true)}
+              title="Delete project"
             />
           </div>
           <Body1>
@@ -500,6 +515,35 @@ export function ProjectPage() {
               </Button>
               <Button appearance="primary" onClick={handleRename}>
                 Rename
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={(_, data) => setShowDeleteDialog(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Delete Project</DialogTitle>
+            <DialogContent>
+              <Body1>
+                Are you sure you want to delete <strong>{project.name}</strong>?
+              </Body1>
+              <Body2 style={{ marginTop: '12px', color: tokens.colorNeutralForeground3 }}>
+                This will remove the project from the app. Data uploaded to Fabric (source files, Delta tables, ontology) will remain in the Lakehouse.
+              </Body2>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setShowDeleteDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                appearance="primary" 
+                onClick={handleDelete}
+                style={{ backgroundColor: tokens.colorPaletteRedBackground3 }}
+              >
+                Delete Project
               </Button>
             </DialogActions>
           </DialogBody>

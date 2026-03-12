@@ -240,6 +240,31 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     await pollProgress();
   };
 
+  // Reset pipeline state (both local and Fabric)
+  const resetPipeline = async () => {
+    addLog('🔄 Resetting pipeline state...');
+    stopPolling();
+    
+    // Try to clear the progress file in Fabric
+    if (workspaceId && lakehouseId) {
+      try {
+        const cleared = await fabricService.clearPipelineProgress(workspaceId, lakehouseId);
+        if (cleared) {
+          addLog('✓ Cleared progress file from Fabric');
+        } else {
+          addLog('ℹ️ No progress file found in Fabric');
+        }
+      } catch (error) {
+        addLog(`⚠️ Could not clear Fabric progress file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    
+    // Clear local state
+    clearPipelineExecution();
+    addLog('✓ Local pipeline state cleared');
+    addLog('Ready to run a new translation.');
+  };
+
   const runPipeline = async () => {
     if (!workspaceId) {
       setPipelineStatus('failed', 'Workspace not configured. Go to Settings to configure workspace.');
@@ -387,7 +412,7 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
           )}
           <Button
             appearance="primary"
-            icon={isRunning ? <Stop24Regular /> : <Play24Regular />}
+            icon={isRunning ? <Spinner size="tiny" /> : <Play24Regular />}
             onClick={runPipeline}
             disabled={isRunning}
           >
@@ -489,7 +514,18 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
 
       {logs.length > 0 && (
         <>
-          <Body2 style={{ fontWeight: 600 }}>Execution Log</Body2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Body2 style={{ fontWeight: 600 }}>Execution Log</Body2>
+            <Button
+              appearance="subtle"
+              size="small"
+              icon={<Stop24Regular />}
+              onClick={resetPipeline}
+              title="Clear pipeline state and logs"
+            >
+              Reset
+            </Button>
+          </div>
           <div className={styles.logSection}>
             {logs.map((log, i) => (
               <div key={i}>{log}</div>

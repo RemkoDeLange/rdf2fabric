@@ -611,6 +611,57 @@ export class FabricService {
     }
     return this.runNotebook(workspaceId, orchestrator.id);
   }
+
+  /**
+   * Delete a file from OneLake
+   */
+  async deleteOneLakeFile(
+    workspaceId: string,
+    lakehouseId: string,
+    path: string
+  ): Promise<boolean> {
+    const token = await this.getAccessToken(fabricScopes.storage);
+    const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files/${path}`;
+
+    const response = await fetch(`${dfsBase}${fullPath}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return false; // File didn't exist
+    }
+
+    if (!response.ok) {
+      throw new Error(`OneLake delete error (${response.status}): ${await response.text()}`);
+    }
+
+    return true;
+  }
+
+  /**
+   * Clear pipeline progress file from OneLake
+   * Useful for resetting stale pipeline state
+   */
+  async clearPipelineProgress(
+    workspaceId: string,
+    lakehouseId: string
+  ): Promise<boolean> {
+    return this.deleteOneLakeFile(workspaceId, lakehouseId, 'config/pipeline_progress.json');
+  }
+
+  /**
+   * Delete pipeline configuration file from OneLake
+   */
+  async deletePipelineConfig(
+    workspaceId: string,
+    lakehouseId: string
+  ): Promise<boolean> {
+    return this.deleteOneLakeFile(workspaceId, lakehouseId, 'config/pipeline_run.json');
+  }
 }
 
 // Singleton instance - will be initialized with MSAL instance
