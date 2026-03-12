@@ -1960,3 +1960,78 @@ filter_value = _re_edge.sub(r'_\d+$', '', rel_name)
 1. Re-run NB09 to apply property mapping fix
 2. Verify `n.uri` queries work
 3. Continue with Week 1 UI tasks
+
+---
+
+## Session: 2026-03-12
+
+### Primary Goals
+1. Schema level selector showing all 5 levels (was showing 3)
+2. Fix browser dependency for long-running pipelines
+
+### UI Improvements: Schema Level Display
+
+**Issue:** Decision dashboard showed 3 schema levels (0-2) instead of all 5 (0-4).
+
+**Fix Applied (ProjectPage.tsx):**
+- Show all 5 filter buttons: Level 0-4
+- Clear labels: RDF, SKOS, RDFS, OWL, SHACL
+- Format: "Level 0 — RDF (12)"
+
+### Critical Issue: Browser Dependency
+
+**Problem Discovered:** Pipeline stopped at NB06 when browser tracking was interrupted. The old approach ran 9 notebooks sequentially from the browser—if the tab closes or refreshes during a long-running job, the pipeline breaks.
+
+**Impact:** Pipelines can run 30-60+ minutes. Browser must stay open the entire time—unacceptable for production use.
+
+### Solution: Server-Side Orchestrator
+
+Implemented **Option 3: Orchestrator + Progress File Polling**:
+
+| Component | Description |
+|-----------|-------------|
+| `NB00: pipeline_orchestrator` | Runs NB01-NB09 via `mssparkutils.notebook.run()` |
+| `pipeline_progress.json` | Written to OneLake after each step |
+| App polling | Reads progress file every 10 seconds |
+| Resilience | Browser can close, pipeline continues |
+
+**Files Created/Modified:**
+
+1. **`src/notebooks/00_pipeline_orchestrator.ipynb`** (NEW)
+   - Reads `pipeline_run.json` for config
+   - Runs all notebooks sequentially with timeouts
+   - Writes progress to `Files/config/pipeline_progress.json`
+   - Records step timing, status, and errors
+
+2. **`src/app/src/services/fabricService.ts`**
+   - Added `PipelineProgress` interface
+   - Added `readOneLakeFile()` - generic OneLake file read
+   - Added `readPipelineProgress()` - reads progress JSON
+   - Added `runOrchestrator()` - triggers NB00
+
+3. **`src/app/src/components/TranslationPanel.tsx`**
+   - Triggers orchestrator instead of 9 individual notebooks
+   - Polls progress file every 10 seconds via `useEffect`
+   - "Check Status" button to resume polling after browser reopen
+   - "Server-Side Execution" info message during run
+
+### Progress File Format
+
+```json
+{
+  "current": "NB03",
+  "completed": ["NB01", "NB02"],
+  "status": "running",
+  "error": null,
+  "step_times": {
+    "NB01": {"start": "...", "end": "...", "duration_sec": 45},
+    "NB02": {"start": "...", "end": "...", "duration_sec": 12}
+  },
+  "total_steps": 9,
+  "updated_at": "2026-03-12T12:00:00Z"
+}
+```
+
+### Deployment Note
+
+**Action Required:** Upload `src/notebooks/00_pipeline_orchestrator.ipynb` to Fabric workspace before testing new orchestrator flow.

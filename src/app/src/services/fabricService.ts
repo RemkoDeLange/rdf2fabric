@@ -70,6 +70,21 @@ export interface PipelineConfig {
   decisions: Record<string, string>;
 }
 
+export interface PipelineProgress {
+  current: string | null;  // Currently running step ID (e.g., 'NB03') or null if complete
+  completed: string[];     // List of completed step IDs
+  status: 'running' | 'completed' | 'failed';
+  error: string | null;
+  step_times: Record<string, {
+    start: string;
+    end: string;
+    duration_sec: number;
+    error?: string;
+  }>;
+  total_steps: number;
+  updated_at: string;
+}
+
 export interface TranslationStep {
   id: string;
   name: string;
@@ -532,6 +547,69 @@ export class FabricService {
   async findNotebookByName(workspaceId: string, displayName: string): Promise<FabricItem | undefined> {
     const notebooks = await this.listNotebooks(workspaceId);
     return notebooks.find(nb => nb.displayName === displayName);
+  }
+
+  /**
+   * Read a file from OneLake
+   */
+  async readOneLakeFile(
+    workspaceId: string,
+    lakehouseId: string,
+    path: string
+  ): Promise<string | null> {
+    const token = await this.getAccessToken(fabricScopes.storage);
+    const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files/${path}`;
+
+    const response = await fetch(`${dfsBase}${fullPath}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return null; // File doesn't exist yet
+    }
+
+    if (!response.ok) {
+      throw new Error(`OneLake read error (${response.status}): ${await response.text()}`);
+    }
+
+    return response.text();
+  }
+
+  /**
+   * Read pipeline progress from OneLake
+   * Returns null if no progress file exists yet
+   */
+  async readPipelineProgress(
+    workspaceId: string,
+    lakehouseId: string
+  ): Promise<PipelineProgress | null> {
+    const content = await this.readOneLakeFile(
+      workspaceId,
+      lakehouseId,
+      'config/pipeline_progress.json'
+    );
+
+    if (!content) {
+      return null;
+    }
+
+    return JSON.parse(content) as PipelineProgress;
+  }
+
+  /**
+   * Run the pipeline orchestrator notebook
+   * This triggers all notebooks server-side - no browser polling needed
+   */
+  async runOrchestrator(workspaceId: string): Promise<NotebookJob> {
+    const orchestrator = await this.findNotebookByName(workspaceId, '00_pipeline_orchestrator');
+    if (!orchestrator) {
+      throw new Error('Orchestrator notebook (00_pipeline_orchestrator) not found in workspace');
+    }
+    return this.runNotebook(workspaceId, orchestrator.id);
   }
 }
 

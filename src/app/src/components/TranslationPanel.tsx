@@ -5,7 +5,7 @@
  * Runs notebooks NB01-NB09 in sequence and shows status for each step.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useMsal } from '@azure/msal-react';
 import {
   makeStyles,
@@ -28,7 +28,7 @@ import {
   ArrowClockwise24Regular,
   Stop24Regular,
 } from '@fluentui/react-icons';
-import { FabricService, TRANSLATION_PIPELINE, NotebookJob, PipelineConfig } from '../services/fabricService';
+import { FabricService, TRANSLATION_PIPELINE, PipelineConfig } from '../services/fabricService';
 import { useAppStore, StepState } from '../stores/appStore';
 
 const useStyles = makeStyles({
@@ -114,8 +114,12 @@ interface TranslationPanelProps {
   onComplete?: () => void;
 }
 
+// Polling interval in milliseconds
+const POLL_INTERVAL_MS = 10000;
+
 export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLevel, decisions, onComplete }: TranslationPanelProps) {
   const styles = useStyles();
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const { 
     workspaceId, 
     lakehouseId,
@@ -149,6 +153,92 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
   const updateStepState = useCallback((stepId: string, update: Partial<StepState>) => {
     updatePipelineStep(stepId, update);
   }, [updatePipelineStep]);
+
+  // Poll progress file and update UI
+  const pollProgress = useCallback(async () => {
+    if (!workspaceId || !lakehouseId) return;
+
+    try {
+      const progress = await fabricService.readPipelineProgress(workspaceId, lakehouseId);
+      if (!progress) return;
+
+      // Update step states from progress file
+      for (const step of TRANSLATION_PIPELINE) {
+        const stepTime = progress.step_times[step.id];
+        if (stepTime) {
+          const startTime = new Date(stepTime.start).getTime();
+          const endTime = stepTime.end ? new Date(stepTime.end).getTime() : undefined;
+          
+          if (progress.completed.includes(step.id)) {
+            updateStepState(step.id, { 
+              status: 'completed', 
+              startTime, 
+              endTime 
+            });
+          } else if (stepTime.error) {
+            updateStepState(step.id, { 
+              status: 'failed', 
+              startTime, 
+              endTime,
+              error: stepTime.error 
+            });
+          }
+        }
+        
+        if (progress.current === step.id) {
+          const stepTime = progress.step_times[step.id];
+          const startTime = stepTime ? new Date(stepTime.start).getTime() : Date.now();
+          updateStepState(step.id, { status: 'running', startTime });
+        }
+      }
+
+      // Check if pipeline completed or failed
+      if (progress.status === 'completed') {
+        setPipelineStatus('completed');
+        addLog('✓ Translation pipeline completed successfully!');
+        stopPolling();
+        if (onComplete) onComplete();
+      } else if (progress.status === 'failed') {
+        setPipelineStatus('failed', progress.error || 'Pipeline failed');
+        addLog(`✗ Pipeline failed: ${progress.error || 'Unknown error'}`);
+        stopPolling();
+      }
+    } catch (error) {
+      // Progress file may not exist yet, ignore errors during polling
+      console.log('Polling progress:', error);
+    }
+  }, [workspaceId, lakehouseId, fabricService, updateStepState, setPipelineStatus, addLog, onComplete]);
+
+  // Start polling for progress
+  const startPolling = useCallback(() => {
+    if (pollIntervalRef.current) return; // Already polling
+    addLog(`📡 Starting progress polling every ${POLL_INTERVAL_MS / 1000}s...`);
+    pollIntervalRef.current = setInterval(pollProgress, POLL_INTERVAL_MS);
+  }, [pollProgress, addLog]);
+
+  // Stop polling
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+      addLog('📡 Stopped progress polling');
+    }
+  }, [addLog]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Check status manually (for resuming after browser reopen)
+  const checkStatus = async () => {
+    addLog('🔍 Checking pipeline status...');
+    await pollProgress();
+  };
 
   const runPipeline = async () => {
     if (!workspaceId) {
@@ -211,80 +301,28 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
         addLog('  Notebooks will use default settings');
       }
 
-      // Step 3: Find all notebooks
-      addLog('Discovering notebooks...');
-      const notebooks = await fabricService.listNotebooks(workspaceId);
-      addLog(`Found ${notebooks.length} notebooks in workspace`);
-
-      // Run each step
-      for (let i = 0; i < TRANSLATION_PIPELINE.length; i++) {
-        const step = TRANSLATION_PIPELINE[i];
-        
-        // Find notebook
-        const notebook = notebooks.find(nb => nb.displayName === step.notebookName);
-        if (!notebook) {
-          addLog(`⚠️ Notebook '${step.notebookName}' not found - skipping ${step.id}`);
-          updateStepState(step.id, { status: 'skipped' });
-          continue;
-        }
-
-        addLog(`▶ Running ${step.id}: ${step.name}`);
-        updateStepState(step.id, { status: 'running', startTime: Date.now() });
-
-        try {
-          // Start the notebook job
-          const job = await fabricService.runNotebook(workspaceId, notebook.id);
-          updateStepState(step.id, { jobId: job.id });
-          addLog(`  Job started: ${job.id}`);
-
-          // Wait for completion
-          const finalJob = await fabricService.waitForJob(
-            workspaceId,
-            notebook.id,
-            job.id,
-            (status: NotebookJob) => {
-              addLog(`  Status: ${status.status}`);
-            },
-            10000 // Poll every 10 seconds
-          );
-
-          const endTime = Date.now();
-          
-          if (finalJob.status === 'Completed') {
-            updateStepState(step.id, { 
-              status: 'completed', 
-              endTime 
-            });
-            addLog(`✓ ${step.id} completed`);
-          } else {
-            updateStepState(step.id, { 
-              status: 'failed', 
-              endTime,
-              error: finalJob.failureReason?.message || 'Unknown error'
-            });
-            addLog(`✗ ${step.id} failed: ${finalJob.failureReason?.message || 'Unknown error'}`);
-            throw new Error(`Step ${step.id} failed: ${finalJob.failureReason?.message}`);
-          }
-        } catch (stepError) {
-          const endTime = Date.now();
-          const errorMsg = stepError instanceof Error ? stepError.message : 'Unknown error';
-          updateStepState(step.id, { 
-            status: 'failed', 
-            endTime,
-            error: errorMsg
-          });
-          addLog(`✗ ${step.id} failed: ${errorMsg}`);
-          throw stepError;
-        }
-      }
-
-      // All steps completed
-      setPipelineStatus('completed');
-      addLog('✓ Translation pipeline completed successfully!');
+      // Step 3: Start the orchestrator notebook (runs all steps server-side)
+      addLog('🚀 Starting orchestrator notebook (server-side execution)...');
+      addLog('  Pipeline will continue running even if you close this browser.');
       
-      if (onComplete) {
-        onComplete();
+      try {
+        const orchestratorJobId = await fabricService.runOrchestrator(workspaceId);
+        addLog(`✓ Orchestrator started: ${orchestratorJobId}`);
+        addLog('  Polling progress every 10 seconds...');
+        
+        // Start polling for progress updates
+        startPolling();
+        
+        // Do an immediate poll
+        await pollProgress();
+        
+      } catch (orchestratorError) {
+        const errorMsg = orchestratorError instanceof Error ? orchestratorError.message : 'Failed to start orchestrator';
+        setPipelineStatus('failed', errorMsg);
+        addLog(`✗ Failed to start orchestrator: ${errorMsg}`);
+        throw orchestratorError;
       }
+      // Note: onComplete is called by pollProgress when pipeline finishes
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Pipeline failed';
       setPipelineStatus('failed', errorMsg);
@@ -337,15 +375,36 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     <div className={styles.container}>
       <div className={styles.header}>
         <Body1>Run the translation pipeline to convert RDF data to Fabric Graph.</Body1>
-        <Button
-          appearance="primary"
-          icon={isRunning ? <Stop24Regular /> : <Play24Regular />}
-          onClick={runPipeline}
-          disabled={isRunning}
-        >
-          {isRunning ? 'Running...' : 'Run Translation'}
-        </Button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          {isRunning && (
+            <Button
+              appearance="outline"
+              icon={<ArrowClockwise24Regular />}
+              onClick={checkStatus}
+            >
+              Check Status
+            </Button>
+          )}
+          <Button
+            appearance="primary"
+            icon={isRunning ? <Stop24Regular /> : <Play24Regular />}
+            onClick={runPipeline}
+            disabled={isRunning}
+          >
+            {isRunning ? 'Running...' : 'Run Translation'}
+          </Button>
+        </div>
       </div>
+
+      {isRunning && (
+        <MessageBar intent="info">
+          <MessageBarBody>
+            <MessageBarTitle>Server-Side Execution</MessageBarTitle>
+            The pipeline is running on the Fabric server. You can close this tab and check back later.
+            Use "Check Status" to refresh progress.
+          </MessageBarBody>
+        </MessageBar>
+      )}
 
       {errorMessage && (
         <MessageBar intent="error">

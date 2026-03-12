@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-11 (late evening)  
+**Last Updated:** 2026-03-12  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -34,6 +34,7 @@
 | 8 | Execute translation UI | ✅ Done | Pipeline progress, logs, status |
 | 8 | **Config file architecture** | ✅ Done | App writes config, notebooks read it |
 | 8 | **App → Fabric pipeline execution** | ✅ Done | Full pipeline running from app |
+| 9 | **Server-side orchestrator** | ✅ Done | NB00 runs all steps, progress file polling |
 | 9-10 | Demo polish | ⬜ | Screenshots, script |
 
 ### Current Graph Metrics (Mar 11 - Ziekenhuis minimal)
@@ -163,6 +164,13 @@ This is different from Neo4j where one relationship type can connect any node ty
 └──────────────────────┬──────────────────────────────────────┘
                        │
     ┌──────────────────▼──────────────────┐
+    │       NB00: ORCHESTRATOR            │
+    │  Runs NB01-NB09 server-side         │
+    │  Writes progress to OneLake         │
+    │  App polls progress file            │
+    └──────────────────┬──────────────────┘
+                       │
+    ┌──────────────────▼──────────────────┐
     │          BRONZE LAYER               │
     │  NB01: Parse RDF → bronze_triples   │
     │  NB02: Detect schema richness       │
@@ -190,12 +198,24 @@ This is different from Neo4j where one relationship type can connect any node ty
     └─────────────────────────────────────┘
 ```
 
+### Server-Side Execution (Mar 12)
+
+**Problem:** Browser-based notebook execution breaks if tab closes during long pipelines.
+
+**Solution:** Orchestrator pattern with progress file polling:
+1. App triggers NB00 (orchestrator) once
+2. NB00 runs NB01-NB09 via `mssparkutils.notebook.run()`
+3. After each step, NB00 writes progress to `Files/config/pipeline_progress.json`
+4. App polls progress file every 10 seconds
+5. Browser can close; pipeline continues server-side
+
 ---
 
 ## Notebooks
 
 | # | Name | Purpose | Status |
 |---|------|---------|--------|
+| 00 | pipeline_orchestrator | Server-side orchestration, progress file | ✅ |
 | 01 | rdf_parser_jena | Parse RDF with Jena | ✅ |
 | 02 | schema_detector | Detect schema richness (0-4) | ✅ |
 | 03 | class_to_nodetype | Extract classes → entity types | ✅ |
@@ -234,7 +254,10 @@ This is different from Neo4j where one relationship type can connect any node ty
 ## Quick Commands
 
 ```bash
-# Run notebooks in order (Fabric)
+# Run pipeline (via orchestrator)
+NB00 (orchestrates NB01 → NB02 → ... → NB09)
+
+# Or run notebooks individually
 NB01 → NB02 → NB03 → NB04 → NB05 → NB06 → NB07 → NB08 → NB09
 
 # Test GQL query (Graph Explorer)
