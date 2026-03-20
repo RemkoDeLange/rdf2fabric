@@ -44,7 +44,6 @@ import { ScenarioPreview } from '../components/ScenarioPreview';
 import { NamespacePanel } from '../components/NamespacePanel';
 import { FabricService } from '../services/fabricService';
 import { detectNamespaces, mergeNamespaces, type DetectedNamespace } from '../services/namespaceDetector';
-import { fetchOntologies, type FetchProgress, type FetchResult } from '../services/ontologyFetcher';
 
 const useStyles = makeStyles({
   container: {
@@ -219,36 +218,36 @@ export function ProjectPage() {
     detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
   };
 
-  // Fetch external ontologies and cache them to OneLake
-  const handleFetchOntologies = useCallback(async (
-    uris: string[], 
-    onProgress: (progress: FetchProgress[]) => void
-  ): Promise<FetchResult[]> => {
-    // Fetch the ontologies
-    const results = await fetchOntologies(uris, onProgress);
-    
-    // Cache successful fetches to OneLake
-    if (fabricService && workspaceId && lakehouseId) {
-      for (const result of results) {
-        if (result.success && result.content && result.cachedPath) {
-          try {
-            await fabricService.writeOneLakeFile(
-              workspaceId, 
-              lakehouseId, 
-              `Files/${result.cachedPath}`,
-              result.content
-            );
-            console.log(`Cached ontology to: ${result.cachedPath}`);
-          } catch (error) {
-            console.error(`Failed to cache ${result.uri}:`, error);
-            // Don't fail the whole operation, just log the error
-          }
-        }
-      }
+  // Queue external ontologies for notebook to fetch (avoids browser CORS issues)
+  const handleQueueForFetch = useCallback(async (uris: string[]): Promise<boolean> => {
+    if (!fabricService || !workspaceId || !lakehouseId) {
+      console.error('Fabric connection not available');
+      return false;
     }
     
-    return results;
-  }, [fabricService, workspaceId, lakehouseId]);
+    try {
+      const manifest = {
+        uris: uris,
+        created_at: new Date().toISOString(),
+        project_id: project.id,
+        project_name: project.name,
+        instructions: 'Run notebook 12_external_ontology_fetcher.ipynb in Fabric to fetch these ontologies'
+      };
+      
+      await fabricService.writeOneLakeFile(
+        workspaceId,
+        lakehouseId,
+        'Files/cache/fetch_manifest.json',
+        JSON.stringify(manifest, null, 2)
+      );
+      
+      console.log(`Wrote fetch manifest for ${uris.length} URIs`);
+      return true;
+    } catch (error) {
+      console.error('Failed to write fetch manifest:', error);
+      return false;
+    }
+  }, [fabricService, workspaceId, lakehouseId, project.id, project.name]);
 
   const handleDecisionChange = (decisionId: string, value: string) => {
     updateProject(project.id, {
@@ -372,7 +371,7 @@ export function ProjectPage() {
               namespaces={project.detectedNamespaces}
               isLoading={isDetectingNamespaces}
               onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
-              onFetchOntologies={fabricService ? handleFetchOntologies : undefined}
+              onQueueForFetch={fabricService ? handleQueueForFetch : undefined}
             />
           </div>
 

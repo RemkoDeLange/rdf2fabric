@@ -2,7 +2,9 @@
  * NamespacePanel Component
  * 
  * Displays detected namespaces from RDF files with classification
- * (external, well-known, etc.) and allows selecting which to fetch.
+ * (external, well-known, etc.) and allows selecting which to queue for fetching.
+ * 
+ * Fetching is done via notebook (12_external_ontology_fetcher.ipynb) to avoid CORS.
  */
 
 import { useState } from 'react';
@@ -18,21 +20,18 @@ import {
   Button,
   Tooltip,
   Checkbox,
-  ProgressBar,
 } from '@fluentui/react-components';
 import {
   Globe24Regular,
   Library24Regular,
   Link24Regular,
-  ArrowDownload24Regular,
+  DocumentQueue24Regular,
   Info16Regular,
   ArrowSync24Regular,
   CheckmarkCircle16Regular,
-  ErrorCircle16Regular,
 } from '@fluentui/react-icons';
 import type { DetectedNamespace } from '../services/namespaceDetector';
 import { getNamespaceStats } from '../services/namespaceDetector';
-import type { FetchProgress, FetchResult } from '../services/ontologyFetcher';
 
 const useStyles = makeStyles({
   container: {
@@ -116,34 +115,15 @@ const useStyles = makeStyles({
     alignItems: 'center',
     gap: '12px',
   },
-  progressContainer: {
+  successMessage: {
     marginTop: '8px',
-  },
-  progressLabel: {
-    fontSize: '12px',
-    color: tokens.colorNeutralForeground3,
-    marginBottom: '4px',
-  },
-  fetchResults: {
-    marginTop: '8px',
+    padding: '8px 12px',
+    backgroundColor: tokens.colorPaletteGreenBackground1,
+    borderRadius: tokens.borderRadiusSmall,
     fontSize: '12px',
     display: 'flex',
-    gap: '16px',
-  },
-  successCount: {
-    color: tokens.colorPaletteGreenForeground1,
-    display: 'flex',
     alignItems: 'center',
-    gap: '4px',
-  },
-  failCount: {
-    color: tokens.colorPaletteRedForeground1,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-  },
-  statusIcon: {
-    marginLeft: 'auto',
+    gap: '8px',
   },
   badge: {
     fontSize: '11px',
@@ -154,15 +134,14 @@ interface NamespacePanelProps {
   namespaces: DetectedNamespace[] | undefined;
   isLoading?: boolean;
   onRefresh?: () => void;
-  onFetchOntologies?: (uris: string[], onProgress: (progress: FetchProgress[]) => void) => Promise<FetchResult[]>;
+  onQueueForFetch?: (uris: string[]) => Promise<boolean>;
 }
 
-export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntologies }: NamespacePanelProps) {
+export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFetch }: NamespacePanelProps) {
   const styles = useStyles();
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
-  const [isFetching, setIsFetching] = useState(false);
-  const [fetchProgress, setFetchProgress] = useState<FetchProgress[]>([]);
-  const [fetchResults, setFetchResults] = useState<FetchResult[] | null>(null);
+  const [isQueuing, setIsQueuing] = useState(false);
+  const [queueSuccess, setQueueSuccess] = useState(false);
   
   // Get external namespaces that can be fetched
   const externalNamespaces = namespaces?.filter(ns => ns.isExternal) || [];
@@ -189,31 +168,22 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
     }
   };
   
-  // Handle fetch button click
-  const handleFetch = async () => {
-    if (!onFetchOntologies || selectedUris.size === 0) return;
+  // Handle queue button click - writes manifest to OneLake for notebook to process
+  const handleQueue = async () => {
+    if (!onQueueForFetch || selectedUris.size === 0) return;
     
-    setIsFetching(true);
-    setFetchResults(null);
-    setFetchProgress([]);
+    setIsQueuing(true);
+    setQueueSuccess(false);
     
     try {
-      const results = await onFetchOntologies(
-        Array.from(selectedUris),
-        (progress) => setFetchProgress([...progress])
-      );
-      setFetchResults(results);
-      // Clear selection for successful fetches
-      const successfulUris = new Set(results.filter(r => r.success).map(r => r.uri));
-      setSelectedUris(prev => new Set([...prev].filter(uri => !successfulUris.has(uri))));
+      const success = await onQueueForFetch(Array.from(selectedUris));
+      if (success) {
+        setQueueSuccess(true);
+        setSelectedUris(new Set()); // Clear selection after queuing
+      }
     } finally {
-      setIsFetching(false);
+      setIsQueuing(false);
     }
-  };
-  
-  // Get fetch status for a specific URI
-  const getFetchStatus = (uri: string): FetchProgress | undefined => {
-    return fetchProgress.find(p => p.uri === uri);
   };
   
   if (isLoading) {
@@ -256,12 +226,6 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
   const wellKnownNamespaces = namespaces.filter(ns => ns.isWellKnown);
   const localNamespaces = namespaces.filter(ns => !ns.isExternal && !ns.isWellKnown);
   
-  // Calculate fetch progress
-  const completedCount = fetchProgress.filter(p => p.status === 'success' || p.status === 'failed').length;
-  const totalToFetch = fetchProgress.length;
-  const progressValue = totalToFetch > 0 ? completedCount / totalToFetch : 0;
-  const currentlyFetching = fetchProgress.find(p => p.status === 'fetching');
-  
   return (
     <Card className={styles.container}>
       <div className={styles.header}>
@@ -284,7 +248,7 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
               icon={<ArrowSync24Regular />}
               onClick={onRefresh}
               title="Re-detect namespaces"
-              disabled={isFetching}
+              disabled={isQueuing}
             />
           )}
         </div>
@@ -295,11 +259,11 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
         {externalNamespaces.length > 0 && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
-              {onFetchOntologies && (
+              {onQueueForFetch && (
                 <Checkbox
                   checked={selectedUris.size === externalNamespaces.length ? true : selectedUris.size > 0 ? 'mixed' : false}
                   onChange={toggleSelectAll}
-                  disabled={isFetching}
+                  disabled={isQueuing}
                 />
               )}
               <Body2 style={{ fontWeight: 600, color: tokens.colorPaletteGreenForeground2 }}>
@@ -312,11 +276,10 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
                 key={ns.uri} 
                 namespace={ns} 
                 styles={styles}
-                selectable={!!onFetchOntologies}
+                selectable={!!onQueueForFetch}
                 selected={selectedUris.has(ns.uri)}
                 onToggle={() => toggleSelection(ns.uri)}
-                disabled={isFetching}
-                fetchStatus={getFetchStatus(ns.uri)}
+                disabled={isQueuing}
               />
             ))}
           </>
@@ -349,47 +312,30 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntolo
         )}
       </div>
       
-      {/* Fetch section */}
-      {externalNamespaces.length > 0 && onFetchOntologies && (
+      {/* Queue for fetch section */}
+      {externalNamespaces.length > 0 && onQueueForFetch && (
         <div className={styles.fetchSection}>
           <div className={styles.fetchControls}>
             <Button
               appearance="outline"
-              icon={isFetching ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
-              onClick={handleFetch}
-              disabled={isFetching || selectedUris.size === 0}
+              icon={isQueuing ? <Spinner size="tiny" /> : <DocumentQueue24Regular />}
+              onClick={handleQueue}
+              disabled={isQueuing || selectedUris.size === 0}
             >
-              {isFetching 
-                ? `Fetching (${completedCount}/${totalToFetch})...` 
-                : `Fetch Selected (${selectedUris.size})`}
+              {isQueuing 
+                ? 'Writing manifest...' 
+                : `Queue for Notebook (${selectedUris.size})`}
             </Button>
           </div>
           
-          {/* Progress bar during fetch */}
-          {isFetching && totalToFetch > 0 && (
-            <div className={styles.progressContainer}>
-              <div className={styles.progressLabel}>
-                {currentlyFetching 
-                  ? `Fetching: ${currentlyFetching.uri.slice(0, 50)}...`
-                  : 'Completing...'}
-              </div>
-              <ProgressBar value={progressValue} />
-            </div>
-          )}
-          
-          {/* Results summary */}
-          {fetchResults && !isFetching && (
-            <div className={styles.fetchResults}>
-              <span className={styles.successCount}>
-                <CheckmarkCircle16Regular />
-                {fetchResults.filter(r => r.success).length} fetched
+          {/* Success message */}
+          {queueSuccess && (
+            <div className={styles.successMessage}>
+              <CheckmarkCircle16Regular />
+              <span>
+                Manifest saved to <code>Files/cache/fetch_manifest.json</code>. 
+                Run <code>12_external_ontology_fetcher.ipynb</code> in Fabric to fetch.
               </span>
-              {fetchResults.some(r => !r.success) && (
-                <span className={styles.failCount}>
-                  <ErrorCircle16Regular />
-                  {fetchResults.filter(r => !r.success).length} failed
-                </span>
-              )}
             </div>
           )}
         </div>
@@ -406,7 +352,6 @@ interface NamespaceRowProps {
   selected?: boolean;
   onToggle?: () => void;
   disabled?: boolean;
-  fetchStatus?: FetchProgress;
 }
 
 function NamespaceRow({ 
@@ -415,8 +360,7 @@ function NamespaceRow({
   selectable, 
   selected, 
   onToggle, 
-  disabled,
-  fetchStatus 
+  disabled
 }: NamespaceRowProps) {
   const rowClass = `${styles.namespaceRow} ${
     namespace.isExternal ? styles.externalRow : 
@@ -438,20 +382,6 @@ function NamespaceRow({
         <Tooltip content={namespace.description} relationship="label">
           <Info16Regular style={{ color: tokens.colorNeutralForeground3 }} />
         </Tooltip>
-      )}
-      {/* Fetch status indicator */}
-      {fetchStatus && (
-        <span className={styles.statusIcon}>
-          {fetchStatus.status === 'fetching' && <Spinner size="tiny" />}
-          {fetchStatus.status === 'success' && (
-            <CheckmarkCircle16Regular style={{ color: tokens.colorPaletteGreenForeground1 }} />
-          )}
-          {fetchStatus.status === 'failed' && (
-            <Tooltip content={fetchStatus.error || 'Failed'} relationship="label">
-              <ErrorCircle16Regular style={{ color: tokens.colorPaletteRedForeground1 }} />
-            </Tooltip>
-          )}
-        </span>
       )}
     </div>
   );
