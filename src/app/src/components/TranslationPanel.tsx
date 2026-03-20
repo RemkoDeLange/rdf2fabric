@@ -362,6 +362,12 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
       addLog('🚀 Starting orchestrator notebook (server-side execution)...');
       addLog('  Pipeline will continue running even if you close this browser.');
       
+      // Mark NB00 as running immediately (it represents the orchestrator startup)
+      // This ensures the animation shows before polling catches up
+      updateStepState('NB00', { status: 'running', startTime: Date.now() });
+      addLog('▶ NB00: Initialize running...');
+      lastLoggedStep.current = 'NB00'; // Prevent duplicate log when polling
+      
       try {
         const orchestratorJobId = await fabricService.runOrchestrator(workspaceId);
         addLog(`✓ Orchestrator started: ${orchestratorJobId}`);
