@@ -237,7 +237,7 @@ export function ProjectPage() {
       await fabricService.writeOneLakeFile(
         workspaceId,
         lakehouseId,
-        'Files/cache/fetch_manifest.json',
+        'cache/fetch_manifest.json',
         JSON.stringify(manifest, null, 2)
       );
       
