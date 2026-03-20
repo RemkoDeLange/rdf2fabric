@@ -136,9 +136,15 @@ export function ProjectPage() {
     setPendingFiles(files);
   };
 
-  // Detect namespaces from RDF files
-  const detectNamespacesFromFiles = useCallback(async (filePaths: string[]) => {
-    if (!fabricService || !workspaceId || !lakehouseId || filePaths.length === 0) {
+  // Detect namespaces from RDF and schema files
+  const detectNamespacesFromFiles = useCallback(async (rdfFiles: string[], schemaFiles: string[]) => {
+    if (!fabricService || !workspaceId || !lakehouseId) {
+      return;
+    }
+
+    const allFiles = [...rdfFiles, ...schemaFiles];
+    if (allFiles.length === 0) {
+      updateProject(project.id, { detectedNamespaces: [] });
       return;
     }
 
@@ -146,7 +152,7 @@ export function ProjectPage() {
     try {
       const allNamespaces: DetectedNamespace[][] = [];
 
-      for (const filePath of filePaths) {
+      for (const filePath of allFiles) {
         // Extract relative path from full OneLake path
         // filePath format: "folder/subfolder/file.ttl"
         const content = await fabricService.readOneLakeFile(workspaceId, lakehouseId, filePath);
@@ -168,43 +174,48 @@ export function ProjectPage() {
   }, [fabricService, workspaceId, lakehouseId, project.id, updateProject]);
 
   const handleConfirmSelection = async () => {
-    const newFiles = browseMode === 'rdf' 
+    const newRdfFiles = browseMode === 'rdf' 
       ? [...project.source.files, ...pendingFiles]
-      : [...project.source.schemaFiles, ...pendingFiles];
+      : project.source.files;
+    const newSchemaFiles = browseMode === 'schema'
+      ? [...project.source.schemaFiles, ...pendingFiles]
+      : project.source.schemaFiles;
 
     if (browseMode === 'rdf') {
       updateProject(project.id, { 
-        source: { ...project.source, files: newFiles }
+        source: { ...project.source, files: newRdfFiles }
       });
-      // Detect namespaces for all RDF files (existing + new)
-      detectNamespacesFromFiles(newFiles);
     } else {
       updateProject(project.id, { 
-        source: { ...project.source, schemaFiles: newFiles }
+        source: { ...project.source, schemaFiles: newSchemaFiles }
       });
     }
+    
+    // Detect namespaces for all files (RDF + schema)
+    detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
+    
     setShowFileBrowser(false);
     setPendingFiles([]);
   };
 
   const handleRemoveFile = (filePath: string, type: 'rdf' | 'schema') => {
+    let newRdfFiles = project.source.files;
+    let newSchemaFiles = project.source.schemaFiles;
+    
     if (type === 'rdf') {
-      const newFiles = project.source.files.filter(f => f !== filePath);
+      newRdfFiles = project.source.files.filter(f => f !== filePath);
       updateProject(project.id, {
-        source: { ...project.source, files: newFiles }
+        source: { ...project.source, files: newRdfFiles }
       });
-      // Re-detect namespaces with remaining files
-      if (newFiles.length > 0) {
-        detectNamespacesFromFiles(newFiles);
-      } else {
-        // Clear namespaces if no files left
-        updateProject(project.id, { detectedNamespaces: [] });
-      }
     } else {
+      newSchemaFiles = project.source.schemaFiles.filter(f => f !== filePath);
       updateProject(project.id, {
-        source: { ...project.source, schemaFiles: project.source.schemaFiles.filter(f => f !== filePath) }
+        source: { ...project.source, schemaFiles: newSchemaFiles }
       });
     }
+    
+    // Re-detect namespaces from all remaining files
+    detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
   };
 
   const handleDecisionChange = (decisionId: string, value: string) => {
@@ -328,7 +339,7 @@ export function ProjectPage() {
             <NamespacePanel 
               namespaces={project.detectedNamespaces}
               isLoading={isDetectingNamespaces}
-              onRefresh={() => detectNamespacesFromFiles(project.source.files)}
+              onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
             />
           </div>
 
