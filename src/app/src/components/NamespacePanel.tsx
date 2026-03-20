@@ -5,6 +5,7 @@
  * (external, well-known, etc.) and allows selecting which to fetch.
  */
 
+import { useState } from 'react';
 import {
   makeStyles,
   tokens,
@@ -16,6 +17,8 @@ import {
   Spinner,
   Button,
   Tooltip,
+  Checkbox,
+  ProgressBar,
 } from '@fluentui/react-components';
 import {
   Globe24Regular,
@@ -24,9 +27,12 @@ import {
   ArrowDownload24Regular,
   Info16Regular,
   ArrowSync24Regular,
+  CheckmarkCircle16Regular,
+  ErrorCircle16Regular,
 } from '@fluentui/react-icons';
 import type { DetectedNamespace } from '../services/namespaceDetector';
 import { getNamespaceStats } from '../services/namespaceDetector';
+import type { FetchProgress, FetchResult } from '../services/ontologyFetcher';
 
 const useStyles = makeStyles({
   container: {
@@ -99,8 +105,45 @@ const useStyles = makeStyles({
     textAlign: 'center',
     color: tokens.colorNeutralForeground3,
   },
-  fetchButton: {
+  fetchSection: {
     marginTop: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  fetchControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  progressContainer: {
+    marginTop: '8px',
+  },
+  progressLabel: {
+    fontSize: '12px',
+    color: tokens.colorNeutralForeground3,
+    marginBottom: '4px',
+  },
+  fetchResults: {
+    marginTop: '8px',
+    fontSize: '12px',
+    display: 'flex',
+    gap: '16px',
+  },
+  successCount: {
+    color: tokens.colorPaletteGreenForeground1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  failCount: {
+    color: tokens.colorPaletteRedForeground1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+  },
+  statusIcon: {
+    marginLeft: 'auto',
   },
   badge: {
     fontSize: '11px',
@@ -111,11 +154,67 @@ interface NamespacePanelProps {
   namespaces: DetectedNamespace[] | undefined;
   isLoading?: boolean;
   onRefresh?: () => void;
-  onFetchSelected?: (uris: string[]) => void;
+  onFetchOntologies?: (uris: string[], onProgress: (progress: FetchProgress[]) => void) => Promise<FetchResult[]>;
 }
 
-export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchSelected }: NamespacePanelProps) {
+export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchOntologies }: NamespacePanelProps) {
   const styles = useStyles();
+  const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState<FetchProgress[]>([]);
+  const [fetchResults, setFetchResults] = useState<FetchResult[] | null>(null);
+  
+  // Get external namespaces that can be fetched
+  const externalNamespaces = namespaces?.filter(ns => ns.isExternal) || [];
+  
+  // Toggle selection for a single namespace
+  const toggleSelection = (uri: string) => {
+    setSelectedUris(prev => {
+      const next = new Set(prev);
+      if (next.has(uri)) {
+        next.delete(uri);
+      } else {
+        next.add(uri);
+      }
+      return next;
+    });
+  };
+  
+  // Select/deselect all external namespaces
+  const toggleSelectAll = () => {
+    if (selectedUris.size === externalNamespaces.length) {
+      setSelectedUris(new Set());
+    } else {
+      setSelectedUris(new Set(externalNamespaces.map(ns => ns.uri)));
+    }
+  };
+  
+  // Handle fetch button click
+  const handleFetch = async () => {
+    if (!onFetchOntologies || selectedUris.size === 0) return;
+    
+    setIsFetching(true);
+    setFetchResults(null);
+    setFetchProgress([]);
+    
+    try {
+      const results = await onFetchOntologies(
+        Array.from(selectedUris),
+        (progress) => setFetchProgress([...progress])
+      );
+      setFetchResults(results);
+      // Clear selection for successful fetches
+      const successfulUris = new Set(results.filter(r => r.success).map(r => r.uri));
+      setSelectedUris(prev => new Set([...prev].filter(uri => !successfulUris.has(uri))));
+    } finally {
+      setIsFetching(false);
+    }
+  };
+  
+  // Get fetch status for a specific URI
+  const getFetchStatus = (uri: string): FetchProgress | undefined => {
+    return fetchProgress.find(p => p.uri === uri);
+  };
   
   if (isLoading) {
     return (
@@ -154,9 +253,14 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchSelect
   }
   
   const stats = getNamespaceStats(namespaces);
-  const externalNamespaces = namespaces.filter(ns => ns.isExternal);
   const wellKnownNamespaces = namespaces.filter(ns => ns.isWellKnown);
   const localNamespaces = namespaces.filter(ns => !ns.isExternal && !ns.isWellKnown);
+  
+  // Calculate fetch progress
+  const completedCount = fetchProgress.filter(p => p.status === 'success' || p.status === 'failed').length;
+  const totalToFetch = fetchProgress.length;
+  const progressValue = totalToFetch > 0 ? completedCount / totalToFetch : 0;
+  const currentlyFetching = fetchProgress.find(p => p.status === 'fetching');
   
   return (
     <Card className={styles.container}>
@@ -180,6 +284,7 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchSelect
               icon={<ArrowSync24Regular />}
               onClick={onRefresh}
               title="Re-detect namespaces"
+              disabled={isFetching}
             />
           )}
         </div>
@@ -189,12 +294,30 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchSelect
         {/* External namespaces first - these are fetchable */}
         {externalNamespaces.length > 0 && (
           <>
-            <Body2 style={{ padding: '4px 0', fontWeight: 600, color: tokens.colorPaletteGreenForeground2 }}>
-              <Globe24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-              External Ontologies ({externalNamespaces.length})
-            </Body2>
+            <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
+              {onFetchOntologies && (
+                <Checkbox
+                  checked={selectedUris.size === externalNamespaces.length ? true : selectedUris.size > 0 ? 'mixed' : false}
+                  onChange={toggleSelectAll}
+                  disabled={isFetching}
+                />
+              )}
+              <Body2 style={{ fontWeight: 600, color: tokens.colorPaletteGreenForeground2 }}>
+                <Globe24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                External Ontologies ({externalNamespaces.length})
+              </Body2>
+            </div>
             {externalNamespaces.map(ns => (
-              <NamespaceRow key={ns.uri} namespace={ns} styles={styles} />
+              <NamespaceRow 
+                key={ns.uri} 
+                namespace={ns} 
+                styles={styles}
+                selectable={!!onFetchOntologies}
+                selected={selectedUris.has(ns.uri)}
+                onToggle={() => toggleSelection(ns.uri)}
+                disabled={isFetching}
+                fetchStatus={getFetchStatus(ns.uri)}
+              />
             ))}
           </>
         )}
@@ -226,24 +349,75 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onFetchSelect
         )}
       </div>
       
-      {/* Future: Fetch button for external ontologies */}
-      {externalNamespaces.length > 0 && onFetchSelected && (
-        <Button
-          appearance="outline"
-          icon={<ArrowDownload24Regular />}
-          className={styles.fetchButton}
-          disabled
-          title="Coming soon: Fetch external ontologies"
-        >
-          Fetch External Ontologies ({externalNamespaces.length})
-        </Button>
+      {/* Fetch section */}
+      {externalNamespaces.length > 0 && onFetchOntologies && (
+        <div className={styles.fetchSection}>
+          <div className={styles.fetchControls}>
+            <Button
+              appearance="outline"
+              icon={isFetching ? <Spinner size="tiny" /> : <ArrowDownload24Regular />}
+              onClick={handleFetch}
+              disabled={isFetching || selectedUris.size === 0}
+            >
+              {isFetching 
+                ? `Fetching (${completedCount}/${totalToFetch})...` 
+                : `Fetch Selected (${selectedUris.size})`}
+            </Button>
+          </div>
+          
+          {/* Progress bar during fetch */}
+          {isFetching && totalToFetch > 0 && (
+            <div className={styles.progressContainer}>
+              <div className={styles.progressLabel}>
+                {currentlyFetching 
+                  ? `Fetching: ${currentlyFetching.uri.slice(0, 50)}...`
+                  : 'Completing...'}
+              </div>
+              <ProgressBar value={progressValue} />
+            </div>
+          )}
+          
+          {/* Results summary */}
+          {fetchResults && !isFetching && (
+            <div className={styles.fetchResults}>
+              <span className={styles.successCount}>
+                <CheckmarkCircle16Regular />
+                {fetchResults.filter(r => r.success).length} fetched
+              </span>
+              {fetchResults.some(r => !r.success) && (
+                <span className={styles.failCount}>
+                  <ErrorCircle16Regular />
+                  {fetchResults.filter(r => !r.success).length} failed
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </Card>
   );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function NamespaceRow({ namespace, styles }: { namespace: DetectedNamespace; styles: any }) {
+interface NamespaceRowProps {
+  namespace: DetectedNamespace;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  styles: any;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggle?: () => void;
+  disabled?: boolean;
+  fetchStatus?: FetchProgress;
+}
+
+function NamespaceRow({ 
+  namespace, 
+  styles, 
+  selectable, 
+  selected, 
+  onToggle, 
+  disabled,
+  fetchStatus 
+}: NamespaceRowProps) {
   const rowClass = `${styles.namespaceRow} ${
     namespace.isExternal ? styles.externalRow : 
     namespace.isWellKnown ? styles.wellKnownRow : ''
@@ -251,12 +425,33 @@ function NamespaceRow({ namespace, styles }: { namespace: DetectedNamespace; sty
   
   return (
     <div className={rowClass}>
+      {selectable && (
+        <Checkbox
+          checked={selected}
+          onChange={onToggle}
+          disabled={disabled}
+        />
+      )}
       <span className={styles.prefix}>{namespace.prefix || '(default)'}</span>
       <span className={styles.uri} title={namespace.uri}>{namespace.uri}</span>
       {namespace.description && (
         <Tooltip content={namespace.description} relationship="label">
           <Info16Regular style={{ color: tokens.colorNeutralForeground3 }} />
         </Tooltip>
+      )}
+      {/* Fetch status indicator */}
+      {fetchStatus && (
+        <span className={styles.statusIcon}>
+          {fetchStatus.status === 'fetching' && <Spinner size="tiny" />}
+          {fetchStatus.status === 'success' && (
+            <CheckmarkCircle16Regular style={{ color: tokens.colorPaletteGreenForeground1 }} />
+          )}
+          {fetchStatus.status === 'failed' && (
+            <Tooltip content={fetchStatus.error || 'Failed'} relationship="label">
+              <ErrorCircle16Regular style={{ color: tokens.colorPaletteRedForeground1 }} />
+            </Tooltip>
+          )}
+        </span>
       )}
     </div>
   );

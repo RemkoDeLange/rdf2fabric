@@ -44,6 +44,7 @@ import { ScenarioPreview } from '../components/ScenarioPreview';
 import { NamespacePanel } from '../components/NamespacePanel';
 import { FabricService } from '../services/fabricService';
 import { detectNamespaces, mergeNamespaces, type DetectedNamespace } from '../services/namespaceDetector';
+import { fetchOntologies, type FetchProgress, type FetchResult } from '../services/ontologyFetcher';
 
 const useStyles = makeStyles({
   container: {
@@ -218,6 +219,37 @@ export function ProjectPage() {
     detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
   };
 
+  // Fetch external ontologies and cache them to OneLake
+  const handleFetchOntologies = useCallback(async (
+    uris: string[], 
+    onProgress: (progress: FetchProgress[]) => void
+  ): Promise<FetchResult[]> => {
+    // Fetch the ontologies
+    const results = await fetchOntologies(uris, onProgress);
+    
+    // Cache successful fetches to OneLake
+    if (fabricService && workspaceId && lakehouseId) {
+      for (const result of results) {
+        if (result.success && result.content && result.cachedPath) {
+          try {
+            await fabricService.writeOneLakeFile(
+              workspaceId, 
+              lakehouseId, 
+              `Files/${result.cachedPath}`,
+              result.content
+            );
+            console.log(`Cached ontology to: ${result.cachedPath}`);
+          } catch (error) {
+            console.error(`Failed to cache ${result.uri}:`, error);
+            // Don't fail the whole operation, just log the error
+          }
+        }
+      }
+    }
+    
+    return results;
+  }, [fabricService, workspaceId, lakehouseId]);
+
   const handleDecisionChange = (decisionId: string, value: string) => {
     updateProject(project.id, {
       decisions: { ...project.decisions, [decisionId]: value }
@@ -340,6 +372,7 @@ export function ProjectPage() {
               namespaces={project.detectedNamespaces}
               isLoading={isDetectingNamespaces}
               onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
+              onFetchOntologies={fabricService ? handleFetchOntologies : undefined}
             />
           </div>
 
