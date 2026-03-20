@@ -46,16 +46,35 @@
 - **Pipeline progress:** Real-time polling of `pipeline_progress.json` file
 - **Reset/Delete:** Added Reset Pipeline and Delete Project features
 
-### Next Phase: F2.4 External Ontology Dereferencing
+### F2.4 External Ontology Dereferencing (Mar 20)
+
+**Branch:** `feature/f2.4-external-ontology-dereferencing`
 
 **Focus:** Enable "follow your nose" Linked Data pattern — automatically fetch schema from external namespace URIs.
 
-| Phase | Implementation |
-|-------|----------------|
-| A | NB01 detects namespaces → `detected_namespaces.json` |
-| B | New NB01b fetches external ontologies with HTTP content negotiation |
-| C | App UI allows user to select which namespaces to dereference |
-| D | Cache management in `Files/cache/external_ontologies/` |
+**Completed:**
+1. **NB12 (external_ontology_fetcher.ipynb):** Python notebook that reads `ontology_fetch_manifest.json` written by app, fetches ontologies via HTTP with content negotiation (`text/turtle`, `application/rdf+xml`, etc.), and caches to `Files/cache/external_ontologies/`.
+
+2. **NB13 (ontology_enrichment.ipynb):** Python notebook that parses cached `.ttl` files using Jena (via Py4J), extracts:
+   - Labels (`rdfs:label`, `skos:prefLabel`)
+   - Class hierarchy (`rdfs:subClassOf`)
+   - Property metadata (`rdfs:domain`, `rdfs:range`)
+   - Classes and properties lists
+   - Outputs `Files/cache/ontology_metadata.json`
+
+3. **Mount sync fix:** Added `notebookutils.fs.head()` fallback in NB12 when `/lakehouse/default/Files` mount misses recently-written files.
+
+**Test Results:**
+- 5/6 ontologies fetched (ziekenhuis 404 expected — project-local namespace)
+- 4,702 labels extracted from external ontologies
+- 139 classes, 278 properties, 133 hierarchy entries
+
+**Key Finding:** QUDT quantitykind/unit (4,100+ labels) define instances, not classes. These are valuable for display labels but should not create Fabric Ontology types.
+
+**Pending:**
+- Add "schema" vs "reference data" classification to NB13
+- Update NB02 to consume `ontology_metadata.json` for label enrichment
+- Update NB04 to use external labels in property names
 
 ---
 

@@ -98,6 +98,53 @@
 | **Project Management** | ✅ Working | Create, rename, delete projects |
 | **Translation Execution** | ✅ Working | Full pipeline from app UI with progress tracking |
 | **Config File Export** | ✅ Working | App writes `pipeline_run.json` to OneLake |
+| **Ext. Ontology Fetcher (NB12)** | ✅ Working | HTTP fetch with content negotiation |
+| **Ontology Enrichment (NB13)** | ✅ Working | Extracts labels, hierarchy, domains/ranges |
+
+---
+
+## F2.4: External Ontology Dereferencing (In Progress)
+
+**Branch:** `feature/f2.4-external-ontology-dereferencing`
+
+**Goal:** Enable "follow your nose" Linked Data pattern — fetch schemas from external namespace URIs.
+
+### Implementation Status
+
+| Step | Status | Notes |
+|------|--------|-------|
+| 1. App namespace selection UI | ✅ Done | Checkbox list, write manifest |
+| 2. NB12 fetcher notebook | ✅ Done | HTTP fetch, content negotiation, cache to OneLake |
+| 3. NB13 enrichment notebook | ✅ Done | Parse cached ontologies, extract labels/hierarchy |
+| 4. Integration with schema detection | ⏳ Pending | Feed `ontology_metadata.json` to NB02 |
+| 5. Integration with property mapping | ⏳ Pending | Use labels in NB04 |
+
+### Test Results (Mar 20)
+
+**Fetcher (NB12):** 5/6 ontologies fetched successfully (~5.9 MB total)
+- ✅ `https://w3id.org/nen2660/def#` → 1647 triples
+- ✅ `http://qudt.org/schema/qudt` → 2410 triples
+- ✅ `http://qudt.org/vocab/unit/` → 81129 triples
+- ✅ `http://qudt.org/vocab/quantitykind/` → 30512 triples
+- ✅ `http://www.w3.org/2006/time#` → 1296 triples
+- ❌ `https://w3id.org/ziekenhuis/def#` → 404 (project-local namespace, expected)
+
+**Enrichment (NB13):** Metadata extraction complete
+| Source | Classes | Properties | Labels |
+|--------|---------|------------|--------|
+| NEN 2660 | 45 | 38 | 188 |
+| QUDT schema | 74 | 182 | 303 |
+| QUDT quantitykind | 0 | 0 | 1,217 |
+| QUDT unit | 0 | 0 | 2,900 |
+| W3C Time | 20 | 58 | 97 |
+| **Total** | 139 | 278 | 4,702 |
+
+**Key Insight:** QUDT quantitykind/unit have 0 classes because they define *instances* (e.g., `unit:Meter`), not schema types. These 4,100+ labels are still valuable for human-readable display.
+
+### Next Steps
+- Add filtering to NB13 to flag "schema" vs "reference data" ontologies
+- Update NB02 (schema detector) to load `ontology_metadata.json` for label enrichment
+- Update NB04 (property mapping) to use external labels for property names
 | **Workspace Folders** | ✅ Working | Output items organized in folders |
 | **Decision Enforcement** | ✅ Working | 11/12 decisions read from config + enforced |
 | **Qualified Values** | ✅ Working | rdf:value extraction with multi-standard units |
