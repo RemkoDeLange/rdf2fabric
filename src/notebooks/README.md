@@ -8,25 +8,53 @@ Modular PySpark/Scala notebooks for the RDF translation pipeline.
 XX_name_technology.ipynb
 ```
 
-- `XX` - Execution order (01, 02, 03...)
-- `name` - Purpose (rdf_parser, node_extractor, etc.)
+- `XX` - Execution order (00, 01, 02, 03...)
+- `name` - Purpose (orchestrator, rdf_parser, node_extractor, etc.)
 - `technology` - Key library used (jena, spark, etc.)
 
 ## Pipeline Overview
 
 | # | Notebook | Layer | Description |
 |---|----------|-------|-------------|
+| 00 | `00_pipeline_orchestrator` | Orchestration | **Server-side orchestrator** — runs NB01-NB09 sequentially, writes progress to OneLake |
 | 01 | `01_rdf_parser_jena` | Raw → Bronze | Parse RDF files to `bronze_triples` using Apache Jena (TTL, RDF/XML, JSON-LD, TriG, N-Triples, N-Quads) |
 | 02 | `02_schema_detector` | Bronze → Analysis | Detect schema richness level (0-4) and extract statistics (F3.1 + F3.2) |
-| 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) |
-| 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) |
-| 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) |
-| 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) |
+| 03 | `03_class_to_nodetype` | Bronze → Silver | Map OWL/RDFS classes to node types (`silver_node_types`) — implements **B1, B12** decisions |
+| 04 | `04_property_mapping` | Bronze → Silver | Map properties to node properties/edges (`silver_properties`) — implements **B5, B6, B9, B10** decisions |
+| 05 | `05_instance_translator` | Bronze → Silver | Translate instances to nodes/edges (`silver_nodes`, `silver_edges`) — implements **B2, B3, B4, B11** decisions |
+| 06 | `06_delta_writer` | Silver → Gold | Write gold tables for graph import (`gold_nodes`, `gold_edges`) — implements **B7** decision |
 | 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition from silver tables |
 | 08 | `08_ontology_api_client` | Ontology → Fabric | Upload Ontology definition via REST API |
 | 09 | `09_data_binding` | Ontology → Graph | Bind Lakehouse tables to Ontology for Graph materialization |
 | 10 | `10_shacl_parser` | Bronze → Silver | Parse SHACL shapes to `silver_shacl_shapes` for validation (F6.1) |
+| 11 | `11_shacl_validator` | Silver → Validation | Validate data against SHACL shapes |
 | 99 | `99_test_runner` | Testing | Automated test orchestrator for F2.2, F3.2, F6.1 |
+
+## Decision Implementation
+
+| Decision | Notebook | Options |
+|----------|----------|---------|
+| B1: Node Type Strategy | NB03 | class, predicate, uri_pattern |
+| B2: Blank Node Handling | NB05 | generate, inline, skolemize |
+| B3: Multi-Type Resources | NB05 | primary, first, duplicate |
+| B4: Named Graph Strategy | NB05 | property, partition, ignore |
+| B5: Language Tag Handling | NB04 | suffix, preferred, array |
+| B6: Edge Type Derivation | NB04 | property_name, domain_range |
+| B7: Datatype Coercion | NB06 | strict, string, infer |
+| B9: Edge vs Property | NB04 | all_edges, enum_properties |
+| B10: Inverse Properties | NB04 | materialize, single_direction |
+| B11: URI → ID Generation | NB05 | local_name, label, hash |
+| B12: Hierarchy Strategy | NB03 | flatten, preserve, inherit |
+
+## Server-Side Orchestration (NB00)
+
+The orchestrator pattern ensures reliable pipeline execution:
+
+1. App triggers **NB00** (single notebook job)
+2. NB00 runs NB01-NB09 via `mssparkutils.notebook.run()`
+3. After each step, NB00 writes progress to `Files/config/pipeline_progress.json`
+4. App polls the progress file every 10 seconds
+5. Pipeline continues even if browser tab closes
 
 ## Parameterized Notebooks
 

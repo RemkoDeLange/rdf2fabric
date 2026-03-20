@@ -2,9 +2,21 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-12  
+**Last Updated:** 2026-03-20  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
+
+---
+
+## Project Context (Updated Mar 20)
+
+**This is a Proof of Concept** for learning RDF → Fabric translation patterns. The focus is on:
+- Exploring what's involved in RDF → LPG translation
+- Understanding Fabric Ontology/Graph API capabilities and limitations
+- Documenting modeling decisions required for the translation
+- Building reusable patterns for future product development
+
+**Not a production app** — The POC may inform a future Fabric product team import feature, but is not intended to compete with it.
 
 ---
 
@@ -12,7 +24,9 @@
 
 **Goal:** Scenario A (12 decisions) vs Scenario E (3-4 decisions) contrast with maximized Graph population.
 
-### Week 1: Data Completeness + Backend
+### Sprint Progress: ~90% Complete (11/12 decisions implemented)
+
+### Week 1: Data Completeness + Backend ✅ Complete
 
 | Day | Task | Status | Notes |
 |-----|------|--------|-------|
@@ -24,7 +38,7 @@
 | 4 | File browser UI (F7.5) | ✅ Done | OneLake DFS API integration |
 | 5 | Decision Dashboard (F7.6) | ✅ Done | 12 B-decisions with auto-resolve |
 
-### Week 2: Decision Dashboard + Polish
+### Week 2: Decision Dashboard + Polish ✅ ~90% Complete
 
 | Day | Task | Status | Notes |
 |-----|------|--------|-------|
@@ -35,7 +49,26 @@
 | 8 | **Config file architecture** | ✅ Done | App writes config, notebooks read it |
 | 8 | **App → Fabric pipeline execution** | ✅ Done | Full pipeline running from app |
 | 9 | **Server-side orchestrator** | ✅ Done | NB00 runs all steps, progress file polling |
-| 9-10 | Demo polish | ⬜ | Screenshots, script |
+| 10 | **Decision logic implementation** | ✅ Done | 11/12 B-decisions enforced in notebooks |
+| 10 | **Multi-standard unit extraction** | ✅ Done | NEN 2660-2, QUDT, Schema.org |
+| 11 | Demo polish | ⏳ In Progress | Screenshots, script |
+
+### Decision Implementation Status
+
+| Decision | Status | Notebook | Implementation |
+|----------|--------|----------|----------------|
+| B1: Node Type Strategy | ✅ | NB03 | class/predicate/uri_pattern |
+| B2: Blank Node Handling | ✅ | NB05 | generate/inline/skolemize |
+| B3: Multi-Type Resources | ✅ | NB05 | primary/first/duplicate |
+| B4: Named Graph Strategy | ✅ | NB05 | property/partition/ignore |
+| B5: Language Tag Handling | ✅ | NB04 | suffix/preferred/array |
+| B6: Edge Type Derivation | ✅ | NB04 | property_name/domain_range |
+| B7: Datatype Coercion | ✅ | NB06 | strict/string/infer |
+| B8: Property Attachment | ⬜ | - | Low priority (reification rare) |
+| B9: Edge vs Property | ✅ | NB04 | all_edges/enum_properties |
+| B10: Inverse Properties | ✅ | NB04 | materialize/single_direction |
+| B11: URI → ID Generation | ✅ | NB05 | local_name/label/hash |
+| B12: Hierarchy Strategy | ✅ | NB03 | flatten/preserve/inherit |
 
 ### Current Graph Metrics (Mar 11 - Ziekenhuis minimal)
 
@@ -54,7 +87,7 @@
 
 | Area | Status | Notes |
 |------|--------|-------|
-| **Pipeline (NB01-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph |
+| **Pipeline (NB00-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph with orchestrator |
 | **Ontology API** | ✅ Working | 74 entity types, 48 relationships |
 | **Graph Materialization** | ✅ Working | 59 nodes, 372 edges queryable |
 | **GQL Queries** | ✅ Working | Basic patterns verified |
@@ -63,46 +96,80 @@
 | **React App** | ✅ Working | Auth, workspace config, file browser |
 | **Decision Dashboard** | ✅ Working | 12 B-decisions with schema-based auto-resolve |
 | **Project Management** | ✅ Working | Create, rename, delete projects |
-| **Translation Execution** | ✅ Working | Full pipeline from app UI |
+| **Translation Execution** | ✅ Working | Full pipeline from app UI with progress tracking |
 | **Config File Export** | ✅ Working | App writes `pipeline_run.json` to OneLake |
 | **Workspace Folders** | ✅ Working | Output items organized in folders |
+| **Decision Enforcement** | ✅ Working | 11/12 decisions read from config + enforced |
+| **Qualified Values** | ✅ Working | rdf:value extraction with multi-standard units |
 
 ---
 
-## Decision Enforcement - Branch Status
+## Decision Enforcement: Complete (Mar 20)
 
-### `feature/decision-enforcement` Branch (Mar 12)
+**Current State:**
+- ✅ UI captures 12 B-decisions based on schema level
+- ✅ Decisions stored in browser localStorage AND exported to OneLake
+- ✅ App writes `Files/config/pipeline_run.json` with project settings
+- ✅ NB00-NB09 read config file and branch logic based on decisions
+- ✅ **11/12 decisions implemented** with full branching logic
 
-**Status:** 8/12 decisions fully implemented, 4 have partial options marked in UI.
+**What This Means:**
+- Changing a decision (e.g., B2: Blank Node Handling) in the UI writes to config
+- Notebooks read the config and execute the appropriate logic path
+- The demo shows both schema-driven decision reduction AND actual behavior changes
+- B8 (Property Attachment) not implemented — reification patterns are rare in test data
 
-**Branch Contains:**
-| Item | Description |
-|------|-------------|
-| NB03-NB06 | Decision branching logic implemented |
-| NB09 | Polling fix (case-insensitive status, limit=50) |
-| App | Reset Pipeline button, Delete Project, notImplemented UI flags |
+**Feature Enhancements (Mar 20):**
+- **Qualified value extraction** — NB05 now extracts `rdf:value` from qualified value patterns
+- **Multi-standard unit detection** — Supports NEN 2660-2, QUDT 2.x, and Schema.org unit predicates
 
-**Decision Implementation:**
-| Decision | Status | Notes |
-|----------|--------|-------|
-| B1, B2, B3, B5-B7, B10-B12 | ✅ Full | All options work |
-| B4 (Named Graph) | ⚠️ 2/3 | `partition` marked notImplemented |
-| B8 (Multi-value) | ⚠️ 1/3 | `reified`,`both` marked notImplemented |
-| B9 (Cardinality) | ⚠️ 1/3 | `enum-property`,`threshold` marked notImplemented |
-| B11 | ✅ Full | All 4 options work |
+**See:** `docs/backlog.md` → Epic 13: Decision Enforcement (F13.1 ✅, F13.2 ✅, F13.3 ~90%)
 
-**To Test Feature Branch:**
-1. `git checkout feature/decision-enforcement`
-2. Upload NB03, NB04, NB05, NB06, NB09 to Fabric
-3. Run app with decision variations
+---
 
-### `main` Branch
+## Next Phase: F2.4 External Ontology Dereferencing
 
-**Status:** Baseline without decision enforcement. Notebooks use default behavior.
+**Priority Focus:** F2.4 enables "follow your nose" Linked Data pattern — automatically fetching schema from external namespace URIs.
 
-**Known Issue:** NB09 polling may timeout on large graphs (fixed in feature branch).
+### Implementation Plan (5-8 days)
 
-**See:** `docs/backlog.md` → Epic 13: Decision Enforcement
+| Phase | Tasks | Effort |
+|-------|-------|--------|
+| A | NB01 namespace detection + JSON output | S (1 day) |
+| B | NB01b external ontology fetcher notebook | M (2-3 days) |
+| C | App UI for namespace selection dialog | M (2-3 days) |
+| D | Integration + cache management | S (1 day) |
+
+### Key Deliverables
+
+- `Files/config/detected_namespaces.json` output from NB01
+- New `NB01b_external_ontology_fetcher` notebook
+- `ExternalOntologyDialog` component in app
+- Cache in `Files/cache/external_ontologies/`
+
+---
+
+## ⚠️ Known Limitations (POC Scope)
+
+### Fabric Graph Limitations
+
+| Limitation | Impact | Workaround |
+|------------|--------|------------|
+| No `labels()` function in GQL | Can't query all labels dynamically | Query specific node types |
+| No `type()` for edges | Can't introspect edge types | Query specific edge types |
+| Type-specific relationships | `hasPart` becomes `haspart_1`, `haspart_2` per source-target | Use exact relationship type |
+| RefreshGraph performance | Can take 30+ minutes for large graphs | Plan refresh windows |
+| ConcurrentOperation errors | Overlapping RefreshGraph jobs cancel | Single-threaded refresh |
+
+### POC Scope Boundaries
+
+| Item | Status | Notes |
+|------|--------|-------|
+| B8: Property Attachment | ⬜ Not Done | Reification patterns rare, low priority |
+| F2.3: Large file streaming | ⬜ Deferred | RefreshGraph is bottleneck, not parsing |
+| F3.3: Schema detection API | ⬜ Deferred | Not needed for POC |
+| F7.7: Graph Preview | ⬜ Deferred | Nice to have, not priority |
+| F13.4: Decision Preview | ⬜ Deferred | Nice to have, not priority |
 
 ---
 

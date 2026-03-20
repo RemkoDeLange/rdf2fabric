@@ -43,6 +43,7 @@ export interface DecisionOption {
   label: string;
   description: string;
   isDefault?: boolean;
+  notImplemented?: boolean;  // Gray out options not yet implemented
 }
 
 // Full decision definition
@@ -111,7 +112,7 @@ export const DECISION_DEFINITIONS: DecisionDefinition[] = [
     hintLevels: [],
     options: [
       { value: 'property', label: 'Graph Property', description: 'Add _graph property to nodes/edges', isDefault: true },
-      { value: 'partition', label: 'Separate Graphs', description: 'Create separate Fabric graphs per named graph' },
+      { value: 'partition', label: 'Separate Graphs', description: 'Create separate Fabric graphs per named graph', notImplemented: true },
       { value: 'ignore', label: 'Ignore', description: 'Merge all graphs, discard context' },
     ],
   },
@@ -164,8 +165,8 @@ export const DECISION_DEFINITIONS: DecisionDefinition[] = [
     hintLevels: [],
     options: [
       { value: 'subject', label: 'Subject Node', description: 'Datatype properties go on the subject node', isDefault: true },
-      { value: 'reified', label: 'Support Reification', description: 'If property references statement, attach to edge' },
-      { value: 'both', label: 'Duplicate', description: 'Copy properties to both node and related edges' },
+      { value: 'reified', label: 'Support Reification', description: 'If property references statement, attach to edge', notImplemented: true },
+      { value: 'both', label: 'Duplicate', description: 'Copy properties to both node and related edges', notImplemented: true },
     ],
   },
   {
@@ -177,8 +178,8 @@ export const DECISION_DEFINITIONS: DecisionDefinition[] = [
     hintLevels: [2],
     options: [
       { value: 'all-edges', label: 'All as Edges', description: 'Every object property creates an edge', isDefault: true },
-      { value: 'enum-property', label: 'Enums as Properties', description: 'Small enumerations become string properties' },
-      { value: 'threshold', label: 'Instance Threshold', description: 'Types with few instances become properties' },
+      { value: 'enum-property', label: 'Enums as Properties', description: 'Small enumerations become string properties', notImplemented: true },
+      { value: 'threshold', label: 'Instance Threshold', description: 'Types with few instances become properties', notImplemented: true },
     ],
   },
   {
@@ -462,8 +463,16 @@ export function DecisionPanel({ schemaLevel, decisions, onDecisionChange }: Deci
                 onChange={(_, data) => setPendingValue(data.value)}
               >
                 {selectedDecision?.options.map((option) => (
-                  <div key={option.value} style={{ marginBottom: '12px' }}>
-                    <Radio value={option.value} label={option.label} />
+                  <div key={option.value} style={{ marginBottom: '12px', opacity: option.notImplemented ? 0.5 : 1 }}>
+                    <Radio 
+                      value={option.value} 
+                      label={
+                        option.notImplemented 
+                          ? `${option.label} (not implemented)` 
+                          : option.label
+                      } 
+                      disabled={option.notImplemented}
+                    />
                     <Body2 className={styles.optionDescription}>{option.description}</Body2>
                   </div>
                 ))}

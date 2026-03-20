@@ -1,9 +1,61 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-03-09  
+**Date:** 2026-03-20  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
+
+---
+
+## Latest Updates (Mar 20)
+
+### Sprint Completion: ~90% (11/12 B-Decisions Implemented)
+
+**Decision Logic Implemented:**
+| Decision | Notebook | Status |
+|----------|----------|--------|
+| B1: Node Type Strategy | NB03 | ✅ class/predicate/uri_pattern |
+| B2: Blank Node Handling | NB05 | ✅ generate/inline/skolemize |
+| B3: Multi-Type Resources | NB05 | ✅ primary/first/duplicate |
+| B4: Named Graph Strategy | NB05 | ✅ property/partition/ignore |
+| B5: Language Tag Handling | NB04 | ✅ suffix/preferred/array |
+| B6: Edge Type Derivation | NB04 | ✅ property_name/domain_range |
+| B7: Datatype Coercion | NB06 | ✅ strict/string/infer |
+| B8: Property Attachment | - | ⬜ Not implemented (low priority) |
+| B9: Edge vs Property | NB04 | ✅ all_edges/enum_properties |
+| B10: Inverse Properties | NB04 | ✅ materialize/single_direction |
+| B11: URI → ID Generation | NB05 | ✅ local_name/label/hash |
+| B12: Hierarchy Strategy | NB03 | ✅ flatten/preserve/inherit |
+
+### Qualified Value Extraction (Mar 19-20)
+
+**Enhancement:** NB05 now extracts values from NEN 2660-2's qualified value pattern:
+```
+:x :hasProperty [ rdf:value "42.0" ; nen2660:hasUnit qudt:M ] .
+```
+
+**Multi-Standard Unit Support:** Expanded unit predicate detection:
+- `https://w3id.org/nen2660/def#hasUnit` (NEN 2660-2)
+- `http://qudt.org/schema/qudt/unit` (QUDT 2.x)
+- `http://qudt.org/schema/qudt/hasUnit` (QUDT variant)
+- `http://schema.org/unitCode` (Schema.org)
+
+### App Improvements (Mar 19)
+
+- **NB00 running state fix:** UI now shows NB00 as "running" immediately before calling orchestrator
+- **Pipeline progress:** Real-time polling of `pipeline_progress.json` file
+- **Reset/Delete:** Added Reset Pipeline and Delete Project features
+
+### Next Phase: F2.4 External Ontology Dereferencing
+
+**Focus:** Enable "follow your nose" Linked Data pattern — automatically fetch schema from external namespace URIs.
+
+| Phase | Implementation |
+|-------|----------------|
+| A | NB01 detects namespaces → `detected_namespaces.json` |
+| B | New NB01b fetches external ontologies with HTTP content negotiation |
+| C | App UI allows user to select which namespaces to dereference |
+| D | Cache management in `Files/cache/external_ontologies/` |
 
 ---
 

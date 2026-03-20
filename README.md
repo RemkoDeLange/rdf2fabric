@@ -2,6 +2,21 @@
 
 A **proof of concept** exploring what it takes to import RDF (Semantic Web) data into Microsoft Fabric Real-Time Intelligence — specifically Fabric Ontology and Fabric Graph.
 
+## Status (Mar 20, 2026)
+
+✅ **Proof of Concept Complete** — Full pipeline working with 11/12 B-decisions implemented
+
+| Component | Status |
+|-----------|--------|
+| RDF Parser (Jena) | ✅ Turtle, TriG, JSON-LD, RDF/XML, N-Triples, N-Quads |
+| Schema Detection | ✅ 5 levels (Instance-only → SHACL) |
+| Translation Pipeline | ✅ NB00-NB09 orchestrated execution |
+| Decision Enforcement | ✅ 11/12 decisions read from config + enforced |
+| Ontology API | ✅ Entity types, relationships, data bindings |
+| Graph Materialization | ✅ 74 entities, 48 relationships, 372 edges |
+| React App | ✅ Auth, workspace config, file browser, decision dashboard |
+| Pipeline Execution | ✅ Server-side orchestrator with progress tracking |
+
 ## What this PoC explores
 
 RDF and Fabric Graph use fundamentally different graph paradigms that cannot be mapped 1:1. This PoC investigates the **translation challenges**, the **12 modeling decisions** involved, and the current capabilities and limitations of Fabric's Ontology and Graph APIs.
@@ -9,6 +24,7 @@ RDF and Fabric Graph use fundamentally different graph paradigms that cannot be 
 - **RDF → LPG translation**: Parsing RDF, discovering schema, mapping classes to entity types, properties to attributes, and object properties to relationships
 - **Fabric Ontology API integration**: Creating ontology definitions, uploading data bindings, handling LRO patterns
 - **Fabric Graph materialization**: Building GraphModel definitions, triggering RefreshGraph, understanding the end-to-end pipeline
+- **Decision enforcement**: App captures user decisions, notebooks read and act on them
 - **NEN 2660-2 as test data**: Dutch built environment standard used to exercise the full translation pipeline
 
 ## Installation Options
@@ -71,10 +87,22 @@ fabric_rdf_translation/
 
 ## Documentation
 
+- [Project Status](docs/project-status.md) - Current state and sprint progress
 - [Requirements](docs/requirements.md) - Business & technical requirements
 - [Architecture](docs/architecture.md) - System design and decisions
 - [Data Sources](docs/data-sources.md) - Test data documentation
+- [Backlog](docs/backlog.md) - Feature backlog and implementation status
 
-## Status
+## Key Findings
 
-� **Proof of Concept** — Actively exploring RDF import into Fabric IQ
+| Finding | Implication |
+|---------|-------------|
+| Fabric Graph uses GQL (ISO), not Gremlin | Query syntax differs from Neo4j/Neptune |
+| Schema ≠ Instance predicates | `owl:hasFunctionalPart` vs actual `hasPart` |
+| Type-specific relationships | `hasPart` becomes `haspart_1`, `haspart_2` per node type pair |
+| RefreshGraph is async + expensive | 30+ minute jobs, must poll for completion |
+| ConcurrentOperation cancels jobs | Only one RefreshGraph at a time |
+
+## Next Phase
+
+**F2.4 External Ontology Dereferencing** — Enable "follow your nose" Linked Data pattern by automatically fetching schema from external namespace URIs.

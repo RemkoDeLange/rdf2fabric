@@ -94,6 +94,7 @@ export interface TranslationStep {
 
 // Pipeline steps - notebooks to run in order
 export const TRANSLATION_PIPELINE: TranslationStep[] = [
+  { id: 'NB00', name: 'Initialize', notebookName: '00_pipeline_orchestrator', description: 'Starting pipeline orchestrator' },
   { id: 'NB01', name: 'Parse RDF', notebookName: '01_rdf_parser_jena', description: 'Parse RDF files with Apache Jena' },
   { id: 'NB02', name: 'Detect Schema', notebookName: '02_schema_detector', description: 'Detect schema richness level' },
   { id: 'NB03', name: 'Map Classes', notebookName: '03_class_to_nodetype', description: 'Map RDF classes to node types' },
@@ -610,6 +611,57 @@ export class FabricService {
       throw new Error('Orchestrator notebook (00_pipeline_orchestrator) not found in workspace');
     }
     return this.runNotebook(workspaceId, orchestrator.id);
+  }
+
+  /**
+   * Delete a file from OneLake
+   */
+  async deleteOneLakeFile(
+    workspaceId: string,
+    lakehouseId: string,
+    path: string
+  ): Promise<boolean> {
+    const token = await this.getAccessToken(fabricScopes.storage);
+    const dfsBase = 'https://onelake.dfs.fabric.microsoft.com';
+    const fullPath = `/${workspaceId}/${lakehouseId}/Files/${path}`;
+
+    const response = await fetch(`${dfsBase}${fullPath}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return false; // File didn't exist
+    }
+
+    if (!response.ok) {
+      throw new Error(`OneLake delete error (${response.status}): ${await response.text()}`);
+    }
+
+    return true;
+  }
+
+  /**
+   * Clear pipeline progress file from OneLake
+   * Useful for resetting stale pipeline state
+   */
+  async clearPipelineProgress(
+    workspaceId: string,
+    lakehouseId: string
+  ): Promise<boolean> {
+    return this.deleteOneLakeFile(workspaceId, lakehouseId, 'config/pipeline_progress.json');
+  }
+
+  /**
+   * Delete pipeline configuration file from OneLake
+   */
+  async deletePipelineConfig(
+    workspaceId: string,
+    lakehouseId: string
+  ): Promise<boolean> {
+    return this.deleteOneLakeFile(workspaceId, lakehouseId, 'config/pipeline_run.json');
   }
 }
 
