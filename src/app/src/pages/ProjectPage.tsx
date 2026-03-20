@@ -34,12 +34,16 @@ import {
   Flash24Regular,
   Delete24Regular,
 } from '@fluentui/react-icons';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { useAppStore } from '../stores/appStore';
 import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
 import { DecisionPanel, DECISION_DEFINITIONS, getDecisionStatus } from '../components/DecisionPanel';
 import { TranslationPanel } from '../components/TranslationPanel';
 import { ScenarioPreview } from '../components/ScenarioPreview';
+import { NamespacePanel } from '../components/NamespacePanel';
+import { FabricService } from '../services/fabricService';
+import { detectNamespaces, mergeNamespaces, type DetectedNamespace } from '../services/namespaceDetector';
 
 const useStyles = makeStyles({
   container: {
@@ -97,6 +101,17 @@ export function ProjectPage() {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newName, setNewName] = useState('');
+  const [isDetectingNamespaces, setIsDetectingNamespaces] = useState(false);
+
+  // Auth and Fabric service
+  const { instance } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+  const { workspaceId, lakehouseId } = useAppStore();
+  
+  const fabricService = useMemo(
+    () => isAuthenticated ? new FabricService(instance) : null,
+    [isAuthenticated, instance]
+  );
   
   const { projects, updateProject, deleteProject } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
@@ -121,14 +136,51 @@ export function ProjectPage() {
     setPendingFiles(files);
   };
 
-  const handleConfirmSelection = () => {
+  // Detect namespaces from RDF files
+  const detectNamespacesFromFiles = useCallback(async (filePaths: string[]) => {
+    if (!fabricService || !workspaceId || !lakehouseId || filePaths.length === 0) {
+      return;
+    }
+
+    setIsDetectingNamespaces(true);
+    try {
+      const allNamespaces: DetectedNamespace[][] = [];
+
+      for (const filePath of filePaths) {
+        // Extract relative path from full OneLake path
+        // filePath format: "folder/subfolder/file.ttl"
+        const content = await fabricService.readOneLakeFile(workspaceId, lakehouseId, filePath);
+        if (content) {
+          const fileName = filePath.split('/').pop() || filePath;
+          const namespaces = detectNamespaces(fileName, content);
+          allNamespaces.push(namespaces);
+        }
+      }
+
+      // Merge and deduplicate namespaces from all files
+      const merged = mergeNamespaces(allNamespaces);
+      updateProject(project.id, { detectedNamespaces: merged });
+    } catch (error) {
+      console.error('Failed to detect namespaces:', error);
+    } finally {
+      setIsDetectingNamespaces(false);
+    }
+  }, [fabricService, workspaceId, lakehouseId, project.id, updateProject]);
+
+  const handleConfirmSelection = async () => {
+    const newFiles = browseMode === 'rdf' 
+      ? [...project.source.files, ...pendingFiles]
+      : [...project.source.schemaFiles, ...pendingFiles];
+
     if (browseMode === 'rdf') {
       updateProject(project.id, { 
-        source: { ...project.source, files: [...project.source.files, ...pendingFiles] }
+        source: { ...project.source, files: newFiles }
       });
+      // Detect namespaces for all RDF files (existing + new)
+      detectNamespacesFromFiles(newFiles);
     } else {
       updateProject(project.id, { 
-        source: { ...project.source, schemaFiles: [...project.source.schemaFiles, ...pendingFiles] }
+        source: { ...project.source, schemaFiles: newFiles }
       });
     }
     setShowFileBrowser(false);
@@ -137,9 +189,17 @@ export function ProjectPage() {
 
   const handleRemoveFile = (filePath: string, type: 'rdf' | 'schema') => {
     if (type === 'rdf') {
+      const newFiles = project.source.files.filter(f => f !== filePath);
       updateProject(project.id, {
-        source: { ...project.source, files: project.source.files.filter(f => f !== filePath) }
+        source: { ...project.source, files: newFiles }
       });
+      // Re-detect namespaces with remaining files
+      if (newFiles.length > 0) {
+        detectNamespacesFromFiles(newFiles);
+      } else {
+        // Clear namespaces if no files left
+        updateProject(project.id, { detectedNamespaces: [] });
+      }
     } else {
       updateProject(project.id, {
         source: { ...project.source, schemaFiles: project.source.schemaFiles.filter(f => f !== filePath) }
@@ -263,6 +323,13 @@ export function ProjectPage() {
                 </Button>
               </div>
             )}
+
+            {/* Detected Namespaces Panel */}
+            <NamespacePanel 
+              namespaces={project.detectedNamespaces}
+              isLoading={isDetectingNamespaces}
+              onRefresh={() => detectNamespacesFromFiles(project.source.files)}
+            />
           </div>
 
           <Divider />
