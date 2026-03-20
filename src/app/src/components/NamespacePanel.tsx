@@ -332,10 +332,7 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
           {queueSuccess && (
             <div className={styles.successMessage}>
               <CheckmarkCircle16Regular />
-              <span>
-                Manifest saved to <code>Files/cache/fetch_manifest.json</code>. 
-                Run <code>12_external_ontology_fetcher.ipynb</code> in Fabric to fetch.
-              </span>
+              <span>Queued for notebook fetch</span>
             </div>
           )}
         </div>
