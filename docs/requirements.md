@@ -3,8 +3,8 @@
 ## Document Info
 | Property | Value |
 |----------|-------|
-| Last Updated | 2026-03-05 |
-| Status | Draft |
+| Last Updated | 2026-03-20 |
+| Status | Implemented (POC) |
 | Owner | <!-- Add owner --> |
 
 ---
@@ -31,19 +31,20 @@ The challenge is fundamental: RDF (Resource Description Framework) from the Sema
 ### 1.2 Business Objectives
 
 - [x] **PoC**: Explore what it involves to import RDF data into Fabric Real-Time Intelligence (Ontology + Graph), identifying translation challenges, required modeling decisions, and API capabilities/limitations
-- [ ] **Decision Support**: Guide users through the modeling decisions required for RDF → LPG translation
-- [ ] **Automated Import**: Once decisions are made, automatically transform and load data into Fabric Ontology/Graph
-- [ ] **Documentation**: Capture decisions and known limitations for each translation project
+- [x] **Decision Support**: Guide users through the modeling decisions required for RDF → LPG translation (12 B-decisions with schema-based auto-resolve)
+- [x] **Automated Import**: Once decisions are made, automatically transform and load data into Fabric Ontology/Graph (NB00-NB09 pipeline)
+- [x] **Documentation**: Capture decisions and known limitations for each translation project
 
 ### 1.3 Success Criteria
 
-| Criteria | Measure |
-|----------|---------|
-| Can parse multiple RDF formats | Turtle, TriG, JSON-LD, RDF/XML supported |
-| Supports schema files | RDFS, OWL, SKOS, SHACL can inform translation |
-| Interactive decision-making | User can make/review all translation decisions via UI |
-| Automated pipeline | After decisions, import runs without manual intervention |
-| Test dataset loads successfully | NEN 2660-2 examples import into Fabric Graph |
+| Criteria | Measure | Status |
+|----------|---------|--------|
+| Can parse multiple RDF formats | Turtle, TriG, JSON-LD, RDF/XML supported | ✅ Complete |
+| Supports schema files | RDFS, OWL, SKOS, SHACL can inform translation | ✅ Complete |
+| Interactive decision-making | User can make/review all translation decisions via UI | ✅ Complete |
+| Automated pipeline | After decisions, import runs without manual intervention | ✅ Complete |
+| Test dataset loads successfully | NEN 2660-2 examples import into Fabric Graph | ✅ Complete (74 entities, 48 relationships) |
+| Decision enforcement | Notebooks read and act on user decisions | ✅ Complete (11/12 decisions) |
 
 ### 1.4 Stakeholders
 

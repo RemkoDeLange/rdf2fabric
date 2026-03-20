@@ -1,8 +1,25 @@
 # RDF2Fabric - Feature Backlog
 
 > **Purpose:** Comprehensive feature list with acceptance criteria and tests.  
-> **Last Updated:** 2026-03-05  
-> **Version:** v0.1.0 (Documentation Complete)
+> **Last Updated:** 2026-03-20  
+> **Version:** v0.2.0 (Sprint 1 Complete - 90%)
+
+---
+
+## Sprint 1 Summary (Mar 9-23)
+
+**Completed:** 11/12 B-decisions implemented in notebooks with full branching logic.
+
+| Epic | Status | Notes |
+|------|--------|-------|
+| Epic 1: Infrastructure | ✅ Complete | Workspace, lakehouse, shortcuts |
+| Epic 2: RDF Parsing | ✅ Complete | Jena parser, all formats |
+| Epic 3: Schema Detection | ✅ Complete | 5 levels (0-4) |
+| Epic 4: Translation | ✅ Complete | Classes, properties, instances |
+| Epic 5: Fabric Integration | ✅ Complete | Ontology API, data binding, GraphModel |
+| Epic 6: SHACL Validation | ✅ Complete | Parser + validator |
+| Epic 7: Frontend | 🔄 ~80% | Decision dashboard, execution UI |
+| Epic 13: Decision Enforcement | ✅ ~90% | 11/12 decisions enforced |
 
 ---
 
@@ -2196,25 +2213,23 @@ class TestPreviewPipeline:
 
 ---
 
-## Epic 13: Decision Enforcement (Phase 2)
+## Epic 13: Decision Enforcement
 
-> **Status:** ⚠️ Known Gap  
-> **Context:** The UI captures translation decisions (B1-B12) but notebooks currently use hardcoded defaults.
+> **Status:** ✅ ~90% Complete (Mar 20)  
+> **Context:** 11/12 B-decisions are now enforced in notebooks. App writes config, notebooks read and act on it.
 
-### Current State (POC)
+### Current State (Mar 20)
 
-**What Works:**
+**✅ What Works:**
 - UI displays 12 B-decisions with schema-based auto-resolution
-- Decisions stored in `project.decisions` (localStorage)
-- Schema level affects which decisions need manual input
-- Visual demonstration of schema richness impact
+- Decisions stored in localStorage AND exported to OneLake
+- App writes `Files/config/pipeline_run.json` before pipeline execution
+- Notebooks read config and branch logic based on decision values
+- 11/12 decisions fully implemented with branching logic
 
-**What's Missing:**
-- Decisions are NOT enforced in notebooks
-- No config file written to OneLake
-- Pipeline runs with hardcoded defaults regardless of UI settings
-
-**Impact:** The POC demonstrates the *concept* that richer schemas reduce decisions, but the actual translation behavior doesn't change based on user choices.
+**⬜ Remaining:**
+- B8 (Property Attachment) not implemented — reification patterns rare in test data
+- F13.4 (Decision Preview) deferred — nice to have, not priority
 
 ---
 
@@ -2255,16 +2270,16 @@ class TestPreviewPipeline:
 ---
 
 ### F13.2 - Notebook Config Reader
-**Priority:** 🟠 P1 | **Status:** 🔄 In Progress | **Estimate:** M
+**Priority:** 🟠 P1 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Notebooks read config file and branch logic based on decisions.
 
 **Acceptance Criteria:**
-- [x] NB08 reads `Files/config/pipeline_run.json`
+- [x] NB03-NB06, NB08 read `Files/config/pipeline_run.json`
 - [x] Uses `folder_id` for ontology output folder
 - [x] Uses `project_name` for ontology display name
-- [ ] NB01-NB07, NB09 read config (not yet implemented)
-- [ ] Log which config values are being used
+- [x] All notebooks log which config values are being used
+- [x] Graceful fallback to defaults if config not found
 
 **Implementation Pattern:**
 ```python
@@ -2285,40 +2300,42 @@ elif blank_node_strategy == "skolemize":
 ---
 
 ### F13.3 - Decision Logic Implementation
-**Priority:** 🟠 P1 | **Status:** ⬜ Not Started | **Estimate:** XL
+**Priority:** 🟠 P1 | **Status:** ✅ ~90% Complete | **Estimate:** XL
 
 **Description:** Implement actual decision logic in notebooks for each B-decision.
 
-**Per-Decision Implementation Effort:**
+**Per-Decision Implementation Status:**
 
-| Decision | Notebook(s) | Effort | Notes |
-|----------|-------------|--------|-------|
-| B1: Node Type Strategy | NB03, NB05 | M | Class vs predicate vs URI pattern |
-| B2: Blank Node Handling | NB01, NB05 | M | Generate vs inline vs skolemize |
-| B3: Multi-Type Resources | NB05 | M | Primary vs first vs duplicate |
-| B4: Named Graph Strategy | NB01, NB05 | S | Property vs partition vs ignore |
-| B5: Language Tag Handling | NB04, NB06 | M | Suffix vs preferred vs array |
-| B6: Edge Type Derivation | NB04 | S | Property name vs domain-range |
-| B7: Datatype Coercion | NB06 | M | Strict vs string vs infer |
-| B8: Property Attachment | NB04 | S | Subject vs reified |
-| B9: Edge vs Property | NB04, NB05 | M | All edges vs enum properties |
-| B10: Inverse Properties | NB04, NB07 | M | Materialize vs single direction |
-| B11: URI → ID Generation | NB05 | S | Local name vs label vs hash |
-| B12: Hierarchy Strategy | NB03, NB07 | M | Flatten vs preserve vs inherit |
+| Decision | Notebook | Status | Implementation |
+|----------|----------|--------|----------------|
+| B1: Node Type Strategy | NB03 | ✅ | class/predicate/uri_pattern |
+| B2: Blank Node Handling | NB05 | ✅ | generate/inline/skolemize |
+| B3: Multi-Type Resources | NB05 | ✅ | primary/first/duplicate |
+| B4: Named Graph Strategy | NB05 | ✅ | property/partition/ignore |
+| B5: Language Tag Handling | NB04 | ✅ | suffix/preferred/array |
+| B6: Edge Type Derivation | NB04 | ✅ | property_name/domain_range |
+| B7: Datatype Coercion | NB06 | ✅ | strict/string/infer |
+| B8: Property Attachment | - | ⬜ | Deferred (reification rare) |
+| B9: Edge vs Property | NB04 | ✅ | all_edges/enum_properties |
+| B10: Inverse Properties | NB04 | ✅ | materialize/single_direction |
+| B11: URI → ID Generation | NB05 | ✅ | local_name/label/hash |
+| B12: Hierarchy Strategy | NB03 | ✅ | flatten/preserve/inherit |
 
-**Total Estimate:** XL (likely 2-3 weeks of focused work)
+**Completed:** 11/12 decisions (~2 weeks of work)
 
 **Acceptance Criteria:**
-- [ ] Each decision has corresponding code paths
-- [ ] Unit tests for each decision variant
-- [ ] Integration tests with NEN 2660 data
+- [x] Each decision has corresponding code paths
+- [x] Decisions read from config file
+- [x] Graceful fallback to defaults
+- [ ] Unit tests for each decision variant (deferred)
+- [ ] Integration tests with NEN 2660 data (manual testing complete)
 
 **Dependencies:** F13.2
 
 ---
 
 ### F13.4 - Decision Preview
-**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** L
+**Priority:** 🟡 P2 | **Status:** ⬜ Deferred | **Estimate:** L
 
 **Description:** Show impact of decisions before running pipeline (dry-run preview).
 
@@ -2326,6 +2343,8 @@ elif blank_node_strategy == "skolemize":
 - [ ] Preview how many nodes/edges will be created
 - [ ] Show sample transformations
 - [ ] Highlight decisions that significantly impact output
+
+**Note:** Deferred — nice to have feature, not critical for POC.
 
 **Dependencies:** F13.3
 
