@@ -94,6 +94,7 @@ export interface TranslationStep {
 
 // Pipeline steps - notebooks to run in order
 export const TRANSLATION_PIPELINE: TranslationStep[] = [
+  { id: 'NB00', name: 'Initialize', notebookName: '00_pipeline_orchestrator', description: 'Starting pipeline orchestrator' },
   { id: 'NB01', name: 'Parse RDF', notebookName: '01_rdf_parser_jena', description: 'Parse RDF files with Apache Jena' },
   { id: 'NB02', name: 'Detect Schema', notebookName: '02_schema_detector', description: 'Detect schema richness level' },
   { id: 'NB03', name: 'Map Classes', notebookName: '03_class_to_nodetype', description: 'Map RDF classes to node types' },

@@ -154,6 +154,10 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     updatePipelineStep(stepId, update);
   }, [updatePipelineStep]);
 
+  // Track last known state for log deduplication
+  const lastLoggedStep = useRef<string | null>(null);
+  const lastLoggedCompleted = useRef<number>(0);
+
   // Poll progress file and update UI
   const pollProgress = useCallback(async () => {
     if (!workspaceId || !lakehouseId) return;
@@ -161,6 +165,26 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     try {
       const progress = await fabricService.readPipelineProgress(workspaceId, lakehouseId);
       if (!progress) return;
+
+      // Log new completions
+      const completedCount = progress.completed?.length || 0;
+      if (completedCount > lastLoggedCompleted.current) {
+        const newlyCompleted = progress.completed.slice(lastLoggedCompleted.current);
+        for (const stepId of newlyCompleted) {
+          const step = TRANSLATION_PIPELINE.find(s => s.id === stepId);
+          const stepTime = progress.step_times[stepId];
+          const duration = stepTime?.duration_sec ? ` (${stepTime.duration_sec}s)` : '';
+          addLog(`✓ ${stepId}: ${step?.name || stepId} completed${duration}`);
+        }
+        lastLoggedCompleted.current = completedCount;
+      }
+
+      // Log current step change
+      if (progress.current && progress.current !== lastLoggedStep.current) {
+        const step = TRANSLATION_PIPELINE.find(s => s.id === progress.current);
+        addLog(`▶ ${progress.current}: ${step?.name || progress.current} running...`);
+        lastLoggedStep.current = progress.current;
+      }
 
       // Update step states from progress file
       for (const step of TRANSLATION_PIPELINE) {
@@ -197,11 +221,15 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
         setPipelineStatus('completed');
         addLog('✓ Translation pipeline completed successfully!');
         stopPolling();
+        lastLoggedStep.current = null;
+        lastLoggedCompleted.current = 0;
         if (onComplete) onComplete();
       } else if (progress.status === 'failed') {
         setPipelineStatus('failed', progress.error || 'Pipeline failed');
         addLog(`✗ Pipeline failed: ${progress.error || 'Unknown error'}`);
         stopPolling();
+        lastLoggedStep.current = null;
+        lastLoggedCompleted.current = 0;
       }
     } catch (error) {
       // Progress file may not exist yet, ignore errors during polling
@@ -278,6 +306,10 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
 
     // Initialize pipeline execution in global store
     startPipelineExecution(projectId);
+    
+    // Reset tracking refs for new run
+    lastLoggedStep.current = null;
+    lastLoggedCompleted.current = 0;
     
     // Reset step states
     TRANSLATION_PIPELINE.forEach(step => {
