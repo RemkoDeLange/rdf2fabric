@@ -2,7 +2,7 @@
 
 A **proof of concept** exploring what it takes to import RDF (Semantic Web) data into Microsoft Fabric Real-Time Intelligence — specifically Fabric Ontology and Fabric Graph.
 
-## Status (Mar 20, 2026)
+## Status (Mar 21, 2026)
 
 ✅ **Proof of Concept Complete** — Full pipeline working with 11/12 B-decisions implemented
 
@@ -14,10 +14,12 @@ A **proof of concept** exploring what it takes to import RDF (Semantic Web) data
 | Decision Enforcement | ✅ 11/12 decisions read from config + enforced |
 | Ontology API | ✅ Entity types, relationships, data bindings |
 | Graph Materialization | ✅ 74 entities, 48 relationships, 372 edges |
+| External Ontology Fetch | ✅ F2.4 complete — HTTP fetch with content negotiation |
+| GQL Queries | ✅ Tested — adjacency patterns working |
 | React App | ✅ Auth, workspace config, file browser, decision dashboard |
 | Pipeline Execution | ✅ Server-side orchestrator with progress tracking |
 
-## What this PoC explores
+## What This PoC Explores
 
 RDF and Fabric Graph use fundamentally different graph paradigms that cannot be mapped 1:1. This PoC investigates the **translation challenges**, the **12 modeling decisions** involved, and the current capabilities and limitations of Fabric's Ontology and Graph APIs.
 
@@ -27,71 +29,84 @@ RDF and Fabric Graph use fundamentally different graph paradigms that cannot be 
 - **Decision enforcement**: App captures user decisions, notebooks read and act on them
 - **NEN 2660-2 as test data**: Dutch built environment standard used to exercise the full translation pipeline
 
-## Installation Options
+## Quick Start
 
-### Option A: Desktop App (Simplest)
+### Prerequisites
 
-1. Download installer from [GitHub Releases](../../releases):
-   - Windows: `rdf2fabric-setup.exe`
-   - macOS: `rdf2fabric.dmg`
-   - Linux: `rdf2fabric.AppImage`
-2. [Set up Fabric workspace](#set-up-fabric-workspace)
-3. Run app, login with your Entra ID, configure workspace URL
+1. **Fabric workspace** with capacity (F64 or higher recommended)
+2. **Lakehouse** in the workspace
+3. Git integration enabled on the workspace
 
-### Option B: Web App (Azure)
+### Setup
 
-1. Prerequisites: [Azure CLI](https://docs.microsoft.com/cli/azure/install-azure-cli) + [Azure Developer CLI](https://learn.microsoft.com/azure/developer/azure-developer-cli/install-azd)
-2. Clone this repo and run:
-   ```bash
-   azd auth login
-   azd up
+1. **Fork this repo** to your GitHub account
+2. **Connect your Fabric workspace** to the fork:
+   - Workspace Settings → Git integration → Connect
+   - Sync folder: `/src/fabric/`
+3. **Create shortcuts** to test data (NEN 2660-2):
    ```
-3. [Set up Fabric workspace](#set-up-fabric-workspace)
-4. Open browser to the deployed URL, configure workspace URL
+   Files/normative_nen2660  → shortcut to NEN 2660 normative files
+   Files/examples_nen2660   → shortcut to example TTL files
+   ```
+4. **Publish environment** with Jena JAR:
+   - Upload `tools/jena-shaded/target/jena-shaded-4.10.0.jar`
+   - Create environment `env_rdf_jena`
+5. **Run the pipeline** via NB00 (orchestrator) or run NB01-NB09 individually
 
-### Set up Fabric Workspace
+### Web App (Optional)
 
-> **You choose the workspace.** The app does NOT auto-create workspaces.
+The React app provides a UI for decision-making and pipeline execution:
 
-1. Create a new workspace or use an existing one
-2. Go to workspace **Settings** → **Git integration**
-3. Connect to this GitHub repository (fork it first)
-4. Fabric auto-imports notebooks and pipelines from `src/fabric/`
-5. A lakehouse will be created automatically when notebooks run
+```bash
+cd src/app
+npm install
+npm run dev
+```
+
+Configure workspace URL in Settings, then use the Decision Dashboard.
 
 ## Project Structure
 
 ```
 fabric_rdf_translation/
 ├── docs/                     # Documentation
-│   ├── requirements.md       # Business & technical requirements
+│   ├── project-status.md     # Current state & sprint progress
 │   ├── architecture.md       # System design & decisions
+│   ├── backlog.md            # Feature backlog
 │   └── data-sources.md       # Test data (NEN 2660-2)
 │
 ├── src/
-│   ├── fabric/               # Fabric backend (notebooks, pipelines)
-│   └── app/                  # React frontend (web + desktop)
+│   ├── notebooks/            # Spark notebooks (local copies)
+│   │   ├── 00_pipeline_orchestrator.ipynb
+│   │   ├── 01_rdf_parser_jena.ipynb
+│   │   └── ... (NB02-NB13)
+│   ├── fabric/               # Fabric items (synced via Git)
+│   │   └── notebooks/
+│   └── app/                  # React frontend
+│
+├── tools/
+│   └── jena-shaded/          # Apache Jena JAR for Spark
 │
 └── infra/                    # Azure deployment (bicep)
 ```
 
-## Technology Stack
+## Notebook Pipeline
 
-| Component | Technology |
-|-----------|------------|
-| UI | React + Fluent UI + React Flow (graph viz) |
-| Backend | Spark notebooks (Scala + Python), Apache Jena for RDF parsing |
-| Storage | Delta Lake (Lakehouse) |
-| Target | Fabric Ontology + Fabric Graph |
-| Auth | Entra ID (SSO / device code) |
-
-## Documentation
-
-- [Project Status](docs/project-status.md) - Current state and sprint progress
-- [Requirements](docs/requirements.md) - Business & technical requirements
-- [Architecture](docs/architecture.md) - System design and decisions
-- [Data Sources](docs/data-sources.md) - Test data documentation
-- [Backlog](docs/backlog.md) - Feature backlog and implementation status
+| Notebook | Purpose |
+|----------|---------|
+| NB00 | **Orchestrator** — runs NB01-NB09, writes progress file |
+| NB01 | Parse RDF → `bronze_triples` |
+| NB02 | Detect schema level (0-4) |
+| NB03 | Extract classes → `silver_node_types` |
+| NB04 | Extract properties → `silver_edge_types`, `silver_datatype_props` |
+| NB05 | Transform instances → `silver_nodes`, `silver_edges` |
+| NB06 | Write gold Delta tables |
+| NB07 | Generate Ontology definition JSON |
+| NB08 | Upload to Ontology API |
+| NB09 | Create data bindings, trigger RefreshGraph |
+| NB10-11 | SHACL parsing and validation |
+| NB12 | External ontology HTTP fetcher |
+| NB13 | Ontology enrichment (labels, hierarchy) |
 
 ## Key Findings
 
@@ -102,7 +117,13 @@ fabric_rdf_translation/
 | Type-specific relationships | `hasPart` becomes `haspart_1`, `haspart_2` per node type pair |
 | RefreshGraph is async + expensive | 30+ minute jobs, must poll for completion |
 | ConcurrentOperation cancels jobs | Only one RefreshGraph at a time |
+| `count` is reserved in GQL | Use `AS cnt` or `AS total` instead |
+| Connection hub pattern | `isConnectedTo` uses intermediate Connection nodes |
 
-## Next Phase
+## Documentation
 
-**F2.4 External Ontology Dereferencing** — Enable "follow your nose" Linked Data pattern by automatically fetching schema from external namespace URIs.
+- [Project Status](docs/project-status.md) — Current state and sprint progress
+- [Architecture](docs/architecture.md) — System design and decisions
+- [Backlog](docs/backlog.md) — Feature backlog and implementation status
+- [Data Sources](docs/data-sources.md) — Test data documentation
+- [Requirements](docs/requirements.md) — Business & technical requirements

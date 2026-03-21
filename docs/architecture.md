@@ -3,7 +3,7 @@
 ## Document Info
 | Property | Value |
 |----------|-------|
-| Last Updated | 2026-03-20 |
+| Last Updated | 2026-03-21 |
 | Status | Implemented - POC Complete |
 
 ---
@@ -18,32 +18,26 @@ This proof of concept explores the translation of RDF (Semantic Web) data into M
 
 | Principle | Implementation |
 |-----------|----------------|
-| **Decision-Centric** | Fabric App guides users through 12 modeling decisions |
+| **Decision-Centric** | React app guides users through 12 modeling decisions |
 | **Project-Based** | Each RDF source = saved project with reusable decisions |
 | **Preview-First** | Users see sample output before committing |
-| **Separation of Concerns** | UI (Fabric App) ↔ Processing (Notebooks) ↔ Storage (Lakehouse) |
+| **Separation of Concerns** | UI (React App) ↔ Processing (Notebooks) ↔ Storage (Lakehouse) |
 
 ### 1.2 High-Level Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE (Shared Codebase)                     │
+│                              USER INTERFACE                                  │
 │                                                                              │
-│    ┌─────────────────────────────┐    ┌─────────────────────────────────┐   │
-│    │     WEB APP (Option A)      │    │    DESKTOP APP (Option B)       │   │
-│    │  Azure Static Web App       │    │    Electron (Win/Mac/Linux)     │   │
-│    │  Browser-based access       │    │    Download from GitHub         │   │
-│    └─────────────────────────────┘    └─────────────────────────────────┘   │
-│                         \                    /                               │
-│                          \                  /                                │
 │                    ┌──────────────────────────────────────┐                  │
-│                    │        SHARED REACT APP               │                  │
+│                    │          REACT WEB APP               │                  │
+│                    │  (Local dev or Azure Static Web App) │                  │
 │                    │  ┌──────────┐ ┌──────────┐ ┌───────┐ │                  │
 │                    │  │ Projects │ │ Decisions│ │Preview│ │                  │
 │                    │  └──────────┘ └──────────┘ └───────┘ │                  │
 │                    │  ┌──────────────────────────────────┐│                  │
-│                    │  │    Graph Visualization           ││                  │
-│                    │  │    (React Flow / Cytoscape)      ││                  │
+│                    │  │    Decision Dashboard            ││                  │
+│                    │  │    12 B-decisions + Auto-resolve ││                  │
 │                    │  └──────────────────────────────────┘│                  │
 │                    └──────────────────────────────────────┘                  │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -53,18 +47,15 @@ This proof of concept explores the translation of RDF (Semantic Web) data into M
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         PROCESSING LAYER                                     │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                      SPARK NOTEBOOKS                                     ││
+│  │                      SPARK NOTEBOOKS (NB00-NB13)                        ││
 │  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌────────────────┐  ││
-│  │  │  RDF Parser  │ │   Schema     │ │  Translator  │ │    Preview     │  ││
-│  │  │  & Analyzer  │ │  Discovery   │ │   Engine     │ │   Generator    │  ││
+│  │  │ NB00         │ │ NB01-02      │ │ NB03-06      │ │ NB07-09        │  ││
+│  │  │ Orchestrator │ │ Parse+Schema │ │ Transform    │ │ Ontology+Graph │  ││
 │  │  └──────────────┘ └──────────────┘ └──────────────┘ └────────────────┘  ││
-│  └─────────────────────────────────────────────────────────────────────────┘│
-│  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                      DATA PIPELINES                                      ││
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                     ││
-│  │  │    Ingest    │ │   Transform  │ │    Load      │                     ││
-│  │  │   Pipeline   │→│   Pipeline   │→│   Pipeline   │                     ││
-│  │  └──────────────┘ └──────────────┘ └──────────────┘                     ││
+│  │  ┌──────────────┐ ┌──────────────┐                                      ││
+│  │  │ NB10-11      │ │ NB12-13      │                                      ││
+│  │  │ SHACL        │ │ External Ont │                                      ││
+│  │  └──────────────┘ └──────────────┘                                      ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -76,14 +67,14 @@ This proof of concept explores the translation of RDF (Semantic Web) data into M
 │  │  ┌─────────────────────────┐    ┌─────────────────────────────────────┐ ││
 │  │  │        Files/           │    │           Tables/                   │ ││
 │  │  │  ┌───────────────────┐  │    │  ┌──────────┐  ┌──────────────────┐ │ ││
-│  │  │  │ config/projects/  │  │    │  │  nodes_* │  │     edges_*      │ │ ││
-│  │  │  │ (JSON configs)    │  │    │  │  (Delta) │  │     (Delta)      │ │ ││
+│  │  │  │ config/           │  │    │  │ bronze_  │  │    silver_*      │ │ ││
+│  │  │  │ pipeline_run.json │  │    │  │ triples  │  │     (Delta)      │ │ ││
 │  │  │  ├───────────────────┤  │    │  └──────────┘  └──────────────────┘ │ ││
-│  │  │  │ source/ (shortcut)│  │    │  ┌──────────┐  ┌──────────────────┐ │ ││
-│  │  │  │ → ws-ont_nen2660  │  │    │  │ metadata │  │     preview      │ │ ││
-│  │  │  ├───────────────────┤  │    │  │  tables  │  │     samples      │ │ ││
-│  │  │  │ logs/             │  │    │  └──────────┘  └──────────────────┘ │ ││
-│  │  │  └───────────────────┘  │    └─────────────────────────────────────┘ ││
+│  │  │  │ cache/            │  │    │  ┌──────────┐  ┌──────────────────┐ │ ││
+│  │  │  │ external_ontologies│ │    │  │ gold_*   │  │  Per-entity      │ │ ││
+│  │  │  ├───────────────────┤  │    │  │  nodes   │  │   gold tables    │ │ ││
+│  │  │  │ source/ (shortcut)│  │    │  │  edges   │  │                  │ │ ││
+│  │  │  └───────────────────┘  │    │  └──────────┘  └──────────────────┘ │ ││
 │  │  └─────────────────────────┘                                            ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -93,7 +84,8 @@ This proof of concept explores the translation of RDF (Semantic Web) data into M
 │                          OUTPUT (Fabric Graph)                               │
 │  ┌──────────────────────────────┐  ┌──────────────────────────────────────┐ │
 │  │       FABRIC ONTOLOGY        │  │           FABRIC GRAPH               │ │
-│  │  (Schema/Model Definition)   │  │    (Queryable Property Graph)        │ │
+│  │  (Schema/Model Definition)   │  │    (Queryable via GQL)               │ │
+│  │  Entity types, relationships │  │    Nodes, edges, properties          │ │
 │  └──────────────────────────────┘  └──────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

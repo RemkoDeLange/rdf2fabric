@@ -8,7 +8,7 @@
 
 ---
 
-## Project Context (Updated Mar 20)
+## Project Context (Updated Mar 21)
 
 **This is a Proof of Concept** for learning RDF → Fabric translation patterns. The focus is on:
 - Exploring what's involved in RDF → LPG translation
@@ -20,11 +20,19 @@
 
 ---
 
-## 2-Week Sprint (Mar 9-23): Demo-Ready Application
+## Sprint Status (Mar 9-23)
 
 **Goal:** Scenario A (12 decisions) vs Scenario E (3-4 decisions) contrast with maximized Graph population.
 
-### Sprint Progress: ~90% Complete (11/12 decisions implemented)
+### Sprint Progress: ~95% Complete
+
+| Milestone | Status | Notes |
+|-----------|--------|-------|
+| Decision implementation (11/12) | ✅ Done | B8 (Property Attachment) deferred |
+| F2.4 External Ontology Fetch | ✅ Done | HTTP fetch with content negotiation |
+| GQL Query Testing | ✅ Done | Adjacency patterns verified |
+| Label fallback fix | ✅ Done | Local name from URI when no rdfs:label |
+| Demo polish | ⏳ In Progress | Final touches |
 
 ### Week 1: Data Completeness + Backend ✅ Complete
 

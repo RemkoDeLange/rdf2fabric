@@ -2050,40 +2050,24 @@ describe('LabelOverrideManager', () => {
 
 ---
 
-## Epic 8: Electron Desktop App
+## Epic 8: Electron Desktop App ⏸️ DEFERRED
+
+> **Status:** Deferred. Focus is on web app for POC demonstration. Desktop packaging may be revisited post-POC.
 
 ### F8.1 - Electron Wrapper
-**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟢 P3 | **Status:** ⏸️ Deferred | **Estimate:** M
 
 **Description:** Wrap React app in Electron for desktop distribution.
 
-**Acceptance Criteria:**
+**Deferred Reason:** POC focus is on demonstrating RDF → Fabric translation decisions. Desktop packaging is not required for demonstration and adds complexity. The React app runs in browser for development and can be deployed to Azure Static Web App if needed.
+
+**Acceptance Criteria (Future):**
 - [ ] Electron main process configured
 - [ ] Load React app in BrowserWindow
-- [ ] Window title and icon
-- [ ] Menu bar (File, Edit, Help)
 - [ ] Device code auth flow
 - [ ] Build for Windows (.exe)
 - [ ] Build for macOS (.dmg)
 - [ ] Build for Linux (.AppImage)
-
-**Tests:**
-```typescript
-// test/electron.test.ts (Playwright/Spectron)
-describe('Electron App', () => {
-  test('opens main window', async () => {
-    const app = await startElectronApp();
-    const window = await app.firstWindow();
-    expect(await window.title()).toBe('RDF2Fabric');
-  });
-  
-  test('shows login on first launch', async () => {
-    const app = await startElectronApp();
-    const window = await app.firstWindow();
-    expect(await window.locator('text=Sign in').isVisible()).toBe(true);
-  });
-});
-```
 
 **Dependencies:** F7.1, F7.2
 
@@ -2200,20 +2184,12 @@ class TestPreviewPipeline:
 
 ---
 
-### F10.2 - GitHub Releases
-**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** S
+### F10.2 - GitHub Releases ⏸️ DEFERRED
+**Priority:** 🟢 P3 | **Status:** ⏸️ Deferred | **Estimate:** S
 
 **Description:** Automated release builds for desktop installers.
 
-**Acceptance Criteria:**
-- [ ] GitHub Action for release builds
-- [ ] Builds Windows .exe installer
-- [ ] Builds macOS .dmg
-- [ ] Builds Linux .AppImage
-- [ ] Attaches artifacts to GitHub Release
-- [ ] Triggered on tag push (v*)
-
-**Tests:** Manual verification of release artifacts.
+**Deferred Reason:** Desktop app (Epic 8) is deferred, so release automation for installers is not needed for POC.
 
 ---
 

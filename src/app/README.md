@@ -1,8 +1,8 @@
 # RDF2Fabric App
 
-This folder contains the shared React application that can be deployed as:
-- **Web App** → Azure Static Web App (via `azd up`)
-- **Desktop App** → Electron (Windows, macOS, Linux)
+React application for guiding users through RDF → Fabric Graph translation decisions.
+
+> **Current Focus:** Web app (local dev or Azure Static Web App). Desktop (Electron) packaging is deferred.
 
 ## Current Features (Mar 2026)
 
@@ -37,9 +37,6 @@ app/
 │   ├── stores/           # Zustand state management
 │   └── App.tsx           # Main application component
 │
-├── electron/             # Electron main process
-│   └── main.js           # Desktop app entry point
-│
 ├── package.json          # Dependencies and scripts
 └── README.md             # This file
 ```
@@ -52,9 +49,6 @@ npm install
 
 # Run web app in development mode
 npm run dev
-
-# Run desktop app in development mode
-npm run electron:dev
 ```
 
 ## Building
@@ -62,9 +56,6 @@ npm run electron:dev
 ```bash
 # Build web app (output: dist/)
 npm run build
-
-# Build desktop installers (output: dist-electron/)
-npm run electron:build
 ```
 
 ## Key Dependencies
@@ -75,11 +66,7 @@ npm run electron:build
 | `reactflow` | Interactive graph visualization |
 | `@azure/msal-browser` | Entra ID authentication |
 | `zustand` | Lightweight state management |
-| `electron` | Desktop app wrapper |
 
 ## Authentication
 
-- **Web App**: Uses MSAL.js with redirect flow (SSO)
-- **Desktop App**: Uses MSAL.js with device code flow (works cross-tenant)
-
-Both methods authenticate against the user's Entra ID tenant and acquire tokens for the Fabric REST API.
+Uses MSAL.js with redirect flow (SSO) authenticating against the user's Entra ID tenant to acquire tokens for the Fabric REST API.
