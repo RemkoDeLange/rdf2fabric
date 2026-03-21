@@ -427,7 +427,19 @@ export function ProjectPage() {
             {/* Schema Level Suggestion */}
             {(() => {
               const suggestion = suggestSchemaLevel(project.detectedNamespaces);
-              if (suggestion.level !== null && project.schemaLevel === null) {
+              const currentLevel = project.schemaLevel;
+              const suggestedLevel = suggestion.level;
+              
+              // Show suggestion if:
+              // 1. No level set yet and we have a suggestion, OR
+              // 2. Current level is lower than suggested (higher schema richness detected)
+              const showSuggestion = suggestedLevel !== null && (
+                currentLevel === null || 
+                suggestedLevel > currentLevel
+              );
+              
+              if (showSuggestion) {
+                const isUpdate = currentLevel !== null;
                 return (
                   <div style={{
                     padding: '12px 16px',
@@ -442,7 +454,9 @@ export function ProjectPage() {
                     <Flash24Regular style={{ color: tokens.colorBrandForeground1 }} />
                     <div style={{ flex: 1 }}>
                       <Body2 style={{ fontWeight: 600 }}>
-                        Suggested: Level {suggestion.level}
+                        {isUpdate 
+                          ? `Update to Level ${suggestedLevel}?` 
+                          : `Suggested: Level ${suggestedLevel}`}
                       </Body2>
                       <Body2 style={{ color: tokens.colorNeutralForeground2, fontSize: '12px' }}>
                         {suggestion.reason} ({suggestion.confidence} confidence)
@@ -451,9 +465,9 @@ export function ProjectPage() {
                     <Button 
                       appearance="primary" 
                       size="small"
-                      onClick={() => updateProject(project.id, { schemaLevel: suggestion.level })}
+                      onClick={() => updateProject(project.id, { schemaLevel: suggestedLevel })}
                     >
-                      Apply
+                      {isUpdate ? 'Update' : 'Apply'}
                     </Button>
                   </div>
                 );
