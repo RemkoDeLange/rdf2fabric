@@ -128,6 +128,50 @@ const useStyles = makeStyles({
   badge: {
     fontSize: '11px',
   },
+  queuedSection: {
+    backgroundColor: tokens.colorPaletteGreenBackground1,
+    borderRadius: tokens.borderRadiusMedium,
+    padding: '12px 16px',
+    marginBottom: '8px',
+    border: `1px solid ${tokens.colorPaletteGreenBorder1}`,
+  },
+  queuedHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+  },
+  queuedTitle: {
+    fontWeight: 600,
+    color: tokens.colorPaletteGreenForeground1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+  },
+  queuedList: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '8px',
+    marginTop: '8px',
+  },
+  queuedBadge: {
+    fontFamily: 'monospace',
+    fontSize: '12px',
+    padding: '2px 8px',
+    backgroundColor: tokens.colorPaletteGreenBackground2,
+    borderRadius: tokens.borderRadiusSmall,
+    color: tokens.colorPaletteGreenForeground2,
+  },
+  resetLink: {
+    fontSize: '12px',
+    color: tokens.colorNeutralForeground3,
+    cursor: 'pointer',
+    textDecoration: 'underline',
+    marginLeft: 'auto',
+    '&:hover': {
+      color: tokens.colorNeutralForeground2,
+    },
+  },
 });
 
 interface NamespacePanelProps {
@@ -141,10 +185,13 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
   const styles = useStyles();
   const [selectedUris, setSelectedUris] = useState<Set<string>>(new Set());
   const [isQueuing, setIsQueuing] = useState(false);
-  const [queueSuccess, setQueueSuccess] = useState(false);
+  const [queuedNamespaces, setQueuedNamespaces] = useState<DetectedNamespace[]>([]);
   
   // Get external namespaces that can be fetched
   const externalNamespaces = namespaces?.filter(ns => ns.isExternal) || [];
+  
+  // Check if we have queued namespaces
+  const hasQueuedNamespaces = queuedNamespaces.length > 0;
   
   // Toggle selection for a single namespace
   const toggleSelection = (uri: string) => {
@@ -173,17 +220,23 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
     if (!onQueueForFetch || selectedUris.size === 0) return;
     
     setIsQueuing(true);
-    setQueueSuccess(false);
     
     try {
       const success = await onQueueForFetch(Array.from(selectedUris));
       if (success) {
-        setQueueSuccess(true);
+        // Remember which namespaces were queued
+        const queued = externalNamespaces.filter(ns => selectedUris.has(ns.uri));
+        setQueuedNamespaces(queued);
         setSelectedUris(new Set()); // Clear selection after queuing
       }
     } finally {
       setIsQueuing(false);
     }
+  };
+  
+  // Reset queued state to allow re-queuing
+  const handleResetQueue = () => {
+    setQueuedNamespaces([]);
   };
   
   if (isLoading) {
@@ -255,33 +308,64 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
       </div>
       
       <div className={styles.list}>
-        {/* External namespaces first - these are fetchable */}
+        {/* External namespaces - show queued state or selection UI */}
         {externalNamespaces.length > 0 && (
           <>
-            <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
-              {onQueueForFetch && (
-                <Checkbox
-                  checked={selectedUris.size === externalNamespaces.length ? true : selectedUris.size > 0 ? 'mixed' : false}
-                  onChange={toggleSelectAll}
-                  disabled={isQueuing}
-                />
-              )}
-              <Body2 style={{ fontWeight: 600, color: tokens.colorPaletteGreenForeground2 }}>
-                <Globe24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
-                External Ontologies ({externalNamespaces.length})
-              </Body2>
-            </div>
-            {externalNamespaces.map(ns => (
-              <NamespaceRow 
-                key={ns.uri} 
-                namespace={ns} 
-                styles={styles}
-                selectable={!!onQueueForFetch}
-                selected={selectedUris.has(ns.uri)}
-                onToggle={() => toggleSelection(ns.uri)}
-                disabled={isQueuing}
-              />
-            ))}
+            {hasQueuedNamespaces ? (
+              /* Queued completion state */
+              <div className={styles.queuedSection}>
+                <div className={styles.queuedHeader}>
+                  <div className={styles.queuedTitle}>
+                    <CheckmarkCircle16Regular />
+                    <span>External Ontologies Queued ({queuedNamespaces.length})</span>
+                  </div>
+                  <span 
+                    className={styles.resetLink}
+                    onClick={handleResetQueue}
+                  >
+                    Queue more
+                  </span>
+                </div>
+                <Body2 style={{ color: tokens.colorPaletteGreenForeground2, marginBottom: '8px' }}>
+                  These ontologies will be fetched when you run the pipeline.
+                </Body2>
+                <div className={styles.queuedList}>
+                  {queuedNamespaces.map(ns => (
+                    <span key={ns.uri} className={styles.queuedBadge}>
+                      {ns.prefix}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Selection UI */
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
+                  {onQueueForFetch && (
+                    <Checkbox
+                      checked={selectedUris.size === externalNamespaces.length ? true : selectedUris.size > 0 ? 'mixed' : false}
+                      onChange={toggleSelectAll}
+                      disabled={isQueuing}
+                    />
+                  )}
+                  <Body2 style={{ fontWeight: 600, color: tokens.colorPaletteGreenForeground2 }}>
+                    <Globe24Regular style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+                    External Ontologies ({externalNamespaces.length})
+                  </Body2>
+                </div>
+                {externalNamespaces.map(ns => (
+                  <NamespaceRow 
+                    key={ns.uri} 
+                    namespace={ns} 
+                    styles={styles}
+                    selectable={!!onQueueForFetch}
+                    selected={selectedUris.has(ns.uri)}
+                    onToggle={() => toggleSelection(ns.uri)}
+                    disabled={isQueuing}
+                  />
+                ))}
+              </>
+            )}
           </>
         )}
         
@@ -312,8 +396,8 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
         )}
       </div>
       
-      {/* Queue for fetch section */}
-      {externalNamespaces.length > 0 && onQueueForFetch && (
+      {/* Queue for fetch section - only show when not yet queued */}
+      {externalNamespaces.length > 0 && onQueueForFetch && !hasQueuedNamespaces && (
         <div className={styles.fetchSection}>
           <div className={styles.fetchControls}>
             <Button
@@ -327,14 +411,6 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
                 : `Queue for Notebook (${selectedUris.size})`}
             </Button>
           </div>
-          
-          {/* Success message */}
-          {queueSuccess && (
-            <div className={styles.successMessage}>
-              <CheckmarkCircle16Regular />
-              <span>Queued for notebook fetch</span>
-            </div>
-          )}
         </div>
       )}
     </Card>
