@@ -34,12 +34,16 @@ import {
   Flash24Regular,
   Delete24Regular,
 } from '@fluentui/react-icons';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
+import { useMsal, useIsAuthenticated } from '@azure/msal-react';
 import { useAppStore } from '../stores/appStore';
 import { FileBrowser, rdfFileFilter } from '../components/FileBrowser';
 import { DecisionPanel, DECISION_DEFINITIONS, getDecisionStatus } from '../components/DecisionPanel';
 import { TranslationPanel } from '../components/TranslationPanel';
 import { ScenarioPreview } from '../components/ScenarioPreview';
+import { NamespacePanel } from '../components/NamespacePanel';
+import { FabricService } from '../services/fabricService';
+import { detectNamespaces, mergeNamespaces, type DetectedNamespace } from '../services/namespaceDetector';
 
 const useStyles = makeStyles({
   container: {
@@ -97,6 +101,17 @@ export function ProjectPage() {
   const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newName, setNewName] = useState('');
+  const [isDetectingNamespaces, setIsDetectingNamespaces] = useState(false);
+
+  // Auth and Fabric service
+  const { instance } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+  const { workspaceId, lakehouseId } = useAppStore();
+  
+  const fabricService = useMemo(
+    () => isAuthenticated ? new FabricService(instance) : null,
+    [isAuthenticated, instance]
+  );
   
   const { projects, updateProject, deleteProject } = useAppStore();
   const project = projects.find((p) => p.id === projectId);
@@ -121,31 +136,118 @@ export function ProjectPage() {
     setPendingFiles(files);
   };
 
-  const handleConfirmSelection = () => {
+  // Detect namespaces from RDF and schema files
+  const detectNamespacesFromFiles = useCallback(async (rdfFiles: string[], schemaFiles: string[]) => {
+    if (!fabricService || !workspaceId || !lakehouseId) {
+      return;
+    }
+
+    const allFiles = [...rdfFiles, ...schemaFiles];
+    if (allFiles.length === 0) {
+      updateProject(project.id, { detectedNamespaces: [] });
+      return;
+    }
+
+    setIsDetectingNamespaces(true);
+    try {
+      const allNamespaces: DetectedNamespace[][] = [];
+
+      for (const filePath of allFiles) {
+        // Extract relative path from full OneLake path
+        // filePath format: "folder/subfolder/file.ttl"
+        const content = await fabricService.readOneLakeFile(workspaceId, lakehouseId, filePath);
+        if (content) {
+          const fileName = filePath.split('/').pop() || filePath;
+          const namespaces = detectNamespaces(fileName, content);
+          allNamespaces.push(namespaces);
+        }
+      }
+
+      // Merge and deduplicate namespaces from all files
+      const merged = mergeNamespaces(allNamespaces);
+      updateProject(project.id, { detectedNamespaces: merged });
+    } catch (error) {
+      console.error('Failed to detect namespaces:', error);
+    } finally {
+      setIsDetectingNamespaces(false);
+    }
+  }, [fabricService, workspaceId, lakehouseId, project.id, updateProject]);
+
+  const handleConfirmSelection = async () => {
+    const newRdfFiles = browseMode === 'rdf' 
+      ? [...project.source.files, ...pendingFiles]
+      : project.source.files;
+    const newSchemaFiles = browseMode === 'schema'
+      ? [...project.source.schemaFiles, ...pendingFiles]
+      : project.source.schemaFiles;
+
     if (browseMode === 'rdf') {
       updateProject(project.id, { 
-        source: { ...project.source, files: [...project.source.files, ...pendingFiles] }
+        source: { ...project.source, files: newRdfFiles }
       });
     } else {
       updateProject(project.id, { 
-        source: { ...project.source, schemaFiles: [...project.source.schemaFiles, ...pendingFiles] }
+        source: { ...project.source, schemaFiles: newSchemaFiles }
       });
     }
+    
+    // Detect namespaces for all files (RDF + schema)
+    detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
+    
     setShowFileBrowser(false);
     setPendingFiles([]);
   };
 
   const handleRemoveFile = (filePath: string, type: 'rdf' | 'schema') => {
+    let newRdfFiles = project.source.files;
+    let newSchemaFiles = project.source.schemaFiles;
+    
     if (type === 'rdf') {
+      newRdfFiles = project.source.files.filter(f => f !== filePath);
       updateProject(project.id, {
-        source: { ...project.source, files: project.source.files.filter(f => f !== filePath) }
+        source: { ...project.source, files: newRdfFiles }
       });
     } else {
+      newSchemaFiles = project.source.schemaFiles.filter(f => f !== filePath);
       updateProject(project.id, {
-        source: { ...project.source, schemaFiles: project.source.schemaFiles.filter(f => f !== filePath) }
+        source: { ...project.source, schemaFiles: newSchemaFiles }
       });
     }
+    
+    // Re-detect namespaces from all remaining files
+    detectNamespacesFromFiles(newRdfFiles, newSchemaFiles);
   };
+
+  // Queue external ontologies for notebook to fetch (avoids browser CORS issues)
+  const handleQueueForFetch = useCallback(async (uris: string[]): Promise<boolean> => {
+    if (!fabricService || !workspaceId || !lakehouseId) {
+      console.error('Fabric connection not available');
+      return false;
+    }
+    
+    try {
+      const manifest = {
+        uris: uris,
+        created_at: new Date().toISOString(),
+        project_id: project.id,
+        project_name: project.name,
+        instructions: 'Run notebook 12_external_ontology_fetcher.ipynb in Fabric to fetch these ontologies'
+      };
+      
+      await fabricService.writeOneLakeFile(
+        workspaceId,
+        lakehouseId,
+        'cache/fetch_manifest.json',
+        JSON.stringify(manifest, null, 2)
+      );
+      
+      console.log(`Wrote fetch manifest for ${uris.length} URIs`);
+      return true;
+    } catch (error) {
+      console.error('Failed to write fetch manifest:', error);
+      return false;
+    }
+  }, [fabricService, workspaceId, lakehouseId, project.id, project.name]);
 
   const handleDecisionChange = (decisionId: string, value: string) => {
     updateProject(project.id, {
@@ -263,6 +365,14 @@ export function ProjectPage() {
                 </Button>
               </div>
             )}
+
+            {/* Detected Namespaces Panel */}
+            <NamespacePanel 
+              namespaces={project.detectedNamespaces}
+              isLoading={isDetectingNamespaces}
+              onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
+              onQueueForFetch={fabricService ? handleQueueForFetch : undefined}
+            />
           </div>
 
           <Divider />

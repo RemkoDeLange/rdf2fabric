@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import type { DetectedNamespace } from '../services/namespaceDetector';
 
 export interface Project {
   id: string;
@@ -13,6 +14,7 @@ export interface Project {
   schemaLevel: number | null;
   decisions: Record<string, unknown>;
   status: 'draft' | 'configured' | 'translated' | 'loaded';
+  detectedNamespaces?: DetectedNamespace[];
 }
 
 // Pipeline execution state (not persisted - runtime only)
