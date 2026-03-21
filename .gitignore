@@ -37,6 +37,7 @@ logs/
 *.tmp
 *.temp
 .cache/
+fix_*.py
 
 # Build outputs
 dist/
