@@ -82,6 +82,10 @@ const useStyles = makeStyles({
     gap: '8px',
   },
   emptyFiles: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '16px',
     padding: '32px',
     textAlign: 'center',
     backgroundColor: tokens.colorNeutralBackground3,
@@ -339,7 +343,6 @@ export function ProjectPage() {
                 <Button 
                   appearance="primary" 
                   icon={<FolderOpen24Regular />}
-                  style={{ marginTop: '16px' }}
                   onClick={() => handleBrowseFiles('rdf')}
                 >
                   Browse Lakehouse Files
@@ -429,7 +432,6 @@ export function ProjectPage() {
                 <Button 
                   appearance="secondary" 
                   icon={<FolderOpen24Regular />}
-                  style={{ marginTop: '16px' }}
                   onClick={() => handleBrowseFiles('schema')}
                 >
                   Add Schema Files
