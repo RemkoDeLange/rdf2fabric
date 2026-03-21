@@ -81,6 +81,41 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     gap: '8px',
   },
+  fileRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 12px',
+    backgroundColor: tokens.colorNeutralBackground2,
+    borderRadius: tokens.borderRadiusSmall,
+  },
+  fileName: {
+    flex: 1,
+    fontFamily: 'monospace',
+    fontSize: '14px',
+    fontWeight: 500,
+  },
+  stepNumber: {
+    width: '24px',
+    height: '24px',
+    borderRadius: '50%',
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundOnBrand,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '12px',
+    fontWeight: 600,
+    flexShrink: 0,
+  },
+  stepNumberCompleted: {
+    backgroundColor: tokens.colorPaletteGreenBackground3,
+    color: tokens.colorPaletteGreenForeground1,
+  },
+  stepNumberOptional: {
+    backgroundColor: tokens.colorNeutralBackground5,
+    color: tokens.colorNeutralForeground2,
+  },
   emptyFiles: {
     display: 'flex',
     flexDirection: 'column',
@@ -333,13 +368,20 @@ export function ProjectPage() {
         <Card className={styles.card}>
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
-              <DocumentMultiple24Regular />
+              <span className={`${styles.stepNumber} ${project.source.files.length > 0 ? styles.stepNumberCompleted : ''}`}>
+                {project.source.files.length > 0 ? '✓' : '1'}
+              </span>
               <Title3>RDF Source Files</Title3>
+              {project.source.files.length > 0 && (
+                <Badge appearance="filled" color="success" style={{ marginLeft: '8px' }}>
+                  {project.source.files.length} file{project.source.files.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </div>
             
             {project.source.files.length === 0 ? (
               <div className={styles.emptyFiles}>
-                <Body1>No files selected yet.</Body1>
+                <Body1>Select your RDF data files to translate</Body1>
                 <Button 
                   appearance="primary" 
                   icon={<FolderOpen24Regular />}
@@ -351,8 +393,8 @@ export function ProjectPage() {
             ) : (
               <div className={styles.fileList}>
                 {project.source.files.map((file, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Body1 style={{ flex: 1 }}>{file}</Body1>
+                  <div key={i} className={styles.fileRow}>
+                    <span className={styles.fileName}>{file}</span>
                     <Button size="small" appearance="subtle" onClick={() => handleRemoveFile(file, 'rdf')}>
                       <Dismiss24Regular />
                     </Button>
@@ -374,13 +416,21 @@ export function ProjectPage() {
 
           <div className={styles.section} style={{ marginTop: '24px' }}>
             <div className={styles.sectionTitle}>
-              <DataTreemap24Regular />
-              <Title3>Schema Files (Optional)</Title3>
+              <span className={`${styles.stepNumber} ${project.source.schemaFiles.length > 0 ? styles.stepNumberCompleted : styles.stepNumberOptional}`}>
+                {project.source.schemaFiles.length > 0 ? '✓' : '2'}
+              </span>
+              <Title3>Schema Files</Title3>
+              <Body2 style={{ color: tokens.colorNeutralForeground3, marginLeft: '4px' }}>(optional)</Body2>
+              {project.source.schemaFiles.length > 0 && (
+                <Badge appearance="filled" color="success" style={{ marginLeft: '8px' }}>
+                  {project.source.schemaFiles.length} file{project.source.schemaFiles.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </div>
             
             {project.source.schemaFiles.length === 0 ? (
               <div className={styles.emptyFiles}>
-                <Body1>No schema files selected. Schema will be inferred from data.</Body1>
+                <Body1>Add OWL/RDFS/SHACL files to enable richer translation</Body1>
                 <Button 
                   appearance="secondary" 
                   icon={<FolderOpen24Regular />}
@@ -392,8 +442,8 @@ export function ProjectPage() {
             ) : (
               <div className={styles.fileList}>
                 {project.source.schemaFiles.map((file, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Body1 style={{ flex: 1 }}>{file}</Body1>
+                  <div key={i} className={styles.fileRow}>
+                    <span className={styles.fileName}>{file}</span>
                     <Button size="small" appearance="subtle" onClick={() => handleRemoveFile(file, 'schema')}>
                       <Dismiss24Regular />
                     </Button>
@@ -415,17 +465,18 @@ export function ProjectPage() {
 
           <div className={styles.section} style={{ marginTop: '24px' }}>
             <div className={styles.sectionTitle}>
-              <DataTreemap24Regular />
+              <span className={`${styles.stepNumber} ${project.schemaLevel !== null ? styles.stepNumberCompleted : ''}`}>
+                {project.schemaLevel !== null ? '✓' : '3'}
+              </span>
               <Title3>Schema Level</Title3>
             </div>
             
             <Body2 style={{ marginBottom: '12px', color: tokens.colorNeutralForeground2 }}>
-              Select the richness of your RDF schema. This determines which translation decisions 
-              can be auto-resolved.
+              This determines which translation decisions can be auto-resolved.
             </Body2>
 
-            {/* Schema Level Suggestion */}
-            {(() => {
+            {/* Schema Level Suggestion - only show after RDF files are selected */}
+            {project.source.files.length > 0 && (() => {
               const suggestion = suggestSchemaLevel(project.detectedNamespaces);
               const currentLevel = project.schemaLevel;
               const suggestedLevel = suggestion.level;
@@ -502,13 +553,23 @@ export function ProjectPage() {
             </Field>
           </div>
 
-          {/* Detected Namespaces Panel */}
-          <NamespacePanel 
-            namespaces={project.detectedNamespaces}
-            isLoading={isDetectingNamespaces}
-            onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
-            onQueueForFetch={fabricService ? handleQueueForFetch : undefined}
-          />
+          {/* Detected Namespaces - only show if we have files */}
+          {(project.source.files.length > 0 || project.source.schemaFiles.length > 0) && (
+            <>
+              <Divider style={{ margin: '16px 0' }} />
+              <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className={`${styles.stepNumber} ${styles.stepNumberOptional}`}>4</span>
+                <Title3>External Ontologies</Title3>
+                <Body2 style={{ color: tokens.colorNeutralForeground3 }}>(optional — for label enrichment)</Body2>
+              </div>
+              <NamespacePanel 
+                namespaces={project.detectedNamespaces}
+                isLoading={isDetectingNamespaces}
+                onRefresh={() => detectNamespacesFromFiles(project.source.files, project.source.schemaFiles)}
+                onQueueForFetch={fabricService ? handleQueueForFetch : undefined}
+              />
+            </>
+          )}
         </Card>
       )}
 
