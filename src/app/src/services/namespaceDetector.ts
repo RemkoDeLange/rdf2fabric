@@ -272,3 +272,56 @@ export function getNamespaceStats(namespaces: DetectedNamespace[]): {
     fetchable: external, // External namespaces can be fetched
   };
 }
+
+/**
+ * Suggest schema level based on detected namespaces
+ * 
+ * Schema levels:
+ * - Level 4: SHACL shapes (sh namespace)
+ * - Level 3: OWL ontology (owl namespace)
+ * - Level 2: RDFS schema (rdfs namespace)
+ * - Level 1: SKOS vocabulary (skos namespace)
+ * - Level 0: Instance data only (none of the above)
+ * 
+ * Returns the highest level detected, or null if no namespaces provided
+ */
+export function suggestSchemaLevel(namespaces: DetectedNamespace[] | undefined): {
+  level: number | null;
+  reason: string;
+  confidence: 'high' | 'medium' | 'low';
+} {
+  if (!namespaces || namespaces.length === 0) {
+    return { level: null, reason: 'No namespaces detected', confidence: 'low' };
+  }
+
+  // Check for schema-indicating namespaces by their URIs
+  const uris = new Set(namespaces.map(ns => ns.uri));
+  
+  // SHACL indicates Level 4
+  if (uris.has('http://www.w3.org/ns/shacl#')) {
+    return { level: 4, reason: 'SHACL namespace detected', confidence: 'high' };
+  }
+  
+  // OWL indicates Level 3
+  if (uris.has('http://www.w3.org/2002/07/owl#')) {
+    return { level: 3, reason: 'OWL namespace detected', confidence: 'high' };
+  }
+  
+  // RDFS indicates Level 2
+  if (uris.has('http://www.w3.org/2000/01/rdf-schema#')) {
+    return { level: 2, reason: 'RDFS namespace detected', confidence: 'medium' };
+  }
+  
+  // SKOS indicates Level 1
+  if (uris.has('http://www.w3.org/2004/02/skos/core#')) {
+    return { level: 1, reason: 'SKOS namespace detected', confidence: 'medium' };
+  }
+  
+  // Only RDF present, or other namespaces - likely instance data
+  if (uris.has('http://www.w3.org/1999/02/22-rdf-syntax-ns#')) {
+    return { level: 0, reason: 'Only RDF namespace detected (instance data)', confidence: 'low' };
+  }
+  
+  // No standard schema namespaces found
+  return { level: 0, reason: 'No schema namespaces detected', confidence: 'low' };
+}

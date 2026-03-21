@@ -43,7 +43,7 @@ import { TranslationPanel } from '../components/TranslationPanel';
 import { ScenarioPreview } from '../components/ScenarioPreview';
 import { NamespacePanel } from '../components/NamespacePanel';
 import { FabricService } from '../services/fabricService';
-import { detectNamespaces, mergeNamespaces, type DetectedNamespace } from '../services/namespaceDetector';
+import { detectNamespaces, mergeNamespaces, suggestSchemaLevel, type DetectedNamespace } from '../services/namespaceDetector';
 
 const useStyles = makeStyles({
   container: {
@@ -421,8 +421,45 @@ export function ProjectPage() {
             
             <Body2 style={{ marginBottom: '12px', color: tokens.colorNeutralForeground2 }}>
               Select the richness of your RDF schema. This determines which translation decisions 
-              can be auto-resolved. A future version will auto-detect this from your files.
+              can be auto-resolved.
             </Body2>
+
+            {/* Schema Level Suggestion */}
+            {(() => {
+              const suggestion = suggestSchemaLevel(project.detectedNamespaces);
+              if (suggestion.level !== null && project.schemaLevel === null) {
+                return (
+                  <div style={{
+                    padding: '12px 16px',
+                    marginBottom: '12px',
+                    backgroundColor: tokens.colorNeutralBackground3,
+                    borderRadius: tokens.borderRadiusMedium,
+                    border: `1px solid ${tokens.colorBrandStroke1}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                  }}>
+                    <Flash24Regular style={{ color: tokens.colorBrandForeground1 }} />
+                    <div style={{ flex: 1 }}>
+                      <Body2 style={{ fontWeight: 600 }}>
+                        Suggested: Level {suggestion.level}
+                      </Body2>
+                      <Body2 style={{ color: tokens.colorNeutralForeground2, fontSize: '12px' }}>
+                        {suggestion.reason} ({suggestion.confidence} confidence)
+                      </Body2>
+                    </div>
+                    <Button 
+                      appearance="primary" 
+                      size="small"
+                      onClick={() => updateProject(project.id, { schemaLevel: suggestion.level })}
+                    >
+                      Apply
+                    </Button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             <Field label="Schema Level">
               <Dropdown
