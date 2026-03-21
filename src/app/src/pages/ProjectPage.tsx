@@ -99,14 +99,18 @@ const useStyles = makeStyles({
     width: '24px',
     height: '24px',
     borderRadius: '50%',
-    backgroundColor: tokens.colorBrandBackground,
-    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: tokens.colorNeutralBackground5,
+    color: tokens.colorNeutralForeground2,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: '12px',
     fontWeight: 600,
     flexShrink: 0,
+  },
+  stepNumberActive: {
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundOnBrand,
   },
   stepNumberCompleted: {
     backgroundColor: tokens.colorPaletteGreenBackground3,
@@ -368,7 +372,11 @@ export function ProjectPage() {
         <Card className={styles.card}>
           <div className={styles.section}>
             <div className={styles.sectionTitle}>
-              <span className={`${styles.stepNumber} ${project.source.files.length > 0 ? styles.stepNumberCompleted : ''}`}>
+              <span className={`${styles.stepNumber} ${
+                project.source.files.length > 0 
+                  ? styles.stepNumberCompleted 
+                  : styles.stepNumberActive
+              }`}>
                 {project.source.files.length > 0 ? '✓' : '1'}
               </span>
               <Title3>RDF Source Files</Title3>
@@ -465,7 +473,13 @@ export function ProjectPage() {
 
           <div className={styles.section} style={{ marginTop: '24px' }}>
             <div className={styles.sectionTitle}>
-              <span className={`${styles.stepNumber} ${project.schemaLevel !== null ? styles.stepNumberCompleted : ''}`}>
+              <span className={`${styles.stepNumber} ${
+                project.schemaLevel !== null 
+                  ? styles.stepNumberCompleted 
+                  : project.source.files.length > 0 
+                    ? styles.stepNumberActive 
+                    : ''
+              }`}>
                 {project.schemaLevel !== null ? '✓' : '3'}
               </span>
               <Title3>Schema Level</Title3>
