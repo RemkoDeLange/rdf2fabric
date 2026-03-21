@@ -163,7 +163,7 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     if (!workspaceId || !lakehouseId) return;
 
     try {
-      const progress = await fabricService.readPipelineProgress(workspaceId, lakehouseId);
+      const progress = await fabricService.readPipelineProgress(workspaceId, lakehouseId, projectName);
       if (!progress) return;
 
       // Log new completions
@@ -235,7 +235,7 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
       // Progress file may not exist yet, ignore errors during polling
       console.log('Polling progress:', error);
     }
-  }, [workspaceId, lakehouseId, fabricService, updateStepState, setPipelineStatus, addLog, onComplete]);
+  }, [workspaceId, lakehouseId, projectName, fabricService, updateStepState, setPipelineStatus, addLog, onComplete]);
 
   // Start polling for progress
   const startPolling = useCallback(() => {
@@ -276,7 +276,7 @@ export function TranslationPanel({ projectId, projectName, sourceFiles, schemaLe
     // Try to clear the progress file in Fabric
     if (workspaceId && lakehouseId) {
       try {
-        const cleared = await fabricService.clearPipelineProgress(workspaceId, lakehouseId);
+        const cleared = await fabricService.clearPipelineProgress(workspaceId, lakehouseId, projectName);
         if (cleared) {
           addLog('✓ Cleared progress file from Fabric');
         } else {

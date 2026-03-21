@@ -589,12 +589,18 @@ export class FabricService {
    */
   async readPipelineProgress(
     workspaceId: string,
-    lakehouseId: string
+    lakehouseId: string,
+    projectName?: string
   ): Promise<PipelineProgress | null> {
+    // Use project-specific path if project name provided, else fallback to legacy path
+    const progressPath = projectName 
+      ? `config/${this.sanitizeProjectName(projectName)}/pipeline_progress.json`
+      : 'config/pipeline_progress.json';
+    
     const content = await this.readOneLakeFile(
       workspaceId,
       lakehouseId,
-      'config/pipeline_progress.json'
+      progressPath
     );
 
     if (!content) {
@@ -652,9 +658,21 @@ export class FabricService {
    */
   async clearPipelineProgress(
     workspaceId: string,
-    lakehouseId: string
+    lakehouseId: string,
+    projectName?: string
   ): Promise<boolean> {
-    return this.deleteOneLakeFile(workspaceId, lakehouseId, 'config/pipeline_progress.json');
+    // Use project-specific path if project name provided, else fallback to legacy path
+    const progressPath = projectName 
+      ? `config/${this.sanitizeProjectName(projectName)}/pipeline_progress.json`
+      : 'config/pipeline_progress.json';
+    return this.deleteOneLakeFile(workspaceId, lakehouseId, progressPath);
+  }
+
+  /**
+   * Sanitize project name for use in file paths
+   */
+  private sanitizeProjectName(name: string): string {
+    return name.replace(/[^a-zA-Z0-9_-]/g, '_');
   }
 
   /**
