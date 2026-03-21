@@ -93,9 +93,12 @@ export interface TranslationStep {
 }
 
 // Pipeline steps - notebooks to run in order
+// NB12/NB13 run after NB01 to fetch external ontologies and enrich with labels before schema detection
 export const TRANSLATION_PIPELINE: TranslationStep[] = [
   { id: 'NB00', name: 'Initialize', notebookName: '00_pipeline_orchestrator', description: 'Starting pipeline orchestrator' },
   { id: 'NB01', name: 'Parse RDF', notebookName: '01_rdf_parser_jena', description: 'Parse RDF files with Apache Jena' },
+  { id: 'NB12', name: 'Fetch Ontologies', notebookName: '12_external_ontology_fetcher', description: 'Fetch external ontology metadata' },
+  { id: 'NB13', name: 'Enrich Labels', notebookName: '13_ontology_enrichment', description: 'Enrich data with labels from ontologies' },
   { id: 'NB02', name: 'Detect Schema', notebookName: '02_schema_detector', description: 'Detect schema richness level' },
   { id: 'NB03', name: 'Map Classes', notebookName: '03_class_to_nodetype', description: 'Map RDF classes to node types' },
   { id: 'NB04', name: 'Map Properties', notebookName: '04_property_mapping', description: 'Map RDF properties to edges/properties' },
