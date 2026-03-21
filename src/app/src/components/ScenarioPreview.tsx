@@ -945,7 +945,7 @@ export function ScenarioPreview({ decisions, schemaLevel }: ScenarioPreviewProps
       <Card>
         <div className={styles.sectionTitle}>
           <Organization24Regular />
-          <Body1 style={{ fontWeight: 600 }}>Sample Output</Body1>
+          <Body1 style={{ fontWeight: 600 }}>Sample Nodes</Body1>
         </div>
 
         {computed.sample.map((node, i) => (
