@@ -1,0 +1,126 @@
+# Real-Time Intelligence Demo Setup
+
+One-time setup checklist for the RTI demonstration components.
+
+## Prerequisites
+
+- [ ] Pipeline completed (NB00-NB09)
+- [ ] Ontology deployed with `Operatiekamer` node type
+- [ ] Graph refreshed with data
+
+## Step 1: Create Eventhouse
+
+| Setting | Value |
+|---------|-------|
+| Name | `eh_ziekenhuis_rti` |
+| Workspace | Same as ontology workspace |
+
+**Portal:** Workspace → + New → Eventhouse
+
+## Step 2: Create KQL Database
+
+| Setting | Value |
+|---------|-------|
+| Name | `kql_operatiekamer` |
+| Parent | `eh_ziekenhuis_rti` |
+
+**Portal:** Open Eventhouse → + New database
+
+## Step 3: Create Eventstream
+
+| Setting | Value |
+|---------|-------|
+| Name | `es_operatiekamer_telemetry` |
+| Workspace | Same as ontology workspace |
+
+**Portal:** Workspace → + New → Eventstream
+
+## Step 4: Configure Eventstream Source
+
+1. Open `es_operatiekamer_telemetry`
+2. Add source → **Custom App**
+3. Name: `notebook_source`
+4. **Copy the connection string** → needed for notebook
+
+## Step 5: Configure Eventstream Destination
+
+1. Add destination → **KQL Database**
+2. Select `kql_operatiekamer`
+3. Table name: `OperatiekamerTelemetry`
+4. Input data format: JSON
+5. Create table with schema:
+
+```kql
+.create table OperatiekamerTelemetry (
+    operatiekamer_id: string,
+    timestamp: datetime,
+    temperature_celsius: real,
+    status: string
+)
+```
+
+## Step 6: Bind KQL Table to Ontology
+
+1. Open Ontology in portal
+2. Select `Operatiekamer` node type
+3. Add data binding → KQL Database
+4. Select `kql_operatiekamer` → `OperatiekamerTelemetry`
+5. Map `operatiekamer_id` to node `id` or `label`
+
+## Step 7: Enable Ontology Data Agent
+
+1. Open Ontology settings
+2. Enable "Ontology Data Agent"
+3. Configure agent name/description
+
+## Step 8: Upload Demo Notebook
+
+1. Upload `12_eventstream_demo.ipynb` to Fabric
+2. Configure connection string in notebook
+3. Run to generate demo events
+
+---
+
+## Event Schema
+
+| Field | Type | Example | Update Frequency |
+|-------|------|---------|------------------|
+| `operatiekamer_id` | string | `Operatiekamer_1` | — |
+| `timestamp` | datetime | `2026-03-21T14:30:00Z` | Every event |
+| `temperature_celsius` | real | `21.5` | ~1 min |
+| `status` | string | `In Use` | ~1 hour |
+
+**Status values:**
+- `Available` - Room ready for next procedure
+- `In Use` - Surgery in progress
+- `Cleaning` - Post-procedure cleaning
+- `Maintenance` - Equipment maintenance/repair
+
+---
+
+## Demo Flow
+
+1. **Show Eventstream** - Events flowing in real-time
+2. **Show KQL Database** - Query recent telemetry
+3. **Show Graph Query** - `MATCH (o:Operatiekamer) RETURN o.id, o.\`label\`, o.status`
+4. **Show Ontology Agent** - "What is the current status of operating rooms?"
+
+## Sample KQL Queries
+
+```kql
+// Recent events
+OperatiekamerTelemetry
+| where timestamp > ago(1h)
+| order by timestamp desc
+| take 100
+
+// Current status per room
+OperatiekamerTelemetry
+| summarize arg_max(timestamp, *) by operatiekamer_id
+
+// Temperature trend
+OperatiekamerTelemetry
+| where timestamp > ago(24h)
+| summarize avg(temperature_celsius) by bin(timestamp, 1h), operatiekamer_id
+| render timechart
+```
