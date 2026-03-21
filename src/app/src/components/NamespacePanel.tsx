@@ -407,8 +407,8 @@ export function NamespacePanel({ namespaces, isLoading, onRefresh, onQueueForFet
               disabled={isQueuing || selectedUris.size === 0}
             >
               {isQueuing 
-                ? 'Writing manifest...' 
-                : `Queue for Notebook (${selectedUris.size})`}
+                ? 'Preparing...' 
+                : `Add to Pipeline (${selectedUris.size})`}
             </Button>
           </div>
         </div>
