@@ -46,7 +46,7 @@
 - **Pipeline progress:** Real-time polling of `pipeline_progress.json` file
 - **Reset/Delete:** Added Reset Pipeline and Delete Project features
 
-### F2.4 External Ontology Dereferencing (Mar 20)
+### F2.4 External Ontology Dereferencing ✅ Complete (Mar 21)
 
 **Branch:** `feature/f2.4-external-ontology-dereferencing`
 
@@ -60,21 +60,28 @@
    - Class hierarchy (`rdfs:subClassOf`)
    - Property metadata (`rdfs:domain`, `rdfs:range`)
    - Classes and properties lists
+   - Schema vs reference_data classification
    - Outputs `Files/cache/ontology_metadata.json`
 
-3. **Mount sync fix:** Added `notebookutils.fs.head()` fallback in NB12 when `/lakehouse/default/Files` mount misses recently-written files.
+3. **NB02 label integration:** Schema detector loads `ontology_metadata.json` and displays external labels with `→` markers in PREDICATE DISTRIBUTION and TYPE DISTRIBUTION.
+
+4. **NB04 label integration:** Property mapping loads external labels and shows enrichment statistics (4,702 labels, 278 schema properties).
+
+5. **Mount sync fix:** Added `notebookutils.fs.head()` fallback in NB12 when `/lakehouse/default/Files` mount misses recently-written files.
 
 **Test Results:**
 - 5/6 ontologies fetched (ziekenhuis 404 expected — project-local namespace)
 - 4,702 labels extracted from external ontologies
 - 139 classes, 278 properties, 133 hierarchy entries
+- NB02/NB04 successfully display external labels in Fabric environment
 
-**Key Finding:** QUDT quantitykind/unit (4,100+ labels) define instances, not classes. These are valuable for display labels but should not create Fabric Ontology types.
+**Key Finding:** QUDT quantitykind/unit (4,100+ labels) define instances, not classes. Classified as `reference_data` (not `schema`).
 
-**Pending:**
-- Add "schema" vs "reference data" classification to NB13
-- Update NB02 to consume `ontology_metadata.json` for label enrichment
-- Update NB04 to use external labels in property names
+**Design Decision (R19):** External ontology property inheritance NOT implemented. See R19 in decisions table.
+- NEN 2660-2 defines 93 properties on 26 abstract classes
+- Fabric Ontology API requires single entityTypeId (no polymorphism)
+- Data-driven approach in NB07 already works correctly
+- Schema hierarchy captured for documentation/display only
 
 ---
 
@@ -85,7 +92,7 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | ID | Decision | Options | Current Choice | Rationale | B-Decision | Status |
 |----|----------|---------|----------------|-----------|------------|--------|
 | R1 | **Language preference** | Any ISO 639-1 code | `en` (English) | Fabric Ontology accepts single value per entity; RDF supports multi-language | B10 | ✅ Configurable |
-| R2 | **External ontology dereferencing** | Dereference URIs / Use local only | Local only | External URIs may be slow/unavailable; can cache later | - | ⬜ Phase 2 (F2.4) |
+| R2 | **External ontology dereferencing** | Dereference URIs / Use local only | Dereference + cache | Fetch external ontologies (NEN 2660, QUDT, W3C Time), cache in OneLake, extract labels for display enrichment | - | ✅ F2.4 Complete |
 | R3 | **Class discovery sources** | Explicit only / Include property ranges | Include ranges + domains | Many classes only appear as property ranges, not explicit declarations | B1 | ✅ Implemented |
 | R4 | **Duplicate triple handling** | Keep all / Deduplicate | Keep all (track provenance) | `graph` column tracks source; user can deduplicate downstream | - | ✅ Implemented |
 | R5 | **OWL property type URIs** | Short form / Full URI | Full URI in bronze | `http://www.w3.org/2002/07/owl#ObjectProperty` preserved; normalized in silver | B8 | ✅ Implemented |
@@ -102,6 +109,7 @@ Tracking specific RDF-related implementation decisions encountered during develo
 | R16 | **Implicit SHACL class targeting** | Explicit only / Include implicit (SHACL 2.1.3) | Include implicit | Per SHACL spec 2.1.3, a NodeShape that is also an `owl:Class` or `rdfs:Class` implicitly targets itself. NEN 2660-2 uses this pattern (e.g., `nen2660:Activity a owl:Class, sh:NodeShape`). Parser now detects both explicit `sh:targetClass` and implicit class-as-shape targeting. | B3 | ✅ Implemented |
 | R17 | **Instance-driven relationship types** | Schema-only / Instance-driven fallback / Hybrid | Instance-driven | Schema defines abstract predicates (e.g., `hasFunctionalPart`) but instance data uses concrete predicates (e.g., `hasPart`). NB07 now fully discovers edge types from `gold_edges.type` and infers source/target entity types from actual edge data. | B2, B8 | ✅ Complete |
 | R18 | **Orphan edge targets** | Accept gap / Catch-all entity type / Fix instance extraction | **Catch-all AdHocEntity** | SQL analysis found 157 orphan IDs (edge endpoints with no gold table). Orphans have NO properties in bronze_triples (only appear as edge targets). Solution: Add `AdHocEntity` type with `id` + `label` columns. **Achieved:** 161 entities, 70 relationships, 71 edge bindings. | B1, B2 | ✅ Complete |
+| R19 | **External ontology property inheritance** | Inherit relationships from abstract classes / Data-driven only | **Data-driven only** | External ontologies (NEN 2660-2) define 93 properties on 26 abstract classes (e.g., `isConnectedTo` on `PhysicalObject`). **Evaluated options:** (A) Generate relationship types for all type pairs — exponential complexity (15 subtypes × 15 = 225 rel types per property); (B) Generic `relatesTo` — loses semantic meaning; (C) Data-driven — only create relationships that exist in instance data. **Decision:** Option C. Fabric Ontology requires `source: {entityTypeId}`, `target: {entityTypeId}` — single IDs, not arrays. No polymorphism support. Instance-driven discovery in NB07 already handles this correctly. The external schema hierarchy is captured in `ontology_metadata.json` for future use (display, documentation) but does not drive Fabric Ontology structure. | B2, B8 | ✅ Complete |
 
 ### Adding New Decisions
 When you encounter a new RDF-specific implementation choice:

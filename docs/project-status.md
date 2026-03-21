@@ -100,10 +100,11 @@
 | **Config File Export** | ✅ Working | App writes `pipeline_run.json` to OneLake |
 | **Ext. Ontology Fetcher (NB12)** | ✅ Working | HTTP fetch with content negotiation |
 | **Ontology Enrichment (NB13)** | ✅ Working | Extracts labels, hierarchy, domains/ranges |
+| **Label Enrichment (NB02/NB04)** | ✅ Working | External labels displayed in analysis output |
 
 ---
 
-## F2.4: External Ontology Dereferencing (In Progress)
+## F2.4: External Ontology Dereferencing ✅ Complete
 
 **Branch:** `feature/f2.4-external-ontology-dereferencing`
 
@@ -116,10 +117,10 @@
 | 1. App namespace selection UI | ✅ Done | Checkbox list, write manifest |
 | 2. NB12 fetcher notebook | ✅ Done | HTTP fetch, content negotiation, cache to OneLake |
 | 3. NB13 enrichment notebook | ✅ Done | Parse cached ontologies, extract labels/hierarchy |
-| 4. Integration with schema detection | ⏳ Pending | Feed `ontology_metadata.json` to NB02 |
-| 5. Integration with property mapping | ⏳ Pending | Use labels in NB04 |
+| 4. Integration with schema detection | ✅ Done | NB02 loads `ontology_metadata.json`, shows `→` labels |
+| 5. Integration with property mapping | ✅ Done | NB04 shows external labels for properties/edges |
 
-### Test Results (Mar 20)
+### Test Results (Mar 20-21)
 
 **Fetcher (NB12):** 5/6 ontologies fetched successfully (~5.9 MB total)
 - ✅ `https://w3id.org/nen2660/def#` → 1647 triples
@@ -141,10 +142,25 @@
 
 **Key Insight:** QUDT quantitykind/unit have 0 classes because they define *instances* (e.g., `unit:Meter`), not schema types. These 4,100+ labels are still valuable for human-readable display.
 
-### Next Steps
-- Add filtering to NB13 to flag "schema" vs "reference data" ontologies
-- Update NB02 (schema detector) to load `ontology_metadata.json` for label enrichment
-- Update NB04 (property mapping) to use external labels for property names
+### Design Decision: External Property Inheritance (R19)
+
+**Analysis:** NEN 2660-2 defines 93 properties on 26 abstract classes (e.g., `isConnectedTo` on `PhysicalObject`, `hasPart` on `Entity`). Should these properties be inherited by local entity types?
+
+**Options Evaluated:**
+
+| Option | Approach | Pros | Cons |
+|--------|----------|------|------|
+| A | Generate relationship types for all type pairs | Full inheritance | Exponential: 15 subtypes × 15 = 225 rel types per property |
+| B | Generic `relatesTo` relationship | Simple | Loses semantic meaning |
+| C | Data-driven only | Works now, no complexity | No abstract inheritance |
+
+**Decision: Option C — Data-driven only**
+
+**Rationale:**
+1. **Fabric Ontology API limitation:** Relationship types require `source: {entityTypeId}`, `target: {entityTypeId}` — single IDs, not arrays. No polymorphism support.
+2. **Instance-driven discovery already works:** NB07 discovers edge types from actual `gold_edges.type` data, inferring source/target entity types from real edge instances.
+3. **Schema as documentation:** The external schema hierarchy (`schema_hierarchy`, `schema_properties`) is captured in `ontology_metadata.json` for display enrichment and future documentation features, but does not drive Fabric Ontology structure.
+4. **Pragmatic for POC:** The 93 properties define what's *allowed*, not what *exists*. Our data-driven approach creates relationship types only for what actually exists in instance data.
 | **Workspace Folders** | ✅ Working | Output items organized in folders |
 | **Decision Enforcement** | ✅ Working | 11/12 decisions read from config + enforced |
 | **Qualified Values** | ✅ Working | rdf:value extraction with multi-standard units |
