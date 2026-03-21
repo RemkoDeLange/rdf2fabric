@@ -1,7 +1,7 @@
 # RDF2Fabric - Feature Backlog
 
 > **Purpose:** Comprehensive feature list with acceptance criteria and tests.  
-> **Last Updated:** 2026-03-20  
+> **Last Updated:** 2026-03-21  
 > **Version:** v0.2.0 (Sprint 1 Complete - 90%)
 
 ---
@@ -18,7 +18,7 @@
 | Epic 4: Translation | ✅ Complete | Classes, properties, instances |
 | Epic 5: Fabric Integration | ✅ Complete | Ontology API, data binding, GraphModel |
 | Epic 6: SHACL Validation | ✅ Complete | Parser + validator |
-| Epic 7: Frontend | ✅ ~95% | All core features complete (F7.1-F7.8) |
+| Epic 7: Frontend | ✅ ~95% | All core features complete (F7.1-F7.8), UI polish done |
 | Epic 13: Decision Enforcement | ✅ ~90% | 11/12 decisions enforced |
 
 ---

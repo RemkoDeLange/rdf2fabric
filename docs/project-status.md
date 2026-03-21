@@ -2,7 +2,7 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-20  
+**Last Updated:** 2026-03-21  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
@@ -90,7 +90,7 @@
 | **Pipeline (NB00-NB09)** | ✅ Working | End-to-end RDF → Fabric Graph with orchestrator |
 | **Ontology API** | ✅ Working | 74 entity types, 48 relationships |
 | **Graph Materialization** | ✅ Working | 59 nodes, 372 edges queryable |
-| **GQL Queries** | ✅ Working | Basic patterns verified |
+| **GQL Queries** | ✅ Working | Basic + adjacency patterns verified (Mar 21) |
 | **Property Access** | ✅ Working | `uri` property accessible via GQL |
 | **SHACL Parsing** | ✅ Working | NB10-NB11 parse and validate |
 | **React App** | ✅ Working | Auth, workspace config, file browser |
@@ -275,15 +275,30 @@ filter_value = re.sub(r'_\d+$', '', rel_name)
 | No `STARTS WITH` | Use full string match |
 | Requires `AS` aliases | Always alias RETURN values |
 | GROUP BY strict | Include all non-aggregated columns |
+| `count` is reserved word | Use `cnt` or `total` as alias |
 | **Type-specific relationships** | Use exact rel type with suffix (e.g. `haspart_1`) |
 
 **Valid GQL patterns:**
 ```gql
+-- Basic counts (avoid 'count' as alias - reserved word)
 MATCH (n) RETURN count(n) AS total
+MATCH ()-[e]->() RETURN count(e) AS cnt
+
+-- Query specific node types
 MATCH (b:Steelgirderbridge)-[r]->(part) RETURN b, part LIMIT 5
--- Note: Relationship types are source-target specific!
+
+-- Type-specific relationships (note suffix!)
 MATCH (z:Ziekenhuis)-[:haspart_1]->(r:Installatieruimte) RETURN DISTINCT z.uri, r.uri
 MATCH (z:Ziekenhuis)-[:haspart_7]->(r:Operatiekamer) RETURN DISTINCT z.uri, r.uri
+
+-- Room adjacency via Connection hub pattern
+MATCH (o:Operatiekamer)<-[:isconnectedto_1]-(c:Connection)-[:isconnectedto_2]->(i:Installatieruimte)
+RETURN DISTINCT o.uri AS operatiekamer, c.uri AS connection, i.uri AS installatieruimte
+
+-- Generic neighbor discovery (when edge type unknown)
+MATCH (o:Operatiekamer)<-[:isconnectedto_1]-(c:Connection)-[r]->(other)
+WHERE o.uri CONTAINS "Operatiekamer_1" AND other <> o
+RETURN DISTINCT o.uri AS operatiekamer, c.uri AS via_connection, other.uri AS adjacent
 ```
 
 **Key Discovery (Mar 11):** Fabric Ontology creates **separate relationship types per source-target pair**. A single RDF property like `nen2660:hasPart` becomes multiple Fabric relationships:
@@ -293,6 +308,12 @@ MATCH (z:Ziekenhuis)-[:haspart_7]->(r:Operatiekamer) RETURN DISTINCT z.uri, r.ur
 - etc.
 
 This is different from Neo4j where one relationship type can connect any node types.
+
+**Key Discovery (Mar 21):** NEN 2660-2's `isConnectedTo` relationship uses a **Connection hub pattern**:
+- `Connection` nodes act as junction points between physical objects
+- Edges go FROM Connection TO connected objects (not between objects directly)
+- Edge types: `isconnectedto_1` (Connection → Operatiekamer), `isconnectedto_2` (Connection → Installatieruimte)
+- To find adjacent rooms: traverse through Connection hub with two-hop pattern
 
 ---
 

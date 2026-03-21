@@ -1,13 +1,40 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-03-20  
+**Date:** 2026-03-21  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
 
 ---
 
-## Latest Updates (Mar 20)
+## Latest Updates (Mar 21)
+
+### GQL Query Testing Complete ✅
+
+**Tested:** Full pipeline execution followed by GQL query validation in Fabric Graph Explorer.
+
+**Findings:**
+1. **Reserved word `count`:** Cannot use `AS count` — use `AS cnt` or `AS total`
+2. **Connection hub pattern discovered:** NEN 2660-2's `isConnectedTo` uses intermediate `Connection` nodes
+   - Edges go FROM Connection TO connected objects
+   - `isconnectedto_1`: Connection → Operatiekamer
+   - `isconnectedto_2`: Connection → Installatieruimte
+3. **Adjacency queries work:** Two-hop traversal through Connection finds adjacent rooms
+
+**Working Adjacency Query:**
+```gql
+MATCH (o:Operatiekamer)<-[:isconnectedto_1]-(c:Connection)-[:isconnectedto_2]->(i:Installatieruimte)
+WHERE o.uri CONTAINS "Operatiekamer_1"
+RETURN DISTINCT o.uri AS operatiekamer, c.uri AS connection, i.uri AS adjacent_room
+```
+
+**UI Polish (Mar 21):**
+- Changed button text: "Queue for Notebook" → "Add to Pipeline"
+- Changed label: "Sample Output" → "Sample Nodes" (consistency with "Sample Edges")
+
+---
+
+## Updates (Mar 20)
 
 ### Sprint Completion: ~90% (11/12 B-Decisions Implemented)
 
