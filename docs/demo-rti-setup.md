@@ -78,7 +78,7 @@ One-time setup checklist for the RTI demonstration components.
 
 ## Step 8: Upload and Run Demo Notebook
 
-1. Upload `12_eventstream_demo.ipynb` to Fabric
+1. Upload `01_eventstream_demo.ipynb` to Fabric
 2. Configure `EVENTSTREAM_CONNECTION_STRING` in notebook
 3. Run demo options:
    - **Backfill only**: Run `backfill_historical_data()` to populate 24h of past data
