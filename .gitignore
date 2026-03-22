@@ -66,3 +66,6 @@ local.settings.json
 *.json.gz
 data/raw/
 data/temp/
+
+src/notebooks/02_backfill_simple.ipynb
+src/notebooks/01_telemetry_backfill.ipynb

@@ -2,13 +2,13 @@
 
 > **Quick reference file.** For full context, see [project-context.md](project-context.md).
 
-**Last Updated:** 2026-03-21  
+**Last Updated:** 2026-03-22  
 **Phase:** Proof of Concept  
 **Repository:** https://github.com/RemkoDeLange/rdf2fabric
 
 ---
 
-## Project Context (Updated Mar 21)
+## Project Context (Updated Mar 22)
 
 **This is a Proof of Concept** for learning RDF → Fabric translation patterns. The focus is on:
 - Exploring what's involved in RDF → LPG translation
@@ -17,6 +17,44 @@
 - Building reusable patterns for future product development
 
 **Not a production app** — The POC may inform a future Fabric product team import feature, but is not intended to compete with it.
+
+---
+
+## RTI Timeseries Binding Investigation (Mar 22)
+
+### Objective
+Test binding KQL timeseries data (operating room telemetry) to Graph entities.
+
+### Configuration
+- **Eventhouse:** `eh_hospital_dev_01`
+- **KQL Table:** `tbl_operating-room` (columns: `operating_room_id`, `timestamp`, `temperature_celsius`, `status`)
+- **Entity:** `Operatiekamer` with key property `uri`
+- **Binding:** `operating_room_id → uri` (both use full URI: `https://w3id.org/ziekenhuis/def#Operatiekamer_1`)
+
+### Findings
+
+| Finding | Details |
+|---------|--------|
+| **Ontology ≠ Graph Model** | Separate items in Fabric RTI. Ontology defines schema/bindings; Graph Model must sync to pick up changes. |
+| **Properties in Ontology, not in GQL** | `status` and `temperature_celsius` bound in Ontology UI but GQL returns "Property not found" |
+| **Graph refresh not propagating** | Waited hours after binding creation — properties still not queryable via GQL |
+| **Data Agents don't use bindings** | Timeseries bindings are for GQL path only; Data Agents query KQL/Lakehouses directly |
+
+### Root Cause
+The timeseries binding feature (Ontology → KQL) appears to require Graph Model refresh to sync schema changes. After hours of waiting, the Graph Model schema still doesn't include the bound properties.
+
+### Workaround
+Query KQL directly for demo:
+```kql
+tbl_operating-room
+| where operating_room_id == "https://w3id.org/ziekenhuis/def#Operatiekamer_1"
+| project timestamp, status, temperature_celsius
+| order by timestamp desc
+| take 10
+```
+
+### Status: 🔴 Blocked
+Timeseries binding created but not functional. May be preview limitation or requires recreation of Graph Model.
 
 ---
 

@@ -1,13 +1,68 @@
 # Project Context - Fabric RDF Translation
 
 ## Session Summary
-**Date:** 2026-03-21  
+**Date:** 2026-03-22  
 **Project:** fabric_rdf_translation  
 **Location:** `C:\Users\redelang\Code\cd-rdf-dev-01\fabric_rdf_translation`
 
 ---
 
-## Latest Updates (Mar 21)
+## Latest Updates (Mar 22)
+
+### RTI Timeseries Binding Investigation
+
+**Goal:** Bind KQL timeseries data (`tbl_operating-room`) to graph entity (`Operatiekamer`) for GQL queries that return real-time telemetry.
+
+**Setup:**
+- Created timeseries binding in Ontology UI
+- Key mapping: `operating_room_id` (KQL) → `uri` (entity key)
+- Properties bound: `status`, `temperature_celsius`
+- URIs match: both use `https://w3id.org/ziekenhuis/def#Operatiekamer_1`
+
+**GQL Test Query:**
+```gql
+MATCH (o:Operatiekamer)
+WHERE o.uri CONTAINS "Operatiekamer_1"
+RETURN o.uri, o.status, o.temperature_celsius
+```
+
+**Error:** `Property 'status' not found in type (:Operatiekamer) NOT NULL`
+
+**Investigation:**
+1. ✅ Verified KQL data exists with correct URIs
+2. ✅ Verified binding shows correctly in Ontology UI
+3. ✅ Confirmed entity key matches KQL column values
+4. ❌ Graph Model schema doesn't include the bound properties
+
+**Key Architectural Discovery:**
+
+The Ontology and Graph Model are **separate items** in Fabric RTI:
+
+```
+Ontology (schema + bindings)    Graph Model (queryable via GQL)
+┌─────────────────────────┐     ┌──────────────────────────┐
+│ Entity: Operatiekamer   │     │ Entity: Operatiekamer    │
+│ - uri (key)             │ --> │ - uri (key)              │
+│ - label                 │     │ - label                  │
+│ Binding: tbl_operating  │     │ (NO status/temp_celsius) │
+│ - status                │     │                          │
+│ - temperature_celsius   │     └──────────────────────────┘
+└─────────────────────────┘            ↑
+         │                    Graph Refresh needed
+         └────────────────────────────┘
+```
+
+**Issue:** Graph Model requires refresh to sync with Ontology. After hours of waiting/retrying, properties still not available.
+
+**Additional Finding:** Data Agents (Fabric AI) query KQL/Lakehouses directly — they don't use the Ontology timeseries binding feature. The binding is specifically for the GQL → KQL join path.
+
+**Workaround for Demo:** Query KQL table directly (bypassing Graph/GQL).
+
+**Status:** 🔴 Blocked — timeseries binding created but not functional in GQL queries.
+
+---
+
+## Updates (Mar 21)
 
 ### GQL Query Testing Complete ✅
 
