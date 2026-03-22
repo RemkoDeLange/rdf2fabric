@@ -55,9 +55,12 @@ One-time setup checklist for the RTI demonstration components.
     operatiekamer_id: string,
     timestamp: datetime,
     temperature_celsius: real,
-    status: string
+    status: string,
+    run_id: string
 )
 ```
+
+> **Note:** The `run_id` column tracks which notebook run generated the events. Use it to filter or clean up data from multiple runs.
 
 ## Step 6: Bind KQL Table to Ontology
 
@@ -73,11 +76,16 @@ One-time setup checklist for the RTI demonstration components.
 2. Enable "Ontology Data Agent"
 3. Configure agent name/description
 
-## Step 8: Upload Demo Notebook
+## Step 8: Upload and Run Demo Notebook
 
 1. Upload `12_eventstream_demo.ipynb` to Fabric
-2. Configure connection string in notebook
-3. Run to generate demo events
+2. Configure `EVENTSTREAM_CONNECTION_STRING` in notebook
+3. Run demo options:
+   - **Backfill only**: Run `backfill_historical_data()` to populate 24h of past data
+   - **Live only**: Run `run_demo()` for real-time streaming
+   - **Full demo**: Run `run_full_demo()` for backfill + live streaming
+
+> **Tip:** Each run has a unique `run_id`. If you run multiple times, use KQL queries to filter or clear old data.
 
 ---
 
@@ -89,6 +97,7 @@ One-time setup checklist for the RTI demonstration components.
 | `timestamp` | datetime | `2026-03-21T14:30:00Z` | Every event |
 | `temperature_celsius` | real | `21.5` | ~1 min |
 | `status` | string | `In Use` | ~1 hour |
+| `run_id` | string | `a1b2c3d4` | Per notebook run |
 
 **Status values:**
 - `Available` - Room ready for next procedure
@@ -100,10 +109,11 @@ One-time setup checklist for the RTI demonstration components.
 
 ## Demo Flow
 
-1. **Show Eventstream** - Events flowing in real-time
-2. **Show KQL Database** - Query recent telemetry
-3. **Show Graph Query** - `MATCH (o:Operatiekamer) RETURN o.id, o.\`label\`, o.status`
-4. **Show Ontology Agent** - "What is the current status of operating rooms?"
+1. **Run Notebook** - Backfill 24h of history, then start live stream
+2. **Show Eventstream** - Events flowing in real-time
+3. **Show KQL Database** - Query recent telemetry
+4. **Show Graph Query** - `MATCH (o:Operatiekamer) RETURN o.id, o.\`label\`, o.status`
+5. **Show Ontology Agent** - "What is the current status of operating rooms?"
 
 ## Sample KQL Queries
 
@@ -123,4 +133,12 @@ OperatiekamerTelemetry
 | where timestamp > ago(24h)
 | summarize avg(temperature_celsius) by bin(timestamp, 1h), operatiekamer_id
 | render timechart
+
+// View all notebook runs
+OperatiekamerTelemetry
+| summarize count(), min(timestamp), max(timestamp) by run_id
+| order by max_timestamp desc
+
+// Clear table (start fresh)
+.clear table OperatiekamerTelemetry data
 ```
