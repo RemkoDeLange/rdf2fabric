@@ -48,6 +48,9 @@ build/
 *.pem
 *.key
 secrets/
+
+# Notebooks with embedded credentials
+src/notebooks/01_eventstream_demo.ipynb
 .env.local
 .env.*.local
 appsettings.*.json
