@@ -2,42 +2,48 @@
 
 One-time setup checklist for the RTI demonstration components.
 
+## Fabric Items (Actual Names)
+
+| Item | Type | Status |
+|------|------|--------|
+| `eh_hospital_dev_01` | Eventhouse | ✅ Created |
+| `eh_hospital_dev_01` | KQL Database | ✅ Created |
+| `es_operating-room_dev_01` | Eventstream | ✅ Created |
+| `Ziekenhuis_lvl4_v2_Ontology` | Ontology | ✅ Created |
+| `GraphQuerySet_01` | Graph QuerySet | ✅ Created |
+
 ## Prerequisites
 
-- [ ] Pipeline completed (NB00-NB09)
-- [ ] Ontology deployed with `Operatiekamer` node type
-- [ ] Graph refreshed with data
+- [x] Pipeline completed (NB00-NB09)
+- [x] Ontology deployed with `Operatiekamer` node type
+- [x] Graph refreshed with data
+- [x] Eventhouse and KQL Database created
+- [x] Eventstream created with Custom App source
 
-## Step 1: Create Eventhouse
+## Step 1: Create Eventhouse ✅
 
 | Setting | Value |
 |---------|-------|
-| Name | `eh_ziekenhuis_rti` |
+| Name | `eh_hospital_dev_01` |
 | Workspace | Same as ontology workspace |
 
-**Portal:** Workspace → + New → Eventhouse
-
-## Step 2: Create KQL Database
+## Step 2: Create KQL Database ✅
 
 | Setting | Value |
 |---------|-------|
-| Name | `kql_operatiekamer` |
-| Parent | `eh_ziekenhuis_rti` |
+| Name | `eh_hospital_dev_01` |
+| Parent | `eh_hospital_dev_01` |
 
-**Portal:** Open Eventhouse → + New database
-
-## Step 3: Create Eventstream
+## Step 3: Create Eventstream ✅
 
 | Setting | Value |
 |---------|-------|
-| Name | `es_operatiekamer_telemetry` |
+| Name | `es_operating-room_dev_01` |
 | Workspace | Same as ontology workspace |
 
-**Portal:** Workspace → + New → Eventstream
+## Step 4: Configure Eventstream Source ✅
 
-## Step 4: Configure Eventstream Source
-
-1. Open `es_operatiekamer_telemetry`
+1. Open `es_operating-room_dev_01`
 2. Add source → **Custom App**
 3. Name: `notebook_source`
 4. **Copy the connection string** → needed for notebook
@@ -45,7 +51,7 @@ One-time setup checklist for the RTI demonstration components.
 ## Step 5: Configure Eventstream Destination
 
 1. Add destination → **KQL Database**
-2. Select `kql_operatiekamer`
+2. Select `eh_hospital_dev_01`
 3. Table name: `OperatiekamerTelemetry`
 4. Input data format: JSON
 5. Create table with schema:
@@ -64,10 +70,10 @@ One-time setup checklist for the RTI demonstration components.
 
 ## Step 6: Bind KQL Table to Ontology
 
-1. Open Ontology in portal
+1. Open `Ziekenhuis_lvl4_v2_Ontology` in portal
 2. Select `Operatiekamer` node type
 3. Add data binding → KQL Database
-4. Select `kql_operatiekamer` → `OperatiekamerTelemetry`
+4. Select `eh_hospital_dev_01` → `OperatiekamerTelemetry`
 5. Map `operatiekamer_id` to node `id` or `label`
 
 ## Step 7: Enable Ontology Data Agent
