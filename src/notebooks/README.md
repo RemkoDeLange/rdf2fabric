@@ -14,6 +14,8 @@ XX_name_technology.ipynb
 
 ## Pipeline Overview
 
+### Core Translation Pipeline (NB00-NB09)
+
 | # | Notebook | Layer | Description |
 |---|----------|-------|-------------|
 | 00 | `00_pipeline_orchestrator` | Orchestration | **Server-side orchestrator** — runs NB01-NB09 sequentially, writes progress to OneLake |
@@ -26,9 +28,34 @@ XX_name_technology.ipynb
 | 07 | `07_ontology_definition_generator` | Silver → Ontology | Generate Fabric Ontology definition from silver tables |
 | 08 | `08_ontology_api_client` | Ontology → Fabric | Upload Ontology definition via REST API |
 | 09 | `09_data_binding` | Ontology → Graph | Bind Lakehouse tables to Ontology for Graph materialization |
+
+### SHACL Validation (NB10-NB11)
+
+| # | Notebook | Layer | Description |
+|---|----------|-------|-------------|
 | 10 | `10_shacl_parser` | Bronze → Silver | Parse SHACL shapes to `silver_shacl_shapes` for validation (F6.1) |
 | 11 | `11_shacl_validator` | Silver → Validation | Validate data against SHACL shapes |
-| 99 | `99_test_runner` | Testing | Automated test orchestrator for F2.2, F3.2, F6.1 |
+
+### External Ontology Enrichment (NB12-NB13)
+
+| # | Notebook | Layer | Description |
+|---|----------|-------|-------------|
+| 12 | `12_external_ontology_fetcher` | External → Cache | Fetch external ontologies via HTTP (bypasses CORS), caches to `Files/cache/external_ontologies/` |
+| 13 | `13_ontology_enrichment` | Cache → Metadata | Extract labels, hierarchies, domains/ranges from cached ontologies to `ontology_metadata.json` |
+
+### Real-Time Intelligence Demo (RTI)
+
+| Notebook | Description |
+|----------|-------------|
+| `01_eventstream_demo` | Generates simulated OR telemetry events → Eventstream → KQL Database |
+| `01_telemetry_backfill` | Backfills 24h of historical telemetry data to Eventstream |
+| `02_backfill_simple` | Simplified telemetry backfill variant |
+
+### Testing
+
+| # | Notebook | Description |
+|---|----------|-------------|
+| 99 | `99_test_runner` | Automated test orchestrator for F2.2, F3.2, F6.1 |
 
 ## Decision Implementation
 
@@ -120,8 +147,13 @@ lh_rdf_translation_dev_01/
 │   ├── bronze/                # Intermediate parsed data
 │   ├── silver/                # Translated nodes/edges
 │   ├── gold/                  # Final graph model
-│   ├── config/                # Project configuration JSON
-│   ├── ontology_definitions/  # Generated Ontology definitions (output of 08)
+│   ├── config/                # Project configuration JSON + pipeline progress
+│   ├── cache/                 # External ontology cache
+│   │   ├── external_ontologies/   # Cached .ttl/.rdf files (output of NB12)
+│   │   ├── fetch_manifest.json    # URIs to fetch (input to NB12)
+│   │   ├── fetch_results.json     # Fetch status/errors (output of NB12)
+│   │   └── ontology_metadata.json # Extracted metadata (output of NB13)
+│   ├── ontology_definitions/  # Generated Ontology definitions (output of NB07)
 │   ├── apache_jena_jars/      # Backup of Jena JARs
 │   ├── examples_nen2660/      # Shortcut to test data
 │   ├── informative_nen2660/   # Shortcut to informative ontology
