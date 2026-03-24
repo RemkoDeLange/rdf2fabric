@@ -2178,16 +2178,22 @@ class TestPreviewPipeline:
 ## Epic 10: Documentation & Deployment
 
 ### F10.1 - User Documentation
-**Priority:** 🟢 P3 | **Status:** ⬜ Not Started | **Estimate:** M
+**Priority:** 🟢 P3 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** End-user documentation for installing and using RDF2Fabric.
 
+**Implementation Notes:**
+- Location: `docs/user-guide/`
+- Main guide: `README.md` (installation, quick start, pipeline overview)
+- Decision reference: `decision-reference.md` (all 12 B-decisions explained)
+- Troubleshooting: `troubleshooting.md` (FAQ and common issues)
+
 **Acceptance Criteria:**
-- [ ] Installation guide (Web, Desktop)
-- [ ] Getting started tutorial
-- [ ] Decision reference guide (all 12 decisions explained)
-- [ ] Troubleshooting FAQ
-- [ ] Example walkthroughs
+- [x] Installation guide (Web, Desktop)
+- [x] Getting started tutorial
+- [x] Decision reference guide (all 12 decisions explained)
+- [x] Troubleshooting FAQ
+- [x] Example walkthroughs
 
 **Tests:** Manual review, spell check.
 
