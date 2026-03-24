@@ -1,8 +1,8 @@
 # RDF2Fabric - Feature Backlog
 
 > **Purpose:** Comprehensive feature list with acceptance criteria and tests.  
-> **Last Updated:** 2026-03-21  
-> **Version:** v0.2.0 (Sprint 1 Complete - 90%)
+> **Last Updated:** 2026-03-24  
+> **Version:** v0.2.1 (Sprint 1 Complete - 95%)
 
 ---
 
@@ -342,11 +342,20 @@ class StreamingParserTest extends AnyFunSuite {
 ---
 
 ### F2.4 - External Ontology Dereferencing
-**Priority:** 🟡 P2 | **Status:** ⬜ Not Started | **Estimate:** M | **Phase:** 2
+**Priority:** 🟡 P2 | **Status:** ✅ Complete | **Estimate:** M
 
 **Description:** Automatically fetch referenced ontologies from external URIs found in RDF data.
 
 When RDF instance data references external classes/properties (e.g., `rdf:type <https://w3id.org/nen2660/def#PhysicalObject>`), the application should offer to dereference those URIs to retrieve schema definitions. This follows the Linked Data "follow your nose" principle.
+
+**Implementation Notes:**
+- Notebooks: `12_external_ontology_fetcher.ipynb` + `13_ontology_enrichment.ipynb`
+- Cache location: `Files/cache/external_ontologies/`
+- Input manifest: `Files/cache/fetch_manifest.json`
+- Output metadata: `Files/cache/ontology_metadata.json`
+- Content negotiation: Prefers Turtle, falls back to RDF/XML, JSON-LD
+- Test results: 5/6 ontologies fetched (NEN 2660, QUDT schema/units/quantitykinds, W3C Time)
+- 4,702 labels extracted for display enrichment
 
 **User Flow:**
 1. Parse input RDF files
@@ -358,13 +367,13 @@ When RDF instance data references external classes/properties (e.g., `rdf:type <
 7. Re-run schema detection (may upgrade level 0 → level 2+)
 
 **Acceptance Criteria:**
-- [ ] Extract unique namespace prefixes from parsed triples
-- [ ] Identify namespaces not present in provided files
-- [ ] HTTP fetch with proper content negotiation headers
-- [ ] Handle common responses: Turtle, RDF/XML, JSON-LD
-- [ ] Cache fetched ontologies locally (avoid re-fetching)
-- [ ] Graceful handling of: timeouts, 404s, non-RDF responses
-- [ ] User can skip/defer external fetching
+- [x] Extract unique namespace prefixes from parsed triples
+- [x] Identify namespaces not present in provided files
+- [x] HTTP fetch with proper content negotiation headers
+- [x] Handle common responses: Turtle, RDF/XML, JSON-LD
+- [x] Cache fetched ontologies locally (avoid re-fetching)
+- [x] Graceful handling of: timeouts, 404s, non-RDF responses
+- [x] User can skip/defer external fetching
 - [ ] Display consequences: "Without this ontology, you'll have X more decisions"
 
 **Tests:**
