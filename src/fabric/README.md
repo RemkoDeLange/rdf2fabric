@@ -1,72 +1,75 @@
 # Fabric Backend
 
-This folder contains Microsoft Fabric items that power the RDF translation backend.
+This folder is a **placeholder for Fabric Git integration**. The actual notebooks are maintained in [`../notebooks/`](../notebooks/).
 
-## Folder Structure
+## Current Structure
 
 ```
 fabric/
-├── notebooks/            # Spark notebooks
-│   ├── nb_schema_analyzer.py     # Detect schema richness level
-│   ├── nb_preview_generator.py   # Generate sample preview data
-│   ├── nb_translator.py          # Main RDF→Delta translation
-│   └── nb_graph_loader.py        # Load to Fabric Graph
-│
-└── pipelines/            # Data pipelines
-    ├── pl_full_translation.json  # End-to-end pipeline
-    └── pl_preview_only.json      # Preview generation only
+├── notebooks/            # Placeholder (.gitkeep) — for Fabric Git sync
+├── pipelines/            # Placeholder (.gitkeep) — for Fabric Git sync
+└── README.md             # This file
 ```
 
-## Installation
+## Where Are the Notebooks?
+
+All notebooks are in **[`src/notebooks/`](../notebooks/)**, which is the source of truth. See the [notebooks README](../notebooks/README.md) for the full pipeline documentation.
+
+### Pipeline Overview
+
+| # | Notebook | Description |
+|---|----------|-------------|
+| 00 | `00_pipeline_orchestrator` | Server-side orchestrator — runs NB01-NB09 |
+| 01 | `01_rdf_parser_jena` | Parse RDF files using Apache Jena |
+| 02 | `02_schema_detector` | Detect schema richness level (0-4) |
+| 03 | `03_class_to_nodetype` | Map classes to entity types |
+| 04 | `04_property_mapping` | Map properties to attributes/edges |
+| 05 | `05_instance_translator` | Translate instances to nodes/edges |
+| 06 | `06_delta_writer` | Write gold tables for graph import |
+| 07 | `07_ontology_definition_generator` | Generate Fabric Ontology definition |
+| 08 | `08_ontology_api_client` | Upload ontology via REST API |
+| 09 | `09_data_binding` | Bind tables for Graph materialization |
+
+## Fabric Workspace Setup
 
 > **You choose the workspace.** The app/notebooks do NOT auto-create workspaces.
 
-1. **Choose a workspace:** Create a new workspace or use an existing one
-2. **Connect to GitHub:** Go to workspace Settings → Git integration → connect to your fork of this repo
-3. **Automatic sync:** Fabric imports notebooks and pipelines from this folder
-4. **Lakehouse:** Created automatically when notebooks first run
+### Option 1: Manual Import
 
-### What Gets Installed
+1. Create a Fabric workspace with capacity (F64+ recommended)
+2. Create a Lakehouse in the workspace
+3. Import notebooks from `src/notebooks/` manually
+4. Create environment `env_rdf_jena` with the Jena shaded JAR
 
-| Item | Type | Auto-Created |
-|------|------|---------------|
-| `nb_schema_analyzer` | Notebook | Via Git sync |
-| `nb_preview_generator` | Notebook | Via Git sync |
-| `nb_translator` | Notebook | Via Git sync |
-| `nb_graph_loader` | Notebook | Via Git sync |
-| `pl_full_translation` | Pipeline | Via Git sync |
-| `pl_preview_only` | Pipeline | Via Git sync |
-| `lh_rdf_translation` | Lakehouse | On first notebook run |
+### Option 2: Git Integration (Planned)
 
-## Notebooks
+When Fabric Git sync is configured:
 
-| Notebook | Purpose | Input | Output |
-|----------|---------|-------|--------|
-| `nb_schema_analyzer` | Detect schema richness (Level 0-4) | RDF files | Analysis JSON |
-| `nb_preview_generator` | Generate preview data | Project config | Preview tables |
-| `nb_translator` | Full RDF→Delta translation | Project config | Node/edge tables |
-| `nb_graph_loader` | Load to Fabric Graph | Delta tables | Fabric Graph |
+1. Connect workspace to this repo
+2. Set sync folder to `/src/fabric/`
+3. Copy notebooks from `src/notebooks/` to `src/fabric/notebooks/` for sync
+
+> **Note:** This folder currently contains only `.gitkeep` files. For active development, notebooks are maintained in `src/notebooks/` and imported to Fabric manually.
 
 ## Dependencies
 
-Notebooks can use either Scala or Python (or both):
+**Apache Jena (required for RDF parsing):**
 
-**Scala (preferred for RDF parsing):**
-- Apache Jena libraries (for enterprise-grade RDF parsing)
-- Included in Spark runtime or add via Maven coordinates
+Build the shaded JAR:
+```bash
+cd tools/jena-shaded
+./mvnw.cmd package -DskipTests   # Windows
+./mvnw package -DskipTests       # Linux/Mac
+```
 
-**Python (for orchestration):**
-- `rdflib` - RDF parsing (install via `%pip install rdflib`)
-- PySpark runtime (provided by Fabric)
-
-> **Note:** Mix Scala and Python notebooks as needed. Use Scala for heavy RDF parsing with Jena, Python for orchestration and Fabric API integration.
+Upload `target/jena-shaded-4.10.0.jar` to a Fabric Environment named `env_rdf_jena`.
 
 ## API
 
-The web/desktop app calls these notebooks via the Fabric REST API:
+The web/desktop app triggers pipeline execution via the Fabric REST API:
 
 ```
 POST /v1/workspaces/{workspaceId}/items/{notebookId}/jobs/instances?jobType=RunNotebook
 ```
 
-With parameters passed in the request body.
+The orchestrator notebook (NB00) writes progress to `Files/config/pipeline_progress.json`, which the app polls for status updates.
